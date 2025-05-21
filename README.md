@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚛 Fleet Management System
 
-## Getting Started
+A modern, full-stack **Fleet Management System** built with **Next.js** for managing vehicles, users, and operations efficiently. This project includes route protection middleware, scalable structure, and is ready for full authentication and backend integration.
 
-First, run the development server:
+---
 
-```bash
+## 📁 Tech Stack
+
+- **Frontend:** Next.js (App Router)
+- **Backend (Coming Soon):** Node.js + Express (planned)
+- **Database (Planned):** PostgreSQL + Prisma ORM
+- **Auth:** `next-auth` with JWT (setup-ready)
+- **Styling:** Tailwind CSS (optional)
+- **Deployment:** Vercel / Docker-ready
+
+---
+
+## 🚦 Features
+
+- ✅ Public and Protected Route Access
+- 🔐 Middleware-based Route Protection
+- 👥 Role-based Access Control (Admin/User)
+- 📄 Scalable File and API Structure
+- 🚀 Ready for Integration with Auth and API
+
+---
+
+## 📦 Project Structure
+
+src/
+│
+├── app/
+│ ├── page.tsx # Home (Public)
+│ ├── login/page.tsx # Login Page (Public)
+│ ├── dashboard/page.tsx # Protected Page
+│ └── admin/page.tsx # Admin-only Page
+│
+├── middleware.ts # Auth Guard Middleware
+└── ...
+
+csharp
+🧪 How to Test (Before Auth Integration)
+Visit / – Public Home Page
+
+Visit /login – Public Login Page
+
+Visit /dashboard – Redirects to /login if not "logged in"
+
+Visit /admin – Redirects to /dashboard unless user is "ADMIN"
+
+To simulate roles, change the mock getToken() return value.
+
+🛠️ Getting Started
+1. Clone the Repo
+git clone https://github.com/your-username/fleet-management-system.git
+cd fleet-management-system
+2. Install Dependencies
+npm install
+3. Run Development Server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Visit: http://localhost:3000
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🔮 Roadmap
+ Middleware Setup with Mock Token
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+ Integrate next-auth for real authentication
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ Backend API with Express + PostgreSQL
 
-## Learn More
+ Admin/User Role Dashboard UI
 
-To learn more about Next.js, take a look at the following resources:
+ Vehicle Tracking, Assignment, History Logs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ Deployment with Docker/Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+🤝 Contribution
+Contributions are welcome! Feel free to fork this project, make changes, and open a pull request.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🪪 License
+BinaryHub © UwihanagneyObed
