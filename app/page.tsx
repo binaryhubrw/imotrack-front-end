@@ -6,6 +6,7 @@ import { faCogs, faStar, faEnvelope,
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from '@/components/ui/button' // shadcn/ui button
+import Link from 'next/link'
 
 export default function HomePage() {
 
@@ -20,11 +21,11 @@ export default function HomePage() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#0872b3]">Imotrack</h1>
           <p className="text-lg mb-8 text-[#0872b3]">Streamline your fleet operations with real-time tracking and comprehensive management tools</p>
              <div className="flex justify-center gap-4 ">
-            <Button className=" bg-[#0872b3] text-white hover:bg-white hover:text-[#0872b3] flex items-center gap-2 text-lg px-15 py-7 rounded cursor-pointer ">
-              <FontAwesomeIcon icon={faRocket} /> Get Started
+            <Button className=" bg-[#0872b3] text-white hover:bg-white hover:text-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer ">
+              <Link href='/login' ><FontAwesomeIcon className='mr-3' icon={faRocket} />Get Started</Link> 
             </Button>
-            <Button variant="outline" className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-15 py-7 rounded cursor-pointer ">
-              <FontAwesomeIcon icon={faPlayCircle} /> Watch Demo
+            <Button variant="outline" className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer ">
+              <Link href='/login'><FontAwesomeIcon className='mr-3' icon={faPlayCircle} />Watch Demo</Link> 
             </Button>
           </div>
         </div>
@@ -147,11 +148,11 @@ export default function HomePage() {
         </h2>
         <p className="mb-8">Transform your fleet management today</p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
-          <Button className=" bg-[#0872b3] text-white hover:bg-white hover:text-[#0872b3] flex items-center gap-2 text-lg px-15 py-7 rounded cursor-pointer ">
-              <FontAwesomeIcon icon={faRocket} /> Get Started
+             <Button className=" bg-[#0872b3] text-white hover:bg-white hover:text-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer ">
+              <Link href='/login' ><FontAwesomeIcon className='mr-3' icon={faRocket} />Get Started</Link> 
             </Button>
-            <Button variant="outline" className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-15 py-7 rounded cursor-pointer ">
-              <FontAwesomeIcon icon={faPlayCircle} /> Schedule Demo
+            <Button variant="outline" className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer ">
+              <Link href='/login'><FontAwesomeIcon className='mr-3' icon={faPlayCircle} />Schedule Demo</Link> 
             </Button>
         </div>
       </section>
