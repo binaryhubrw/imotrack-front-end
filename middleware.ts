@@ -1,43 +1,50 @@
-// src/middleware.ts
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// ✅ Mocked getToken for testing without APIs
-async function getToken({ req }: { req: NextRequest }) {
-  const pathname = req.nextUrl.pathname;
-
-  // Simulate no token if accessing login
-  if (pathname === '/login') return null;
-
-  // Simulate a user being logged in when navigating to any other page
-  return {
-    role: pathname.startsWith('/admin') ? 'USER' : 'ADMIN', // Change to 'ADMIN' to allow /admin
-  };
+// Mock getToken: reads a fake "token" from cookies for demonstration
+function getToken(req: NextRequest) {
+  // For real apps, use cookies or headers. For mock/dev, use a query param or a fake cookie.
+  const cookie = req.cookies.get('role')?.value;
+  if (!cookie) return null;
+  // Example: cookie value = "admin", "fleet-manager", "staff", "driver"
+  return { role: cookie };
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ✅ Public paths
+  // Public routes
   const publicPaths = ['/', '/login', '/api/auth'];
   if (publicPaths.includes(pathname)) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req: request });
+  const token = getToken(request);
 
-  // 🔐 Redirect to login if no token
+  // Not authenticated: redirect to login
   if (!token) {
     const url = new URL('/login', request.url);
     url.searchParams.set('callbackUrl', encodeURI(request.url));
     return NextResponse.redirect(url);
   }
 
-  // 🚫 Prevent non-admins from accessing /admin
-  if (pathname.startsWith('/admin') && token.role !== 'ADMIN' && token.role !== 'SUPER_ADMIN') {
+  // Role-based protection
+  // Example: Only allow admin to access /admin, fleet-manager to /fleet, etc.
+  if (pathname.startsWith('/admin') && token.role !== 'super-admin' && token.role !== 'super-admin') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+  if (pathname.startsWith('/fleet') && token.role !== 'fleet-manager') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+  if (pathname.startsWith('/staff') && token.role !== 'staff' && token.role !== 'staff-admin') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+  if (pathname.startsWith('/driver') && token.role !== 'driver') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // All good
   return NextResponse.next();
 }
 

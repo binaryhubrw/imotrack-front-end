@@ -1,0 +1,4 @@
+    { username: "superadmin", password: "admin123", role: "super-admin" },
+    { username: "fleetmanager", password: "manager123", role: "fleet-manager" },
+    { username: "staff", password: "staff123", role: "staff" },
+    { username: "staffadmin", password: "staffadmin123", role: "staff-admin" },
