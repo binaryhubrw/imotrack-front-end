@@ -4,12 +4,20 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+interface NavItem {
+  href: string;
+  label: string;
+  icon?: string;
+  submenu?: NavItem[];
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<{ name?: string; role?: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
 
   useEffect(() => {
     // Check authentication from localStorage
@@ -38,32 +46,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // Define navigation items based on user role
   const getNavItems = () => {
-    const adminItems = [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/organizations', label: 'Organizations' },
-      { href: '/users', label: 'Users' },
-      { href: '/settings', label: 'Settings' },
+    const adminItems: NavItem[] = [
+      { href: '/dashboard/super-admin', label: 'Dashboard', icon: '□' },
+      { 
+        href: '#', 
+        label: 'Organizations', 
+        icon: '□',
+        submenu: [
+          { href: '/dashboard/organizations', label: 'Organizations' },
+          { href: '/dashboard/users', label: 'Users' }
+        ]
+      },
+      { href: '/dashboard/settings', label: 'Settings', icon: '⚙️' },
     ];
 
-    const fleetManagerItems = [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/vehicles', label: 'Vehicles' },
-      { href: '/drivers', label: 'Drivers' },
-      { href: '/requests', label: 'Requests' },
-      { href: '/maintenance', label: 'Maintenance' },
+    const fleetManagerItems: NavItem[] = [
+      { href: '/dashboard/fleet-manager', label: 'Dashboard', icon: '□' },
+      { href: '/dashboard/vehicles', label: 'Vehicles', icon: '🚗' },
+      { href: '/dashboard/drivers', label: 'Drivers', icon: '👤' },
+      { href: '/dashboard/requests', label: 'Requests', icon: '📝' },
+      { href: '/dashboard/maintenance', label: 'Maintenance', icon: '🔧' },
     ];
 
-    const staffItems = [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/requests', label: 'My Requests' },
-      { href: '/profile', label: 'Profile' },
+    const staffItems: NavItem[] = [
+      { href: '/dashboard/staff', label: 'Dashboard', icon: '□' },
+      { href: '/dashboard/requests', label: 'My Requests', icon: '📝' },
+      { href: '/dashboard/profile', label: 'Profile', icon: '👤' },
     ];
 
-    const staffAdminItems = [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/my-vehicles', label: 'My Vehicles' },
-      { href: '/trips', label: 'My Trips' },
-      { href: '/profile', label: 'Profile' },
+    const staffAdminItems: NavItem[] = [
+      { href: '/dashboard/staff-admin', label: 'Dashboard', icon: '□' },
+      { href: '/dashboard/my-vehicles', label: 'My Vehicles', icon: '🚗' },
+      { href: '/dashboard/trips', label: 'My Trips', icon: '🗺️' },
+      { href: '/dashboard/profile', label: 'Profile', icon: '👤' },
     ];
 
     const role = user?.role?.toLowerCase();
@@ -78,8 +93,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
           <div>Loading...</div>
         </div>
       </div>
@@ -87,80 +102,122 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f5f5f5' }}>
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          style={{ position: 'fixed', inset: 0, zIndex: 20, background: 'rgba(0,0,0,0.5)' }}
+          className="fixed inset-0 z-20 bg-black bg-opacity-50 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        style={{
-          position: sidebarOpen ? 'fixed' : 'relative',
-          width: '250px',
-          height: '100%',
-          background: 'white',
-          boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-          transform: sidebarOpen ? 'translateX(0)' : '',
-          transition: 'transform 0.3s',
-          zIndex: 30,
-        }}
+        className={`fixed z-30 h-full w-56 transform bg-[#003366] text-white transition-transform duration-300 md:relative md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
-        <div style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontWeight: 'bold', fontSize: '20px' }}>Fleet Admin</span>
-          <button onClick={() => setSidebarOpen(false)} style={{ display: sidebarOpen ? 'block' : 'none' }}>✕</button>
+        {/* Header with logo */}
+        <div className="flex items-center justify-between border-b border-blue-900 p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-6 rounded bg-[#0872b3]"></div>
+            <span className="text-lg font-bold">System Admin</span>
+          </div>
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="text-white md:hidden"
+          >
+            ✕
+          </button>
         </div>
 
-        <nav style={{ padding: '20px 0' }}>
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: 'block',
-                  padding: '10px 20px',
-                  background: isActive ? '#f0f0f0' : 'transparent',
-                  color: isActive ? '#2563eb' : '#333',
-                  textDecoration: 'none',
-                }}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Navigation items */}
+        <div className="overflow-y-auto">
+          {navItems.map((item) => (
+            <div key={item.href}>
+              {item.submenu ? (
+                <div>
+                  <button 
+                    onClick={() => setOpenSubmenu(openSubmenu === item.label ? null : item.label)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-blue-900 transition-colors duration-200"
+                  >
+                    <span className="w-5 text-center">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                  {openSubmenu === item.label && (
+                    <div className="bg-blue-900/30">
+                      {item.submenu.map(sub => (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          className={`block pl-12 pr-4 py-2 hover:bg-blue-900/50 transition-colors duration-200 ${
+                            pathname === sub.href ? 'bg-blue-900/50' : ''
+                          }`}
+                        >
+                          {sub.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 hover:bg-blue-900 transition-colors duration-200 ${
+                    pathname === item.href ? 'bg-blue-900/50' : ''
+                  }`}
+                >
+                  <span className="w-5 text-center">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom section with logout */}
+        <div className="mt-auto border-t border-blue-900">
+          <button 
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-blue-900 transition-colors duration-200"
+          >
+            <span className="w-5 text-center">⇨</span>
+            <span>Logout</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top header */}
-        <header style={{ background: 'white', padding: '15px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button
-              onClick={() => setSidebarOpen(true)}
-              style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}
+        <header className="bg-white border-b border-gray-200 py-3 px-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="text-gray-500 hover:text-gray-700 focus:outline-none md:hidden"
             >
               ☰
             </button>
-            <div>
-              <span style={{ marginRight: '10px' }}>{user?.name}</span>
-              <button 
-                onClick={handleLogout}
-                style={{ padding: '5px 10px', background: '#f0f0f0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                Logout
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="relative mr-4">
+              <button className="flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-500">
+                <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="sr-only">Notifications</span>
+                2
               </button>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+              <span className="text-gray-700">{user?.name || 'Staff Name'}</span>
             </div>
           </div>
         </header>
 
         {/* Main content area */}
-        <main style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+        <main className="flex-1 overflow-auto p-6">
           {children}
         </main>
       </div>

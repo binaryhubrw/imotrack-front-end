@@ -15,19 +15,59 @@ export default function DashboardHeader({ onMenuButtonClick }: DashboardHeaderPr
   }, []);
 
   const handleLogout = () => {
+    // Clear user data from localStorage
     localStorage.removeItem('user');
+    // Optionally clear other related data here
+
+    // Redirect to login page
     window.location.href = '/login';
   };
 
   return (
-    <header style={{ background: '#fff', borderBottom: '1px solid #eee', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={onMenuButtonClick} style={{ fontSize: 24, background: 'none', border: 'none', cursor: 'pointer' }}>☰</button>
-        <span style={{ fontWeight: 'bold', fontSize: 20 }}>KFLS Admin</span>
+    <header className="bg-white border-b border-gray-200 py-3 px-4 flex items-center justify-between shadow-sm">
+      <div className="flex items-center gap-3">
+        {/* Menu button visible only on small screens */}
+        <button
+          onClick={onMenuButtonClick}
+          className="text-gray-500 hover:text-gray-700 focus:outline-none md:hidden"
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        {user && <span>Hi, {user.name || 'User'}</span>}
-        <button onClick={handleLogout} style={{ background: '#eee', border: 'none', padding: '6px 12px', borderRadius: 4, cursor: 'pointer' }}>Logout</button>
+
+      <div className="flex items-center gap-6">
+        {/* Notifications */}
+        <button
+          className="relative flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-500 hover:bg-red-200 focus:outline-none"
+          aria-label="You have 2 notifications"
+        >
+          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          <span className="sr-only">2 new notifications</span>
+          {/* You can replace this with an icon */}
+          🔔
+        </button>
+
+        {/* User info and logout */}
+        <div className="flex items-center gap-3">
+          {/* User avatar placeholder */}
+          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-semibold uppercase">
+            {user?.name ? user.name.charAt(0) : 'S'}
+          </div>
+
+          {/* Username */}
+          <span className="text-gray-700 font-medium">{user?.name || 'Staff Name'}</span>
+
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+            aria-label="Logout"
+            type="button"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </header>
   );
