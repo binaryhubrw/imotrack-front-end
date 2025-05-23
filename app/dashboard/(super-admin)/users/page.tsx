@@ -1,6 +1,9 @@
 'use client';
 import React, { useState } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+
 
 const USERS = [
   { id: '2058', firstName: 'Pacifique', lastName: 'Uwamarie', email: 'pacifique@ur.ac.rw', organization: 'University of Rwanda', role: 'Admin', dob: '1992', phone: '+250-788-900-500', status: 'Active' },
@@ -32,6 +35,7 @@ export default function AddUserStaffPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const router = useRouter();
 
   const handleDeleteClick = (id: string) => {
     setSelectedUserId(id);
@@ -146,7 +150,7 @@ export default function AddUserStaffPage() {
             </thead>
             <tbody>
               {filteredUsers.map((user, idx) => (
-                <tr key={user.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <tr onClick={() => router.push(`/dashboard/users/${user.id}`)} key={user.id} className={idx % 2 === 0 ? 'bg-white cursor-pointer' : 'bg-gray-50 cursor-pointer '}>
                   <td className="px-4 py-2 font-mono">{user.id}</td>
                   <td className="px-4 py-2">{user.firstName}</td>
                   <td className="px-4 py-2">{user.lastName}</td>
@@ -158,7 +162,7 @@ export default function AddUserStaffPage() {
                   <td className="px-4 py-2">{statusBadge(user.status)}</td>
                   <td className="px-4 py-2 flex gap-2">
                     <button 
-                      onClick={() => handleEditClick(user)}
+                      onClick={e => { e.stopPropagation(); handleEditClick(user); }}
                       className="p-1 rounded hover:bg-gray-100" 
                       aria-label="Edit" 
                       title="Edit"
@@ -166,7 +170,7 @@ export default function AddUserStaffPage() {
                       <Pencil className="w-4 h-4 text-gray-500" />
                     </button>
                     <button 
-                      onClick={() => handleDeleteClick(user.id)}
+                      onClick={e => { e.stopPropagation(); handleDeleteClick(user.id); }}
                       className="p-1 rounded hover:bg-gray-100" 
                       aria-label="Delete" 
                       title="Delete"
@@ -200,31 +204,44 @@ export default function AddUserStaffPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && selectedUserId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            transition={{ type: 'spring', duration: 0.5 }}
+            className="bg-white/90 backdrop-blur-md rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 my-8 overflow-y-auto max-h-[90vh]"
+          >
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
               <h2 className="text-xl font-bold text-[#0872B3]">Confirm Delete</h2>
-              <button onClick={() => setShowDeleteConfirm(false)} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => setShowDeleteConfirm(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            <p className="mb-6">Are you sure you want to delete user {selectedUserId}? This action cannot be undone.</p>
-            <div className="flex justify-end gap-2">
+            <div className="mb-8">
+              <p className="text-gray-600 text-lg">Are you sure you want to delete user <span className="font-semibold text-gray-900">{selectedUserId}</span>? This action cannot be undone.</p>
+            </div>
+            <div className="flex justify-end gap-4 pt-4">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded shadow hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                className="px-6 py-2 text-sm font-medium text-white bg-[#0872B3] rounded shadow hover:bg-blue-700 transition-colors"
               >
                 Delete
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </main>
   );
@@ -240,13 +257,13 @@ function UserModal({ onClose, onSave, user }: { onClose: () => void; onSave: (us
     gender: user?.gender || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    organization: user?.organization || '', // This should be a select dropdown populated with organizations
-    role: user?.role || '', // This should be a select dropdown populated with roles
-    startDate: user?.startDate || '', // Format mm/dd/yyyy
-    password: user?.password || '', // Note: Handling passwords securely is important
+    organization: user?.organization || '',
+    role: user?.role || '',
+    startDate: user?.startDate || '',
+    password: user?.password || '',
     streetAddress: user?.streetAddress || '',
-    dob: user?.dob || '', // Format mm/dd/yyyy
-    status: user?.status || 'Active', // Default status, maybe remove from form if not editable on add/edit
+    dob: user?.dob || '',
+    status: user?.status || 'Active',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -255,7 +272,6 @@ function UserModal({ onClose, onSave, user }: { onClose: () => void; onSave: (us
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation (you might want more robust validation)
     if (!formData.firstName || !formData.lastName || !formData.nid || !formData.gender || !formData.email || !formData.phone || !formData.organization || !formData.role || !formData.startDate || !formData.password) {
       alert('Please fill in all required fields.');
       return;
@@ -264,93 +280,99 @@ function UserModal({ onClose, onSave, user }: { onClose: () => void; onSave: (us
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl p-6 max-w-lg w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-[#0872B3]">{user ? 'Edit Staff Member' : 'Add New Staff Member'}</h2>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 z-50"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', duration: 0.5 }}
+        className="bg-white/90 backdrop-blur-md rounded-xl p-8 max-w-lg w-full shadow-2xl border border-gray-100 my-8 overflow-y-auto max-h-[90vh]"
+      >
+        <div className="flex justify-between items-center mb-8 pb-2">
+          <h2 className="text-2xl font-bold text-[#0872B3]">{user ? 'Edit Staff Member' : 'Add New Staff Member'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
-              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">First Name <span className="text-red-500">*</span></label>
+              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
-              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name <span className="text-red-500">*</span></label>
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">NID <span className="text-red-500">*</span></label>
-              <input type="text" name="nid" value={formData.nid} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">NID <span className="text-red-500">*</span></label>
+              <input type="text" name="nid" value={formData.nid} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Gender <span className="text-red-500">*</span></label>
-              {/* This could be a select dropdown */}
-              <input type="text" name="gender" value={formData.gender} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Gender <span className="text-red-500">*</span></label>
+              <input type="text" name="gender" value={formData.gender} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email <span className="text-red-500">*</span></label>
-              <input type="email" name="email" value={formData.email} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email <span className="text-red-500">*</span></label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number <span className="text-red-500">*</span></label>
-              <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number <span className="text-red-500">*</span></label>
+              <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Select Organization <span className="text-red-500">*</span></label>
-              <select name="organization" value={formData.organization} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Organization <span className="text-red-500">*</span></label>
+              <select name="organization" value={formData.organization} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required>
                  <option value="">Select Organization</option>
                  {/* Populate with organizations */}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Select Role <span className="text-red-500">*</span></label>
-               <select name="role" value={formData.role} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Role <span className="text-red-500">*</span></label>
+               <select name="role" value={formData.role} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required>
                 <option value="">Select Role of User</option>
                 {/* Populate with roles */}
                </select>
             </div>
              <div>
-              <label className="block text-sm font-medium text-gray-700">Start Date <span className="text-red-500">*</span></label>
-              {/* This could be a date picker */}
-              <input type="text" name="startDate" value={formData.startDate} onChange={handleChange} placeholder="mm/dd/yyyy" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date <span className="text-red-500">*</span></label>
+              <input type="text" name="startDate" value={formData.startDate} onChange={handleChange} placeholder="mm/dd/yyyy" className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
              <div>
-              <label className="block text-sm font-medium text-gray-700">User Password <span className="text-red-500">*</span></label>
-              {/* Note: Handle password input carefully, maybe separate modal for password change or hashing */}
-              <input type="password" name="password" value={formData.password} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" required />
+              <label className="block text-sm font-medium text-gray-700 mb-2">User Password <span className="text-red-500">*</span></label>
+              <input type="password" name="password" value={formData.password} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" required />
             </div>
              <div>
-              <label className="block text-sm font-medium text-gray-700">Street Address</label>
-              <input type="text" name="streetAddress" value={formData.streetAddress} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+              <input type="text" name="streetAddress" value={formData.streetAddress} onChange={handleChange} className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" />
             </div>
              <div>
-              <label className="block text-sm font-medium text-gray-700">DOB</label>
-               {/* This could be a date picker */}
-              <input type="text" name="dob" value={formData.dob} onChange={handleChange} placeholder="mm/dd/yyyy" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#0872B3] focus:ring-[#0872B3]" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">DOB</label>
+              <input type="text" name="dob" value={formData.dob} onChange={handleChange} placeholder="mm/dd/yyyy" className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" />
             </div>
-            {/* Status field is present in state but hidden in this form based on screenshot */}
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              className="px-6 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded shadow hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-[#0872B3] rounded-md hover:bg-blue-700"
+              className="px-6 py-2 text-sm font-medium text-white bg-[#0872B3] rounded shadow hover:bg-blue-700 transition-colors"
             >
               {user ? 'Save Changes' : 'Add User'}
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

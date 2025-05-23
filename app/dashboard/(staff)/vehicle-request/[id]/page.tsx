@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, MapPin, Users, Briefcase, Clock, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Briefcase, Clock, Plus, Pencil } from 'lucide-react';
 import Link from 'next/link';
 
 // Mock data for requests (same as in the main page)
@@ -106,10 +106,10 @@ export default function VehicleRequestDetailPage({ params }: { params: { id: str
                 {request.status === "Active" && (
                   <Link 
                     href={`/dashboard/issue-reports/create`}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-[#0872B3] text-white rounded-lg hover:bg-[#0872B3] transition-colors flex items-center gap-2"
                   >
-                    <Plus size={16} />
-                    Create Issue Report
+                    <Pencil size={16} />
+                    Edit Request
                   </Link>
                 )}
               </div>

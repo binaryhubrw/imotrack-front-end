@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Eye, X } from 'lucide-react';
+import { Eye, X, Car, Download } from 'lucide-react';
 
 const TRIPS = [
   { id: 'TRIP-001', date: '2024-02-20', purpose: 'Field Trip', destination: 'Huye Campus', status: 'Completed', driver: 'John Doe', vehicle: 'UR-001' },
@@ -11,19 +11,19 @@ const TRIPS = [
   { id: 'TRIP-006', date: '2024-02-05', purpose: 'Inspection', destination: 'Bugesera', status: 'Cancelled', driver: 'Sarah Lee', vehicle: 'UR-006' },
 ];
 
-function statusBadge(status: string) {
-  const base = 'px-3 py-1 rounded-full text-xs font-semibold';
+function statusBadge(status) {
+  const base = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border';
   switch (status) {
     case 'Completed':
-      return <span className={base + ' bg-[#e6f2fa] text-[#0872B3] border border-[#0872B3]'}>Completed</span>;
+      return <span className={base + ' bg-green-50 text-green-700 border-green-200'}>Completed</span>;
     case 'Cancelled':
-      return <span className={base + ' bg-gray-100 text-gray-500 border border-gray-300'}>Cancelled</span>;
+      return <span className={base + ' bg-gray-100 text-gray-500 border-gray-300'}>Cancelled</span>;
     default:
-      return <span className={base + ' bg-gray-100 text-gray-700 border border-gray-300'}>{status}</span>;
+      return <span className={base + ' bg-gray-100 text-gray-700 border-gray-300'}>{status}</span>;
   }
 }
 
-function exportCSV(data: any[]) {
+function exportCSV(data) {
   const header = ['Trip ID', 'Date', 'Purpose', 'Destination', 'Status', 'Driver', 'Vehicle'];
   const rows = data.map(trip => [trip.id, trip.date, trip.purpose, trip.destination, trip.status, trip.driver, trip.vehicle]);
   const csv = [header, ...rows].map(row => row.map(String).map(cell => '"' + cell.replace(/"/g, '""') + '"').join(',')).join('\n');
@@ -40,7 +40,7 @@ export default function TripHistoryPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [time, setTime] = useState('');
-  const [viewTrip, setViewTrip] = useState<any | null>(null);
+  const [viewTrip, setViewTrip] = useState(null);
 
   const filtered = TRIPS.filter(trip =>
     (trip.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -52,83 +52,108 @@ export default function TripHistoryPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#e6f2fa] px-4 py-8">
+    <main className="min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] px-4 py-10">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-extrabold mb-8" style={{ color: '#0872B3' }}>Trip History</h1>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-          <div className="flex gap-2 w-full md:w-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-8">
+          <Car className="w-8 h-8 text-[#0872B3]" />
+          <h1 className="text-3xl font-extrabold text-[#0872B3] tracking-tight">Trip History</h1>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search trips..."
-              className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white w-full md:w-64"
+              className="rounded-lg border border-gray-300 px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white w-full sm:w-64 shadow-sm"
             />
-            <select
-              className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white"
-              value={status}
-              onChange={e => setStatus(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-            <select
-              className="rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-            >
-              <option value="">All Time</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-            </select>
+            <div className="relative w-full sm:w-44">
+              <select
+                className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-2.5 text-base bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] transition"
+                value={status}
+                onChange={e => setStatus(e.target.value)}
+              >
+                <option value="">All Status</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+            </div>
+            <div className="relative w-full sm:w-40">
+              <select
+                className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-2.5 text-base bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] transition"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+              >
+                <option value="">All Time</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+            </div>
           </div>
           <button
-            className="px-4 py-2 rounded bg-[#0872B3] text-white font-semibold hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#0872B3] text-white font-semibold shadow hover:bg-blue-700 transition-colors text-base"
             onClick={() => exportCSV(filtered)}
             type="button"
           >
+            <span className="inline-flex items-center justify-center bg-white/20 rounded-full p-1">
+              <Download className="w-5 h-5" />
+            </span>
             Export
           </button>
         </div>
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10">
+
+        {/* Table */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-x-auto">
+          <table className="min-w-full text-[15px]">
+            <thead className="sticky top-0 z-10 shadow-sm">
               <tr className="bg-[#0872B3] text-white">
-                <th className="px-4 py-2 text-left font-semibold">Trip ID</th>
-                <th className="px-4 py-2 text-left font-semibold">Date</th>
-                <th className="px-4 py-2 text-left font-semibold">Purpose</th>
-                <th className="px-4 py-2 text-left font-semibold">Destination</th>
-                <th className="px-4 py-2 text-left font-semibold">Status</th>
-                <th className="px-4 py-2 text-left font-semibold">Driver</th>
-                <th className="px-4 py-2 text-left font-semibold">Vehicle</th>
-                <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                <th className="px-6 py-4 text-left font-semibold">Trip ID</th>
+                <th className="px-6 py-4 text-left font-semibold">Date</th>
+                <th className="px-6 py-4 text-left font-semibold">Purpose</th>
+                <th className="px-6 py-4 text-left font-semibold">Destination</th>
+                <th className="px-6 py-4 text-left font-semibold">Status</th>
+                <th className="px-6 py-4 text-left font-semibold">Driver</th>
+                <th className="px-6 py-4 text-left font-semibold">Vehicle</th>
+                <th className="px-6 py-4 text-left font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-gray-400">No trips found.</td>
+                  <td colSpan={8} className="text-center py-12 text-gray-400 text-lg">No trips found.</td>
                 </tr>
               ) : (
                 filtered.map((trip, idx) => (
                   <tr
                     key={trip.id}
-                    className={
-                      (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') +
-                      ' hover:bg-[#e6f2fa] transition-colors'
-                    }
+                    className={`
+                      ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      hover:bg-blue-50/70
+                      transition-colors
+                      duration-150
+                      rounded-lg
+                    `}
+                    style={{ height: "64px" }}
                   >
-                    <td className="px-4 py-2 font-mono">{trip.id}</td>
-                    <td className="px-4 py-2">{trip.date}</td>
-                    <td className="px-4 py-2">{trip.purpose}</td>
-                    <td className="px-4 py-2">{trip.destination}</td>
-                    <td className="px-4 py-2">{statusBadge(trip.status)}</td>
-                    <td className="px-4 py-2">{trip.driver}</td>
-                    <td className="px-4 py-2">{trip.vehicle}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-6 py-4 font-mono">{trip.id}</td>
+                    <td className="px-6 py-4">{trip.date}</td>
+                    <td className="px-6 py-4">{trip.purpose}</td>
+                    <td className="px-6 py-4">{trip.destination}</td>
+                    <td className="px-6 py-4">{statusBadge(trip.status)}</td>
+                    <td className="px-6 py-4">{trip.driver}</td>
+                    <td className="px-6 py-4">{trip.vehicle}</td>
+                    <td className="px-6 py-4">
                       <button
-                        className="p-1 rounded hover:bg-[#e6f2fa]"
+                        className="p-2 rounded hover:bg-blue-100 transition"
                         title="View Details"
                         aria-label="View Details"
                         onClick={() => setViewTrip(trip)}
@@ -142,6 +167,7 @@ export default function TripHistoryPage() {
             </tbody>
           </table>
         </div>
+
         {/* Modal for trip details */}
         {viewTrip && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
@@ -153,13 +179,13 @@ export default function TripHistoryPage() {
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
-              <h2 className="text-xl font-bold mb-4" style={{ color: '#0872B3' }}>Trip Details</h2>
-              <div className="space-y-2 text-sm">
+              <h2 className="text-xl font-bold mb-4 text-[#0872B3]">Trip Details</h2>
+              <div className="space-y-2 text-base">
                 <div><span className="font-semibold">Trip ID:</span> {viewTrip.id}</div>
                 <div><span className="font-semibold">Date:</span> {viewTrip.date}</div>
                 <div><span className="font-semibold">Purpose:</span> {viewTrip.purpose}</div>
                 <div><span className="font-semibold">Destination:</span> {viewTrip.destination}</div>
-                <div><span className="font-semibold">Status:</span> {viewTrip.status}</div>
+                <div><span className="font-semibold">Status:</span> {statusBadge(viewTrip.status)}</div>
                 <div><span className="font-semibold">Driver:</span> {viewTrip.driver}</div>
                 <div><span className="font-semibold">Vehicle:</span> {viewTrip.vehicle}</div>
               </div>

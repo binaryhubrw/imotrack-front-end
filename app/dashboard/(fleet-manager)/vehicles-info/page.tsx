@@ -15,7 +15,6 @@ import {
   MapPin
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const VehiclesDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -145,7 +144,7 @@ const VehiclesDashboard = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Vehicles</h1>
               <p className="text-gray-600">Manage your fleet vehicles and track their status</p>
             </div>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <button className="cursor-pointer bg-[#0872B3] hover:bg-[#0872B3] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
               <Plus size={20} />
               Add Vehicle
             </button>
