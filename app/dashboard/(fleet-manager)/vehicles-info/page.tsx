@@ -110,16 +110,6 @@ const VehiclesDashboard = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentVehicles = filteredVehicles.slice(startIndex, endIndex);
 
-  // Mock data for mileage trends
-  const mileageTrends = [
-    { month: 'Jan', averageMileage: 12000 },
-    { month: 'Feb', averageMileage: 15000 },
-    { month: 'Mar', averageMileage: 18500 },
-    { month: 'Apr', averageMileage: 22000 },
-    { month: 'May', averageMileage: 25000 },
-    { month: 'Jun', averageMileage: 28000 },
-  ];
-
  
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
