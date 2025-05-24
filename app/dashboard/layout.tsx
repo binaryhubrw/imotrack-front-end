@@ -16,6 +16,7 @@ import {
   faBell,
   faDashboard,
   faPeopleGroup,
+  faCodePullRequest,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -110,6 +111,11 @@ export default function DashboardLayout({
         href: "/dashboard/issue-management",
         label: "Issue Management",
         icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
+      },
+       {
+        href: "/dashboard/request-management",
+        label: "Request Management",
+        icon: <FontAwesomeIcon icon={faCodePullRequest} />,
       },
       {
         href: "/dashboard/request-overview",
