@@ -21,7 +21,7 @@ export default function Footer() {
       <footer className="bg-[#0872b3] text-white mt-0 pt-8">
         <div className="max-w-6xl mx-auto py-12 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h4 className="font-bold text-lg mb-2">Imotrack</h4>
+            <h4 className="font-bold text-lg mb-2">imotrak</h4>
             <p>Binary Hub</p>
             <div className="flex gap-4 mt-4">
               <a href="#">
@@ -106,7 +106,7 @@ export default function Footer() {
           </div>
         </div>
         <div className=" text-white text-center py-4">
-          <p>&copy; 2025 Binary Hub - Imotrack. All rights reserved.</p>
+          <p>&copy; 2025 Binary Hub - imotrak. All rights reserved.</p>
         </div>
       </footer>
     </div>
