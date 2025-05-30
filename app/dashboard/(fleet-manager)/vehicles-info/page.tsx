@@ -188,9 +188,6 @@ const VehiclesDashboard = () => {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Location
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -241,40 +238,6 @@ const VehiclesDashboard = () => {
                       <div className="flex items-center text-sm text-gray-900">
                         <MapPin className="mr-1 text-gray-400" size={16} />
                         {vehicle.location}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('View vehicle:', vehicle.id);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 p-1"
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('Edit vehicle:', vehicle.id);
-                          }}
-                          className="text-gray-600 hover:text-gray-800 p-1"
-                          title="Edit Vehicle"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log('Delete vehicle:', vehicle.id);
-                          }}
-                          className="text-red-600 hover:text-red-800 p-1"
-                          title="Delete Vehicle"
-                        >
-                          <Trash2 size={16} />
-                        </button>
                       </div>
                     </td>
                   </tr>
