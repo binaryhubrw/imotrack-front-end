@@ -57,14 +57,14 @@ export default function LoginPage() {
         <div className="text-center px-8 pt-8 pb-4 bg-white">
           <Image
             src="/logo/logo.png"
-            alt="Imotrack Logo"
+            alt="Imotrak Logo"
             width={80}
             height={80}
             className="mx-auto mb-4"
             priority
           />
           <h1 className="text-2xl font-bold text-[#0872b3] mb-2">
-            Imotrack System
+            Imotrak System
           </h1>
         </div>
         {/* Login Form */}
@@ -148,7 +148,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center py-4 bg-[#f8f9fa] border-t border-[#0872b3]/20">
           <p className="text-[#0872b3] text-sm m-0">
-            &copy; {new Date().getFullYear()} Imotrack - Imotrack System
+            &copy; {new Date().getFullYear()} Imotrak - Imotrak System
           </p>
         </div>
       </div>

@@ -18,7 +18,7 @@ export default function HomePage() {
           <div className="text-6xl text-[#0872b3] mb-6 animate-pulse">
             <FontAwesomeIcon icon={faTruckMoving} />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#0872b3]">imotrak</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#0872b3]">Imotrak</h1>
           <p className="text-lg mb-8 text-[#0872b3]">Streamline your fleet operations with real-time tracking and comprehensive management tools</p>
              <div className="flex justify-center gap-4 ">
             <Button className=" bg-[#0872b3] text-white hover:bg-white hover:text-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer ">
@@ -105,7 +105,7 @@ export default function HomePage() {
       {/* Benefits Section */}
       <section id="benefits" className="py-20 px-[5%] bg-white">
         <h2 className="text-3xl font-bold text-center mb-12 flex items-center justify-center gap-2 text-[#0872b3]">
-          <FontAwesomeIcon icon={faStar} /> Why Choose imotrak?
+          <FontAwesomeIcon icon={faStar} /> Why Choose Imotrak?
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {/* Benefit 1 */}

@@ -22,13 +22,13 @@ export default function Navbar() {
           <Link href={"/"}>
             <Image
               src="/logo/logo.png"
-              alt="imotrak Logo"
+              alt="Imotrak Logo"
               width={60}
               height={60}
               className="h-15 w-auto"
             />
           </Link>
-          <span className="text-xl font-bold text-[#0872b3]">imotrak</span>
+          <span className="text-xl font-bold text-[#0872b3]">Imotrak</span>
         </div>
         <ul
           className={`md:flex gap-8 list-none transition-all ${

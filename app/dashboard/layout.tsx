@@ -112,16 +112,16 @@ export default function DashboardLayout({
         label: "Issue Management",
         icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
       },
-       {
-        href: "/dashboard/request-management",
-        label: "Request Management",
-        icon: <FontAwesomeIcon icon={faCodePullRequest} />,
-      },
       {
         href: "/dashboard/request-overview",
         label: "Request Overview",
         icon: <FontAwesomeIcon icon={faPieChart} />,
       },
+           {
+        href: "/dashboard/request-management",
+        label: "Request Management",
+        icon: <FontAwesomeIcon icon={faCodePullRequest} />,
+      }
     ];
 
     const staffItems: NavItem[] = [

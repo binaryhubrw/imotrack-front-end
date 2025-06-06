@@ -95,7 +95,7 @@ export default function AddOrganizationPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-8">
+    <main className="min-h-screen bg-gradient-to-br bg-gray-50 px-4 py-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">

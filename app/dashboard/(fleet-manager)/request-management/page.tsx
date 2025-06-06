@@ -1,6 +1,9 @@
+'use client'
 import { Check, X, Filter, Calendar, User, MapPin, Users, Car, Fuel } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export default function VehicleRequestPage() {
+  const router = useRouter()
   return (
     <div className="container mx-auto py-10 max-w-5xl bg-gray-50 min-h-screen px-4">
       {/* Filter Card */}
@@ -40,7 +43,7 @@ export default function VehicleRequestPage() {
           <input
             type="search"
             placeholder="Search by name or ID"
-            className="h-9 px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
+            className="h-9 mt-5 px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </section>
@@ -157,6 +160,7 @@ export default function VehicleRequestPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-4 mt-6">
           <button
+          onClick={() => router.push('/dashboard/request-overview')}
             className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 focus:ring-2 focus:ring-green-400 transition"
             title="Approve this request"
           >

@@ -79,7 +79,7 @@ export default function AddUserStaffPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#e6f2fa] px-4 py-8">
+    <main className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#0872B3]">Organization Users</h1>

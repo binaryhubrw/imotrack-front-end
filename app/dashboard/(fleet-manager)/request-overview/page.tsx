@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UserPlus, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 function statusBadge(status) {
   const base = "inline-block px-3 py-1 text-xs font-semibold rounded-full";
@@ -29,6 +30,7 @@ export default function RecentRequests() {
   const departments = ["All Departments", ...Array.from(new Set(requests.map(r => r.department)))];
   const statuses = ["All Status", "Pending", "Approved", "Declined"];
 
+  const router = useRouter()
   return (
     <div className="p-4 min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] w-full">
       {/* Remove max-w-3xl and mx-auto to allow full width */}
@@ -93,10 +95,11 @@ export default function RecentRequests() {
                 ) : (
                   filtered.map((request, idx) => (
                     <tr
+                    onClick={() => router.push('/dashboard/request-management')} 
                       key={request.id}
                       className={`
                         ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                        hover:bg-blue-50/70 transition-colors duration-150
+                        hover:bg-blue-50/70 transition-colors cursor-pointer duration-150
                       `}
                       style={{ height: "56px" }}
                     >
