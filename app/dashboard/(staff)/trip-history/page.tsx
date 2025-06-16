@@ -168,37 +168,7 @@ export default function TripHistoryPage() {
           </table>
         </div>
 
-        {/* Modal for trip details */}
-        {viewTrip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-            <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md relative animate-fade-in">
-              <button
-                className="absolute top-3 right-3 p-1 rounded hover:bg-gray-100"
-                onClick={() => setViewTrip(null)}
-                aria-label="Close"
-              >
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-              <h2 className="text-xl font-bold mb-4 text-[#0872B3]">Trip Details</h2>
-              <div className="space-y-2 text-base">
-                <div><span className="font-semibold">Trip ID:</span> {viewTrip.id}</div>
-                <div><span className="font-semibold">Date:</span> {viewTrip.date}</div>
-                <div><span className="font-semibold">Purpose:</span> {viewTrip.purpose}</div>
-                <div><span className="font-semibold">Destination:</span> {viewTrip.destination}</div>
-                <div><span className="font-semibold">Status:</span> {statusBadge(viewTrip.status)}</div>
-                <div><span className="font-semibold">Driver:</span> {viewTrip.driver}</div>
-                <div><span className="font-semibold">Vehicle:</span> {viewTrip.vehicle}</div>
-              </div>
-            </div>
-            <style jsx global>{`
-              @keyframes fade-in {
-                from { opacity: 0; transform: translateY(16px); }
-                to { opacity: 1; transform: none; }
-              }
-              .animate-fade-in { animation: fade-in 0.5s cubic-bezier(.4,0,.2,1) both; }
-            `}</style>
-          </div>
-        )}
+      
       </div>
     </main>
   );
