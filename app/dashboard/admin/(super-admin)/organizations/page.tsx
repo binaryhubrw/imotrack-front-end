@@ -95,18 +95,18 @@ export default function OrganizationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br bg-gray-50 px-4 py-8">
+    <main className="min-h-screen bg-gradient-to-br bg-gray-50 px-2 sm:px-4 py-6 sm:py-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-          <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">
             Organizations
           </h1>
-          <div className="flex items-center gap-4">
-            <div className="relative group">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="relative group w-full sm:w-64">
               <input
                 type="text"
                 placeholder="Search organizations..."
-                className="w-64 rounded-lg border border-gray-200 px-4 py-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white/80 backdrop-blur-sm transition-all duration-200 group-hover:bg-white"
+                className="w-full rounded-lg border border-gray-200 px-4 py-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white/80 backdrop-blur-sm transition-all duration-200 group-hover:bg-white"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
@@ -116,79 +116,77 @@ export default function OrganizationsPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleAddClick}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#0872B3] to-blue-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-sm font-semibold"
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#0872B3] to-blue-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-sm font-semibold w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" /> Add Organization
             </motion.button>
           </div>
         </div>
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50/80 backdrop-blur-sm">
-                <tr className="text-gray-600">
-                  <th className="px-6 py-5 text-left font-semibold">ID</th>
-                  <th className="px-6 py-5 text-left font-semibold">Name</th>
-                  <th className="px-6 py-5 text-left font-semibold">Email</th>
-                  <th className="px-6 py-5 text-left font-semibold">Phone</th>
-                  <th className="px-6 py-5 text-left font-semibold">Address</th>
-                  <th className="px-6 py-5 text-left font-semibold">Status</th>
-                  <th className="px-6 py-5 text-left font-semibold">Actions</th>
+        <div className="overflow-x-auto rounded-lg shadow-md bg-white">
+          <table className="min-w-[700px] w-full text-sm">
+            <thead className="bg-gray-50/80 backdrop-blur-sm">
+              <tr className="text-gray-600">
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">ID</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Name</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Email</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Phone</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Address</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Status</th>
+                <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredOrganizations.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    No organizations found.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredOrganizations.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                      No organizations found.
+              ) : (
+                filteredOrganizations.map((org, idx) => (
+                  <motion.tr 
+                    onClick={() => router.push(`/dashboard/admin/organizations/${org.id}`)}
+                    key={org.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="group hover:bg-gray-50/50 cursor-pointer transition-colors duration-200"
+                  >
+                    <td className="px-4 py-4 font-mono text-gray-600">{org.customId}</td>
+                    <td className="px-4 py-4 font-medium text-gray-900">{org.name}</td>
+                    <td className="px-4 py-4 text-gray-600">{org.email}</td>
+                    <td className="px-4 py-4 text-gray-600">{org.phone}</td>
+                    <td className="px-4 py-4 text-gray-600">{org.address}</td>
+                    <td className="px-4 py-4 text-gray-600">{org.status}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={e => { e.stopPropagation(); handleEditClick(org); }}
+                          className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" 
+                          aria-label="Edit" 
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={e => { e.stopPropagation(); handleDeleteClick(org.id); }}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors" 
+                          aria-label="Delete" 
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
                     </td>
-                  </tr>
-                ) : (
-                  filteredOrganizations.map((org, idx) => (
-                    <motion.tr 
-                      onClick={() => router.push(`/dashboard/admin/organizations/${org.id}`)}
-                      key={org.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="group hover:bg-gray-50/50 cursor-pointer transition-colors duration-200"
-                    >
-                      <td className="px-6 py-4 font-mono text-gray-600">{org.customId}</td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{org.name}</td>
-                      <td className="px-6 py-4 text-gray-600">{org.email}</td>
-                      <td className="px-6 py-4 text-gray-600">{org.phone}</td>
-                      <td className="px-6 py-4 text-gray-600">{org.address}</td>
-                      <td className="px-6 py-4 text-gray-600">{org.status}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <motion.button 
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={e => { e.stopPropagation(); handleEditClick(org); }}
-                            className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" 
-                            aria-label="Edit" 
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </motion.button>
-                          <motion.button 
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={e => { e.stopPropagation(); handleDeleteClick(org.id); }}
-                            className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors" 
-                            aria-label="Delete" 
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </motion.button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </motion.tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -218,14 +216,14 @@ export default function OrganizationsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-8 z-50"
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 my-12"
+              className="bg-white rounded-xl p-4 sm:p-8 max-w-md w-full shadow-2xl border border-gray-100 my-12"
             >
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
                 <h2 className="text-2xl font-bold text-[#0872B3]">Confirm Delete</h2>
@@ -305,14 +303,14 @@ function OrganizationModal({
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 z-50"
+    className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-8 z-50"
   >
     <motion.div 
       initial={{ scale: 0.95, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       exit={{ scale: 0.95, opacity: 0, y: 20 }}
       transition={{ type: 'spring', duration: 0.5 }}
-      className="bg-white rounded-xl p-8 max-w-xl w-full shadow-2xl border border-gray-100 my-6 md:my-12 overflow-y-auto max-h-[90vh]"
+      className="bg-white rounded-xl p-4 sm:p-8 max-w-xl w-full shadow-2xl border border-gray-100 my-4 sm:my-6 md:my-12 overflow-y-auto max-h-[90vh]"
     >
       <div className="flex justify-between items-center mb-8 pb-2">
         <h2 className="text-2xl font-bold text-gray-900">

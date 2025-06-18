@@ -135,28 +135,28 @@ export default function SuperAdminDashboard() {
   const activeAlerts = 12;
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <main className="min-h-screen bg-gray-50 p-2 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Stats Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Users Card */}
           <Link href="/dashboard/admin/users">
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 transition hover:shadow-xl hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Total Users</p>
-                  <h3 className="text-2xl font-bold text-gray-800 mt-1">
+                  <p className="text-gray-500 text-xs sm:text-sm">Total Users</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
                     {totalUsers}
                   </h3>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-green-500 text-sm ml-1">
+                    <span className="text-green-500 text-xs sm:text-sm ml-1">
                       +{userGrowth}% this month
                     </span>
                   </div>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <Users className="w-6 h-6 text-[#0872B3]" />
+                <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-[#0872B3]" />
                 </div>
               </div>
             </div>
@@ -164,22 +164,22 @@ export default function SuperAdminDashboard() {
 
           {/* Organizations Card */}
           <Link href="/dashboard/admin/organizations">
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 transition hover:shadow-xl hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Total Organizations</p>
-                  <h3 className="text-2xl font-bold text-gray-800 mt-1">
+                  <p className="text-gray-500 text-xs sm:text-sm">Total Organizations</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
                     {totalOrganizations}
                   </h3>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-green-500 text-sm ml-1">
+                    <span className="text-green-500 text-xs sm:text-sm ml-1">
                       +{orgGrowth}% this month
                     </span>
                   </div>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <Building2 className="w-6 h-6 text-[#0872B3]" />
+                <div className="bg-blue-100 p-2 sm:p-3 rounded-full">
+                  <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-[#0872B3]" />
                 </div>
               </div>
             </div>
@@ -187,13 +187,13 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* User Growth Chart */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
               User Growth Trend
             </h3>
-            <div className="h-64">
+            <div className="h-56 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={userGrowthData}
@@ -233,11 +233,11 @@ export default function SuperAdminDashboard() {
           </div>
 
           {/* Organization Distribution Chart */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
               Organization Distribution
             </h3>
-            <div className="h-64">
+            <div className="h-56 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={orgDistributionData}
@@ -271,21 +271,21 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* User Role Distribution and System Alerts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* User Role Distribution */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">
               User Role Distribution
             </h3>
-            <div className="h-64">
+            <div className="h-56 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={userRoleData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
+                    innerRadius={40}
+                    outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
                   >
@@ -317,13 +317,13 @@ export default function SuperAdminDashboard() {
           </div>
 
           {/* System Alerts */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-800">
                 System Alerts
               </h3>
               <div className="bg-red-100 px-3 py-1 rounded-full">
-                <span className="text-red-600 text-sm font-medium">
+                <span className="text-red-600 text-xs sm:text-sm font-medium">
                   {activeAlerts} active
                 </span>
               </div>
@@ -345,7 +345,7 @@ export default function SuperAdminDashboard() {
                     <Shield className="w-4 h-4 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-xs sm:text-sm font-medium text-gray-800">
                       {alert.message}
                     </p>
                     <p className="text-xs text-gray-500">{alert.type} Alert</p>
