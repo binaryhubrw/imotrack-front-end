@@ -152,12 +152,13 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+        {sidebarOpen && (
+      <div
+        className="fixed inset-0 z-30 bg-transparent bg-opacity-50 md:hidden"
+        onClick={() => setSidebarOpen(false)}
+      />
+    )}
+
 
       {/* Sidebar */}
       <aside
