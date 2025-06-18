@@ -17,16 +17,19 @@ export const UpdateOrganizationDtoSchema = CreateOrganizationDtoSchema.partial()
 
 // USER
 export const CreateUserDtoSchema = z.object({
-  organization_id: z.string().min(1),
-  username: z.string().min(1),
-  password: z.string().min(6),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
   email: z.string().email(),
-  full_name: z.string().min(1),
   phone: z.string().optional(),
-  role_id: z.string().min(1),
+  nid: z.string().min(1),
+  gender: z.enum(['Male', 'Female']),
+  dob: z.string().min(1), // Assuming DOB is sent as a string (e.g., YYYY-MM-DD)
+  role: z.string().min(1),
+  organizationId: z.string().min(1),
+  streetAddress: z.string().min(1),
 });
-export const UpdateUserDtoSchema = CreateUserDtoSchema.omit({ password: true }).partial().extend({
-  password: z.string().min(6).optional(),
+export const UpdateUserDtoSchema = CreateUserDtoSchema.partial().extend({
+  password: z.string().min(6).optional(), // Keep password optional for updates if needed
   status: UserStatusEnum.optional(),
 });
 
@@ -130,7 +133,7 @@ export const UpdateReportDtoSchema = z.object({
 
 // AUTH
 export const LoginCredentialsSchema = z.object({
-  username: z.string().min(1),
+  email: z.string().email(),
   password: z.string().min(6),
 });
 export const ChangePasswordDtoSchema = z.object({

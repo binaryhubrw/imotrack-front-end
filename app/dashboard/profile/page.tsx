@@ -1,286 +1,155 @@
-/* eslint-disable @typescript-eslint/no-wrapper-object-types */
-"use client";
+'use client';
 
-import { useState } from "react";
-
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
-import {
-  faUser,
-  faEnvelope,
-  faPhone,
-  faBell,
+import { useAuth } from '@/hooks/useAuth';
+import { useUserDetails } from '@/lib/queries';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faUser, 
+  faEnvelope, 
+  faBuilding, 
   faShieldAlt,
-  faCamera,
-} from "@fortawesome/free-solid-svg-icons";
-import { Switch } from "@/components/ui/switch";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+  faPhone,
+  faCalendarAlt,
+  faIdCard,
+  faVenusMars,
+  faMapMarkerAlt
+} from '@fortawesome/free-solid-svg-icons';
 
-type StaffProfile = {
-  fullName: string;
 
-  email: string;
 
-  phoneNumber: string;
+export default function ProfilePage() {
+  const { user: authUser } = useAuth();
+  const { data: userDetails, isLoading, error } = useUserDetails(authUser?.id || '');
 
-  photoUrl?: string;
-};
+  if (!authUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">Not authenticated</div>
+      </div>
+    );
+  }
 
-type PasswordUpdate = {
-  currentPassword: string;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0872b3]"></div>
+      </div>
+    );
+  }
 
-  newPassword: string;
+  if (error) {
+    console.error('Profile loading error:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">Error loading profile: {error.message}</div>
+      </div>
+    );
+  }
 
-  confirmNewPassword: string;
-};
-
-type NotificationPreferences = {
-  email: Boolean;
-
-  sms: Boolean;
-
-  system: Boolean;
-
-  maintenance: Boolean;
-};
-
-export default function StaffSettings() {
-  const [profile, setProfile] = useState<StaffProfile>({
-    fullName: "Staff Admin",
-
-    email: "admin@sigaurc.rw",
-
-    phoneNumber: "+250 788 123 456",
-  });
-
-  const [password, setPassword] = useState<PasswordUpdate>({
-    currentPassword: "",
-
-    newPassword: "",
-
-    confirmNewPassword: "",
-  });
-
-  const [notifications, setNotifications] = useState<NotificationPreferences>({
-    email: true,
-
-    sms: true,
-
-    system: true,
-
-    maintenance: true,
-  });
-
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfile({ ...profile, [e.target.name]: e.target.value });
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
   };
 
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword({ ...password, [e.target.name]: e.target.value });
-  };
+  // Basic profile items (from auth token)
+  const basicItems = [
+    {
+      icon: faUser,
+      label: 'User ID',
+      value: authUser.id,
+    },
+    {
+      icon: faEnvelope,
+      label: 'Email',
+      value: authUser.email,
+    },
+    {
+      icon: faShieldAlt,
+      label: 'Role',
+      value: authUser.role,
+    },
+    {
+      icon: faBuilding,
+      label: 'Organization ID',
+      value: authUser.organization_id,
+    },
+  ];
 
-  const handleNotificationToggle = (name: keyof NotificationPreferences) => {
-    setNotifications((prev) => ({ ...prev, [name]: !prev[name] }));
-  };
-
-  const handleSubmit = () => {
-    // Save logic here
-
-    console.log({ profile, password, notifications });
-
-    toast.success("Settings updated successfully");
-  };
+  // Extended profile items (from users API)
+  const extendedItems = userDetails ? [
+    {
+      icon: faUser,
+      label: 'Full Name',
+      value: `${userDetails.first_name} ${userDetails.last_name}`,
+    },
+    {
+      icon: faPhone,
+      label: 'Phone',
+      value: userDetails.phone || 'N/A',
+    },
+    {
+      icon: faCalendarAlt,
+      label: 'Date of Birth',
+      value: formatDate(userDetails.dob),
+    },
+    {
+      icon: faIdCard,
+      label: 'NID',
+      value: userDetails.nid,
+    },
+    {
+      icon: faVenusMars,
+      label: 'Gender',
+      value: userDetails.gender,
+    },
+    {
+      icon: faMapMarkerAlt,
+      label: 'Address',
+      value: userDetails.street_address,
+    },
+  ] : [];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Staff Settings</h1>
-
-        <div className="flex gap-3">
-          <Button variant="outline" className="px-6">
-            Cancel
-          </Button>
-
-          <Button
-            onClick={handleSubmit}
-            className="px-6 bg-blue-600 hover:bg-blue-700"
-          >
-            Save Changes
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Column - Profile */}
-
-        <div className="md:col-span-1">
-          <Card className="p-6">
-            <div className="flex flex-col items-center">
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center">
-                  <FontAwesomeIcon
-                    icon={faUser}
-                    className="text-4xl text-gray-400"
-                  />
-                </div>
-
-                <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors">
-                  <FontAwesomeIcon icon={faCamera} className="text-sm" />
-                </button>
-              </div>
-
-              <h2 className="mt-4 text-xl font-semibold">{profile.fullName}</h2>
-
-              <p className="text-gray-500">{profile.email}</p>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column - Settings */}
-
-        <div className="md:col-span-2 space-y-6">
-          {/* Profile Information */}
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Profile Information</h3>
-
-            <div className="space-y-4">
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faUser}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  name="fullName"
-                  value={profile.fullName}
-                  onChange={handleProfileChange}
-                  placeholder="Full Name"
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faEnvelope}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  name="email"
-                  value={profile.email}
-                  onChange={handleProfileChange}
-                  placeholder="Email"
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faPhone}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  name="phoneNumber"
-                  value={profile.phoneNumber}
-                  onChange={handleProfileChange}
-                  placeholder="Phone Number"
-                  className="pl-10"
-                />
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          {/* Profile Header */}
+          <div className="px-4 py-5 sm:px-6 bg-[#0872b3] text-white">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg leading-6 font-medium">Profile Information</h3>
+              <div className="text-sm bg-white/20 px-3 py-1 rounded-full capitalize">
+                {authUser.role}
               </div>
             </div>
-          </Card>
+            <p className="mt-1 max-w-2xl text-sm text-white/80">
+              Personal details and account information
+            </p>
+          </div>
 
-          {/* Security Settings */}
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Security Settings</h3>
-
-            <div className="space-y-4">
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faShieldAlt}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  type="password"
-                  name="currentPassword"
-                  value={password.currentPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Current Password"
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faShieldAlt}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  type="password"
-                  name="newPassword"
-                  value={password.newPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="New Password"
-                  className="pl-10"
-                />
-              </div>
-
-              <div className="relative">
-                <FontAwesomeIcon
-                  icon={faShieldAlt}
-                  className="absolute left-3 top-3 text-gray-400"
-                />
-
-                <Input
-                  type="password"
-                  name="confirmNewPassword"
-                  value={password.confirmNewPassword}
-                  onChange={handlePasswordChange}
-                  placeholder="Confirm New Password"
-                  className="pl-10"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* Notification Preferences */}
-
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <FontAwesomeIcon icon={faBell} className="text-gray-400" />
-
-              <h3 className="text-lg font-semibold">
-                Notification Preferences
-              </h3>
-            </div>
-
-            <div className="space-y-4">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-gray-700 capitalize">
-                    {key.replace(/([A-Z])/g, " $1")} Notifications
-                  </span>
-
-                  <Switch
-                    checked={value}
-                    onCheckedChange={() =>
-                      handleNotificationToggle(
-                        key as keyof NotificationPreferences
-                      )
-                    }
-                  />
+          {/* Profile Content */}
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+              {/* Basic Items */}
+              {basicItems.map((item, index) => (
+                <div key={index} className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <FontAwesomeIcon icon={item.icon} /> {item.label}
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">{item.value}</dd>
                 </div>
               ))}
-            </div>
-          </Card>
+
+              {/* Extended Items */}
+              {extendedItems.map((item, index) => (
+                <div key={index} className="sm:col-span-1">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <FontAwesomeIcon icon={item.icon} /> {item.label}
+                  </dt>
+                  <dd className="mt-1 text-sm text-gray-900">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
       </div>
     </div>

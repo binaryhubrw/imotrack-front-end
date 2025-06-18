@@ -1,63 +1,96 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import SuperAdminDashboard from '@/components/dashboard/SuperAdminDashboard';
-import StaffDashboard from '@/components/dashboard/StaffDashboard';
-import FleetManagerDashboard from '@/components/dashboard/FleetManagerDashboard';
-import StaffAdminDashboard from '@/components/dashboard/StaffAdminDashboard';
+import { useAuth } from '@/hooks/useAuth';
+import {
+  faUsers,
+  faCar,
+  faClipboardList,
+  faChartLine,
+} from '@fortawesome/free-solid-svg-icons';
+
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<{ role?: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) {
-      router.push('/login');
-      return;
+    if (user) {
+      switch (user.role) {
+        case 'admin':
+          router.push('/dashboard/admin');
+          break;
+        case 'fleetmanager':
+          router.push('/dashboard/fleet-manager');
+          break;
+        case 'hr':
+          router.push('/dashboard/hr');
+          break;
+        case 'staff':
+          router.push('/dashboard/staff');
+          break;
+        default:
+          router.push('/dashboard/staff');
+      }
     }
-    try {
-      setUser(JSON.parse(stored));
-    } catch {
-      router.push('/login');
-    } finally {
-      setLoading(false);
+  }, [user, router]);
+
+  const getRoleSpecificContent = () => {
+    switch (user?.role) {
+      case 'admin':
+        return {
+          title: 'Admin Dashboard',
+          stats: [
+            { label: 'Total Users', value: '150', icon: faUsers },
+            { label: 'Active Vehicles', value: '45', icon: faCar },
+            { label: 'Pending Requests', value: '12', icon: faClipboardList },
+            { label: 'System Health', value: '98%', icon: faChartLine },
+          ],
+        };
+      case 'fleetmanager':
+        return {
+          title: 'Fleet Manager Dashboard',
+          stats: [
+            { label: 'Available Vehicles', value: '25', icon: faCar },
+            { label: 'Active Trips', value: '8', icon: faClipboardList },
+            { label: 'Maintenance Due', value: '5', icon: faCar },
+            { label: 'Fuel Usage', value: '1,200L', icon: faChartLine },
+          ],
+        };
+      case 'hr':
+        return {
+          title: 'HR Dashboard',
+          stats: [
+            { label: 'Total Staff', value: '75', icon: faUsers },
+            { label: 'Active Staff', value: '68', icon: faUsers },
+            { label: 'Leave Requests', value: '15', icon: faClipboardList },
+            { label: 'Training Programs', value: '4', icon: faChartLine },
+          ],
+        };
+      case 'staff':
+        return {
+          title: 'Staff Dashboard',
+          stats: [
+            { label: 'My Requests', value: '3', icon: faClipboardList },
+            { label: 'Available Vehicles', value: '12', icon: faCar },
+            { label: 'Upcoming Trips', value: '2', icon: faClipboardList },
+            { label: 'Recent Activities', value: '5', icon: faChartLine },
+          ],
+        };
+      default:
+        return {
+          title: 'Dashboard',
+          stats: [],
+        };
     }
-  }, [router]);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg">Loading dashboard...</div>
-        </div>
-      </div>
-    );
-  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { title, stats } = getRoleSpecificContent();
 
-  if (!user || !user.role) {
-    return null;
-  }
-
-  //admin,fleet-manager,staff,staff-admin
-  switch (user.role.toLowerCase()) {
-    case 'super-admin':
-      return <SuperAdminDashboard />;
-    case 'staff':
-      return <StaffDashboard />;
-    case 'fleet-manager':
-      return <FleetManagerDashboard />;
-    case 'staff-admin':
-      return <StaffAdminDashboard />;
-    default:
-      return (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Access Denied</h1>
-            <p className="mt-2 text-gray-600">You don&apos;t have permission to access this dashboard.</p>
-          </div>
-        </div>
-      );
-  }
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  );
 }

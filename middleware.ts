@@ -1,26 +1,21 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
-// Mock getToken: reads a fake "token" from cookies for demonstration
-function getToken(req: NextRequest) {
-  // For real apps, use cookies or headers. For mock/dev, use a query param or a fake cookie.
-  const cookie = req.cookies.get('role')?.value;
-  if (!cookie) return null;
-  // Example: cookie value = "admin", "fleet-manager", "staff", "driver"
-  return { role: cookie };
-}
+// Public routes that don't require authentication
+const publicPaths = ['/', '/login', '/api/auth'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes
-  const publicPaths = ['/', '/login', '/api/auth'];
-  if (publicPaths.includes(pathname)) {
+  // Allow public routes
+  if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  const token = getToken(request);
+  // Get token from cookie
+  const token = request.cookies.get('token')?.value;
 
   // Not authenticated: redirect to login
   if (!token) {
@@ -29,25 +24,59 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Role-based protection
-  // Example: Only allow admin to access /admin, fleet-manager to /fleet, etc.
-  if (pathname.startsWith('/admin') && token.role !== 'super-admin' && token.role !== 'super-admin') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  if (pathname.startsWith('/fleet') && token.role !== 'fleet-manager') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  if (pathname.startsWith('/staff') && token.role !== 'staff' && token.role !== 'staff-admin') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  if (pathname.startsWith('/driver') && token.role !== 'driver') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  try {
+    // Verify token using the same secret as the backend
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'Secret_key!809');
+    const { payload } = await jwtVerify(token, secret);
+    
+    // Role-based protection
+    const userRole = payload.role as string;
+    
+    // If trying to access login page while authenticated, redirect to dashboard
+    if (pathname === '/login') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
 
-  // All good
-  return NextResponse.next();
+    // Admin routes
+    if (pathname.startsWith('/admin') && userRole !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // HR routes
+    if (pathname.startsWith('/hr') && userRole !== 'hr') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // Staff routes
+    if (pathname.startsWith('/staff') && userRole !== 'staff') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // Fleet Manager routes
+    if (pathname.startsWith('/fleet') && userRole !== 'fleetmanager') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // All good
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Token verification error:', error);
+    // Invalid token: redirect to login
+    const url = new URL('/login', request.url);
+    url.searchParams.set('callbackUrl', encodeURI(request.url));
+    return NextResponse.redirect(url);
+  }
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+  ],
 };

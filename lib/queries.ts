@@ -1,13 +1,221 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from './api';
-import { LoginCredentials, AuthResponse } from '@/types/next-auth';
+import { 
+  LoginCredentials, 
+  AuthResponse, 
+  Organization, 
+  User, 
+  UserRole, 
+  CreateOrganizationDto, 
+  UpdateOrganizationDto,
+  CreateUserDto,
+  UpdateUserDto,
+  UserDetails,
+} from '@/types/next-auth';
+import { jwtDecode } from 'jwt-decode';
 
 // Login mutation
 export const useLogin = () => {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
-      const { data } = await api.post<AuthResponse>('/auth/login', credentials);
+      try {
+        const response = await api.post('/auth/login', credentials);
+        
+        // Debug the response
+        console.log('Login response:', response);
+
+        // Check if we have a response and data
+        if (!response.data) {
+          throw new Error('No response received from server');
+        }
+
+        // The backend returns just the token object
+        const { token } = response.data;
+        
+        if (!token || typeof token !== 'string') {
+          console.error('Invalid token received:', token);
+          throw new Error('Invalid token received from server');
+        }
+
+        try {
+          // Decode the JWT token to get user data
+          const decodedToken = jwtDecode<{
+            id: string;
+            email: string;
+            role: string;
+            organization_id: string;
+          }>(token);
+
+          // Create the auth response with user data from token
+          const authResponse: AuthResponse = {
+            token: token,
+            user: {
+              id: decodedToken.id,
+              email: decodedToken.email,
+              role: decodedToken.role as UserRole,
+              organization_id: decodedToken.organization_id,
+            },
+          };
+
+          return authResponse;
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          console.error('Token that failed to decode:', token);
+          throw new Error('Invalid token received from server');
+        }
+      } catch (error: unknown) {
+        console.error('Login request failed:', error);
+        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
+          const axiosError = error as { response?: { data?: { message?: string } } };
+          console.error('Error response:', axiosError.response?.data);
+          throw new Error(axiosError.response?.data?.message || 'Login failed');
+        }
+        throw error;
+      }
+    },
+  });
+};
+
+// Organizations Query (All)
+export const useOrganizations = () => {
+  return useQuery<Organization[], Error>({
+    queryKey: ['organizations'],
+    queryFn: async () => {
+      const { data } = await api.get<Organization[]>('/org');
       return data;
+    },
+  });
+};
+
+// Organization Details Query (Single)
+export const useOrganizationDetails = (id: string) => {
+  return useQuery<Organization, Error>({
+    queryKey: ['organization', id],
+    queryFn: async () => {
+      const { data } = await api.get<Organization>(`/org/${id}`);
+      return data;
+    },
+    enabled: !!id, // Only run query if id is available
+  });
+};
+
+// Create Organization Mutation
+export const useCreateOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Organization, Error, CreateOrganizationDto>({
+    mutationFn: async (newOrg) => {
+      const { data } = await api.post<Organization>('/org', newOrg);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+    },
+  });
+};
+
+// Update Organization Mutation
+export const useUpdateOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Organization, Error, { id: string; updates: UpdateOrganizationDto }>({
+    mutationFn: async ({ id, updates }) => {
+      const { data } = await api.put<Organization>(`/org/${id}`, updates);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['organization', variables.id] });
+    },
+  });
+};
+
+// Delete Organization Mutation
+export const useDeleteOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      await api.delete(`/org/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+    },
+  });
+};
+
+// Users Query (All)
+export const useUsers = () => {
+  return useQuery<User[], Error>({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const { data } = await api.get<User[]>('/users');
+      return data;
+    },
+  });
+};
+
+// User Details Query (Single)
+export const useUserDetails = (id: string) => {
+  return useQuery<UserDetails, Error>({
+    queryKey: ['user', id],
+    queryFn: async () => {
+      const { data } = await api.get<UserDetails>(`/users/${id}`, {
+        params: {
+          include: ['organization', 'role']
+        }
+      });
+      return data;
+    },
+    enabled: !!id, // Only run query if id is available
+  });
+};
+
+// Create User Mutation
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation<User, Error, CreateUserDto>({
+    mutationFn: async (newUser) => {
+      const { data } = await api.post<User>('/users', newUser);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+// Update User Mutation
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation<User, Error, { id: string; updates: UpdateUserDto }>({
+    mutationFn: async ({ id, updates }) => {
+      const { data } = await api.put<User>(`/users/${id}`, updates);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', variables.id] });
+    },
+  });
+};
+
+// Delete User Mutation
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (id) => {
+      await api.delete(`/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const useRoles = () => {
+  return useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const response = await api.get('/auth/roles');
+      return response.data;
     },
   });
 };

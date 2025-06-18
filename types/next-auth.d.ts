@@ -2,8 +2,10 @@
 export type Organization = {
   id: string;
   name: string;
+  customId: string;
   address: string;
   phone: string;
+  status: string;
   email: string;
   created_at: Date;
   users?: User[];
@@ -23,39 +25,72 @@ export type UpdateOrganizationDto = Partial<CreateOrganizationDto>;
 // User Types
 export type UserStatus = 'active' | 'inactive' | 'suspended';
 
-export type User = {
+// For users list response (GET /api/users)
+export type UserListItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  orgName: string;
+  role: string;
+  roleId: string;
+  dob: string;
+  phone: string | null;
+  status: UserStatus;
+};
+
+// For single user response (GET /api/users/:id)
+export type UserDetails = {
   id: string;
   organization_id: string;
-  username: string;
   email: string;
-  full_name: string;
-  phone?: string;
+  phone: string | null;
   status: UserStatus;
-  created_at: Date;
-  last_login?: Date;
+  created_at: string;
   role_id: string;
-  organization?: Organization;
-  role?: Role;
-  sessions?: Session[];
-  trips?: Trip[];
-  generatedReports?: Report[];
-  reviewedRequests?: Request[];
-  createdRequests?: Request[];
+  dob: string;
+  first_name: string;
+  last_name: string;
+  nid: string;
+  gender: 'MALE' | 'FEMALE';
+  street_address: string;
 };
+
+// Combined type for frontend use
+export type User = UserListItem | UserDetails;
+
+// Helper type guard to check if user is UserDetails
+export function isUserDetails(user: User): user is UserDetails {
+  return 'first_name' in user;
+}
+
+// Helper type guard to check if user is UserListItem
+export function isUserListItem(user: User): user is UserListItem {
+  return 'firstName' in user;
+}
 
 export type CreateUserDto = {
-  organization_id: string;
-  username: string;
-  password: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  full_name: string;
-  phone?: string;
-  role_id: string;
+  phone: string;
+  nid: string;
+  gender: 'Male' | 'Female';
+  dob: string;
+  role: string;
+  organizationId: string;
+  streetAddress: string;
 };
 
-export type UpdateUserDto = Partial<Omit<CreateUserDto, 'password'>> & {
+export type UpdateUserDto = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
   password?: string;
-  status?: UserStatus;
+  role?: string;
+  status?: string;
+  streetAddress?: string;
 };
 
 // Role Types
@@ -293,15 +328,21 @@ export type PaginationParams = {
 };
 
 // Auth Types
+export type UserRole = 'admin' | 'hr' | 'staff' | 'fleetmanager';
+
 export type LoginCredentials = {
-  username: string;
+  email: string;
   password: string;
 };
 
 export type AuthResponse = {
-  user: Omit<User, 'password_hash'>;
   token: string;
-  expires_at: Date;
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+    organization_id: string;
+  };
 };
 
 export type ChangePasswordDto = {

@@ -1,31 +1,32 @@
 'use client';
-
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { UserRole } from '@/types/next-auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
+  allowedRoles?: UserRole[];
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isAuthenticated) {
       router.push('/login');
+      return;
     }
 
-    if (!isLoading && isAuthenticated && allowedRoles && user?.role) {
+    if (allowedRoles && user?.role) {
       if (!allowedRoles.includes(user.role)) {
         router.push('/dashboard');
       }
     }
-  }, [isLoading, isAuthenticated, user, router, allowedRoles]);
+  }, [isAuthenticated, user, router, allowedRoles]);
 
-  if (isLoading) {
+  if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -35,8 +36,15 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+          <p className="mt-2 text-gray-600">You do not have permission to access this page.</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

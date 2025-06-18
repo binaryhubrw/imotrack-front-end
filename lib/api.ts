@@ -1,12 +1,16 @@
 import axios from 'axios';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// Make sure this matches your backend URL exactly
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://imotrak.onrender.com/api';
 
 export const api = axios.create({
   baseURL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  // Ensure we're getting JSON responses
+  responseType: 'json',
 });
 
 // Request interceptor for adding auth token

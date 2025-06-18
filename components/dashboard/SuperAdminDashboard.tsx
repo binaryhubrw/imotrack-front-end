@@ -17,17 +17,17 @@ import {
   Legend,
 } from "recharts";
 import Link from "next/link";
+import { useOrganizations, useUsers } from "@/lib/queries";
+import { UserRole, UserListItem } from "@/types/next-auth";
+
+// Define types for Recharts Tooltip props
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number | string; dataKey: string }>;
+  label?: string;
+}
 
 // Sample data for charts and statistics
-const stats = {
-  totalUsers: 1250,
-  totalOrganizations: 45,
-  activeAlerts: 12,
-  userGrowth: 15,
-  orgGrowth: 5,
-};
-
-// User growth data for line chart
 const userGrowthData = [
   { month: "Jan", users: 65 },
   { month: "Feb", users: 78 },
@@ -37,7 +37,7 @@ const userGrowthData = [
   { month: "Jun", users: 55 },
 ];
 
-// Organization distribution data for bar chart
+// Organization distribution data for bar chart - Placeholder for now
 const orgDistributionData = [
   { sector: "Education", count: 12 },
   { sector: "Healthcare", count: 19 },
@@ -46,17 +46,10 @@ const orgDistributionData = [
   { sector: "NGO", count: 7 },
 ];
 
-// User role distribution for doughnut chart
-const userRoleData = [
-  { name: "Admin", value: 300, color: "#0872B3" },
-  { name: "Staff", value: 450, color: "#36A2EB" },
-  { name: "Viewer", value: 500, color: "#4BC0C0" },
-];
-
 // Custom bar colors for organization chart
 const barColors = ["#0872B3", "#36A2EB", "#4BC0C0", "#9966FF", "#FF9F40"];
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
@@ -70,13 +63,13 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const CustomBarTooltip = ({ active, payload, label }) => {
+const CustomBarTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
         <p className="text-gray-600">{`${label}`}</p>
         <p className="text-blue-600 font-semibold">
-          {`Organizations: ${payload[0].value}`}
+          {`Count: ${payload[0].value}`}
         </p>
       </div>
     );
@@ -84,25 +77,81 @@ const CustomBarTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function DashboardPage() {
+export default function SuperAdminDashboard() {
+  const { data: organizations, isLoading: isLoadingOrg, isError: isErrorOrg } = useOrganizations();
+  const { data: users, isLoading: isLoadingUsers, isError: isErrorUsers } = useUsers();
+
+  const isLoading = isLoadingOrg || isLoadingUsers;
+  const isError = isErrorOrg || isErrorUsers;
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-full items-center justify-center text-red-600">
+        Error loading dashboard data.
+      </div>
+    );
+  }
+
+  const totalOrganizations = organizations?.length || 0;
+  const totalUsers = users?.length || 0;
+
+  // Calculate user role distribution
+  const userRoleCounts = (users as UserListItem[])?.reduce((acc, user) => {
+    const roleName = user.role as UserRole;
+    if (roleName) {
+      acc[roleName] = (acc[roleName] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<UserRole, number>);
+
+  const userRoleData = userRoleCounts ? Object.entries(userRoleCounts).map(([role, count]) => ({
+    name: role.charAt(0).toUpperCase() + role.slice(1),
+    value: count,
+    color: getColorForRole(role as UserRole),
+  })) : [];
+
+  // Helper function to assign colors to roles
+  function getColorForRole(role: UserRole): string {
+    switch (role) {
+      case 'admin': return '#0872B3';
+      case 'fleetmanager': return '#FFC107'; // Yellow
+      case 'hr': return '#28A745'; // Green
+      case 'staff': return '#DC3545'; // Red
+      default: return '#6C757D'; // Gray
+    }
+  }
+
+  // Placeholder for other stats until more APIs are integrated
+  const userGrowth = 15; 
+  const orgGrowth = 5;
+  const activeAlerts = 12;
+
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Stats Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Users Card */}
-          <Link href="/dashboard/users">
+          <Link href="/dashboard/admin/users">
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-500 text-sm">Total Users</p>
                   <h3 className="text-2xl font-bold text-gray-800 mt-1">
-                    {stats.totalUsers}
+                    {totalUsers}
                   </h3>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="w-4 h-4 text-green-500" />
                     <span className="text-green-500 text-sm ml-1">
-                      +{stats.userGrowth}% this month
+                      +{userGrowth}% this month
                     </span>
                   </div>
                 </div>
@@ -113,24 +162,24 @@ export default function DashboardPage() {
             </div>
           </Link>
 
-          <Link href={"/dashboard/organizations"}>
-            {/* Organizations Card */}
+          {/* Organizations Card */}
+          <Link href="/dashboard/admin/organizations">
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-sm">Organizations</p>
+                  <p className="text-gray-500 text-sm">Total Organizations</p>
                   <h3 className="text-2xl font-bold text-gray-800 mt-1">
-                    {stats.totalOrganizations}
+                    {totalOrganizations}
                   </h3>
                   <div className="flex items-center mt-2">
                     <TrendingUp className="w-4 h-4 text-green-500" />
                     <span className="text-green-500 text-sm ml-1">
-                      +{stats.orgGrowth}% this month
+                      +{orgGrowth}% this month
                     </span>
                   </div>
                 </div>
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <Building2 className="w-6 h-6 text-purple-600" />
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <Building2 className="w-6 h-6 text-[#0872B3]" />
                 </div>
               </div>
             </div>
@@ -275,12 +324,12 @@ export default function DashboardPage() {
               </h3>
               <div className="bg-red-100 px-3 py-1 rounded-full">
                 <span className="text-red-600 text-sm font-medium">
-                  {stats.activeAlerts} active
+                  {activeAlerts} active
                 </span>
               </div>
             </div>
             <div className="space-y-4">
-              {[
+              {[ // Placeholder alerts
                 {
                   type: "Security",
                   message: "Multiple failed login attempts detected",
