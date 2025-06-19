@@ -59,12 +59,12 @@ function getIcon(type: string) {
 function getBg(type: string) {
   switch (type) {
     case 'success':
-      return 'bg-green-100 border-green-200';
+      return 'bg-green-50 border border-green-200';
     case 'error':
-      return 'bg-red-100 border-red-200';
+      return 'bg-red-50 border border-red-200';
     case 'info':
     default:
-      return 'bg-blue-50 border-blue-100';
+      return 'bg-blue-50 border border-blue-100';
   }
 }
 
@@ -83,15 +83,17 @@ export default function NotificationsPage() {
   );
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#e6f2fa] via-gray-50 to-[#e6f2fa] px-4 py-8">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 px-4 py-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <h1 className="text-2xl md:text-3xl font-extrabold flex items-center gap-2 text-gray-800">
-            <Bell className="w-7 h-7 text-[#0872B3]" /> Notifications
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2 text-gray-800">
+            <Bell className="w-7 h-7 text-[#0872B3]" />
+            Notifications
           </h1>
           <div className="flex gap-2 items-center w-full md:w-auto">
             <select
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
             >
@@ -101,7 +103,7 @@ export default function NotificationsPage() {
               <option value="error">Error</option>
             </select>
             <select
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
               value={timeFilter}
               onChange={e => setTimeFilter(e.target.value)}
             >
@@ -111,12 +113,14 @@ export default function NotificationsPage() {
             </select>
             <button
               onClick={markAllAsRead}
-              className="ml-2 flex items-center gap-2 px-6 py-2 text-[#0872B3] border border-[#0872B3] rounded-lg shadow-none hover:bg-[#0872B3] hover:text-white transition-all text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#0872B3] min-w-[160px] justify-center"
+              className="ml-2 flex items-center gap-2 px-6 py-2 text-blue-700 border border-blue-700 rounded-lg shadow-none hover:bg-blue-50 transition-all text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-300 min-w-[160px] justify-center"
             >
               Mark All as Read
             </button>
           </div>
         </div>
+
+        {/* Notifications List */}
         <div className="space-y-4">
           {filtered.length === 0 ? (
             <div className="text-center text-gray-400 py-16">No notifications.</div>
@@ -124,31 +128,32 @@ export default function NotificationsPage() {
             filtered.map(n => (
               <div
                 key={n.id}
-                className={`flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-xl border ${getBg(n.type)} transition-all hover:shadow-md`}
+                className={`flex flex-col gap-4 p-5 rounded-xl ${getBg(n.type)} hover:shadow-md transition-all`}
               >
-                <div className="flex items-center gap-4 flex-1">
-                  {getIcon(n.type)}
-                  <div>
-                    <div className="font-bold text-base md:text-lg text-gray-800 mb-1">{n.title}</div>
-                    <div className="text-gray-700 text-sm">{n.message}</div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start md:items-center gap-4 flex-1">
+                    {getIcon(n.type)}
+                    <div>
+                      <div className="font-semibold text-gray-800 mb-1">{n.title}</div>
+                      <div className="text-sm text-gray-700">{n.message}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end min-w-[120px]">
+                    <span className="text-xs text-gray-500">{n.time}</span>
+                    <button
+                      className={`p-1 rounded hover:bg-gray-200 ${openId === n.id ? 'bg-gray-200' : ''}`}
+                      onClick={() => setOpenId(openId === n.id ? null : n.id)}
+                      aria-label="Toggle Details"
+                    >
+                      <Eye className="w-5 h-5 text-gray-500" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 min-w-[120px] justify-end">
-                  <span className="text-xs text-gray-500">{n.time}</span>
-                  <button
-                    className={`p-1 rounded hover:bg-gray-200 ${openId === n.id ? 'bg-gray-200' : ''}`}
-                    aria-label="View notification details"
-                    onClick={() => setOpenId(openId === n.id ? null : n.id)}
-                  >
-                    <Eye className="w-5 h-5 text-gray-400" />
-                  </button>
-                </div>
-                {/* Details section */}
                 {openId === n.id && (
-                  <div className="w-full mt-4 md:mt-2 bg-white border border-gray-200 rounded-lg p-4 shadow animate-fade-in">
-                    <div className="text-sm text-gray-700 mb-1"><span className="font-semibold">Request ID:</span> {n.details.requestId}</div>
-                    <div className="text-sm text-gray-700 mb-1"><span className="font-semibold">Vehicle:</span> {n.details.vehicle}</div>
-                    <div className="text-sm text-gray-700"><span className="font-semibold">Details:</span> {n.details.more}</div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-sm text-gray-700 animate-fade-in">
+                    <div className="mb-1"><strong>Request ID:</strong> {n.details.requestId}</div>
+                    <div className="mb-1"><strong>Vehicle:</strong> {n.details.vehicle}</div>
+                    <div><strong>Details:</strong> {n.details.more}</div>
                   </div>
                 )}
               </div>
@@ -156,12 +161,15 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
+
       <style jsx global>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(16px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: none; }
         }
-        .animate-fade-in { animation: fade-in 0.5s cubic-bezier(.4,0,.2,1) both; }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out forwards;
+        }
       `}</style>
     </main>
   );
