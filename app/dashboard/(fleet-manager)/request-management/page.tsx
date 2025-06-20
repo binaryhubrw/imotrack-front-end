@@ -1,10 +1,21 @@
-
 'use client'
 import { Check, X, Filter, Calendar, User, MapPin, Users, Car, Fuel } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 export default function VehicleRequestPage() {
   const router = useRouter()
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [actioned, setActioned] = useState(false)
+
+  const handleAction = (newStatus: 'approved' | 'rejected') => {
+    setStatus(newStatus)
+    setActioned(true)
+    setTimeout(() => {
+      router.push(`/dashboard/request-overview?updated=VR-002&status=${newStatus}`)
+    }, 700) // short delay for feedback
+  }
+
   return (
     <div className="container mx-auto py-10 max-w-5xl bg-gray-50 min-h-screen px-4">
       {/* Filter Card */}
@@ -54,7 +65,15 @@ export default function VehicleRequestPage() {
         {/* Request Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <h2 className="text-2xl font-bold tracking-tight">Request <span className="text-blue-600">#VR-002</span></h2>
-          <span className="inline-block px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Pending</span>
+          {status === 'pending' && (
+            <span className="inline-block px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Pending</span>
+          )}
+          {status === 'approved' && (
+            <span className="inline-block px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">Approved</span>
+          )}
+          {status === 'rejected' && (
+            <span className="inline-block px-3 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium">Rejected</span>
+          )}
         </div>
 
         {/* Requester & Trip Info */}
@@ -161,16 +180,19 @@ export default function VehicleRequestPage() {
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-4 mt-6">
           <button
-          onClick={() => router.push('/dashboard/request-overview')}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 focus:ring-2 focus:ring-green-400 transition"
+            onClick={() => handleAction('approved')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-green-400 ${actioned ? 'bg-green-200 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
             title="Approve this request"
+            disabled={actioned}
           >
             <Check className="h-5 w-5" />
             Approve
           </button>
           <button
-            className="flex items-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 focus:ring-2 focus:ring-red-400 transition"
+            onClick={() => handleAction('rejected')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-red-400 ${actioned ? 'bg-red-200 text-white cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
             title="Reject this request"
+            disabled={actioned}
           >
             <X className="h-5 w-5" />
             Reject
