@@ -1,11 +1,12 @@
 'use client';
 
-import StaffAdminDashboard from '@/components/dashboard/StaffAdminDashboard';
+import HrDashboard from "@/components/dashboard/HrDashboard";
+
 
 export default function HRDashboardPage() {
   return (
     <div className="p-6">
-      <StaffAdminDashboard />
+      <HrDashboard />
     </div>
   );
 } 
