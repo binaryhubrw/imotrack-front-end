@@ -1,69 +1,103 @@
-'use client'
-import React, { useState } from 'react';
-import { Plus, Filter, Edit, Trash2, Eye, Search, ChevronDown, Users, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useHrUsers, useHrRoles, useCreateHrUser, useUpdateHrUser, useDeleteHrUser, useHrUser } from '@/lib/queries';
-import { CreateHrUserDto, HrRole, HrUser, UpdateHrUserDto } from '@/types/next-auth';
-import { toast } from 'sonner';
+"use client";
+import React, { useState } from "react";
+import {
+  Plus,
+  Filter,
+  Edit,
+  Trash2,
+  Eye,
+  Search,
+  ChevronDown,
+  Users,
+  X,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  useHrUsers,
+  useHrRoles,
+  useCreateHrUser,
+  useUpdateHrUser,
+  useDeleteHrUser,
+  useHrUser,
+} from "@/lib/queries";
+import {
+  CreateHrUserDto,
+  HrRole,
+  HrUser,
+  UpdateHrUserDto,
+} from "@/types/next-auth";
+import { toast } from "sonner";
 
 export default function StaffManagement() {
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterRole, setFilterRole] = useState<string>('All');
-  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [filterRole, setFilterRole] = useState<string>("All");
+  const [filterStatus, setFilterStatus] = useState<string>("All");
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
   const [formData, setFormData] = useState<CreateHrUserDto>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    nid: '',
-    gender: 'MALE',
-    dob: '',
-    streetAddress: '',
-    roleId: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    nid: "",
+    gender: "MALE",
+    dob: "",
+    streetAddress: "",
+    roleId: "",
   });
 
   const router = useRouter();
-  
+
   // API hooks
   const { data: hrUsers = [], isError, refetch } = useHrUsers();
   const { data: hrRoles = [] } = useHrRoles();
   const createUserMutation = useCreateHrUser();
   const updateUserMutation = useUpdateHrUser();
   const deleteUserMutation = useDeleteHrUser();
-  const { data: editingUserData, isLoading } = useHrUser(editingUserId || '');
+  const { data: editingUserData, isLoading } = useHrUser(editingUserId || "");
 
-  const statuses: string[] = ['All', 'active', 'inactive'];
-  const roles = ['All', ...hrRoles.map((role: HrRole) => role.name)];
+  const statuses: string[] = ["All", "active", "inactive"];
+  const roles = ["All", ...hrRoles.map((role: HrRole) => role.name)];
 
   const filteredStaff = hrUsers.filter((user: HrUser) => {
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+    const matchesSearch =
+      fullName.includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.nid.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = filterRole === 'All' || user.role === filterRole;
-    const matchesStatus = filterStatus === 'All' || user.status === filterStatus;
+    const matchesRole = filterRole === "All" || user.role === filterRole;
+    const matchesStatus =
+      filterStatus === "All" || user.status === filterStatus;
 
     return matchesSearch && matchesRole && matchesStatus;
   });
 
   const getStatusBadge = (status: string): string => {
     const statusStyles: Record<string, string> = {
-      'active': 'bg-green-100 text-green-800',
-      'inactive': 'bg-red-100 text-red-800'
+      active: "bg-green-100 text-green-800",
+      inactive: "bg-red-100 text-red-800",
     };
-    return `px-3 py-1 rounded-full text-xs font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`;
+    return `px-3 py-1 rounded-full text-xs font-medium ${
+      statusStyles[status] || "bg-gray-100 text-gray-800"
+    }`;
   };
 
   const getRoleBadge = (role: string): string => {
     const roleStyles: Record<string, string> = {
-      'staff': 'bg-blue-100 text-blue-800',
-      'fleetmanager': 'bg-purple-100 text-purple-800'
+      staff: "bg-blue-100 text-blue-800",
+      fleetmanager: "bg-purple-100 text-purple-800",
     };
-    return `px-3 py-1 rounded-full text-xs font-medium ${roleStyles[role] || 'bg-gray-100 text-gray-800'}`;
+    return `px-3 py-1 rounded-full text-xs font-medium ${
+      roleStyles[role] || "bg-gray-100 text-gray-800"
+    }`;
   };
 
   // When entering edit mode, prefill form
@@ -83,15 +117,15 @@ export default function StaffManagement() {
     }
     if (!isEditMode) {
       setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        nid: '',
-        gender: 'MALE',
-        dob: '',
-        streetAddress: '',
-        roleId: '',
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        nid: "",
+        gender: "MALE",
+        dob: "",
+        streetAddress: "",
+        roleId: "",
       });
     }
   }, [isEditMode, editingUserId, editingUserData]);
@@ -100,47 +134,41 @@ export default function StaffManagement() {
     e.preventDefault();
     try {
       if (isEditMode && editingUserId) {
-        await updateUserMutation.mutateAsync({ id: editingUserId, updates: formData as UpdateHrUserDto });
-        toast.success('User updated successfully');
+        await updateUserMutation.mutateAsync({
+          id: editingUserId,
+          updates: formData as UpdateHrUserDto,
+        });
+        toast.success("User updated successfully");
       } else {
         await createUserMutation.mutateAsync(formData);
-        toast.success('User created successfully');
+        toast.success("User created successfully");
       }
       setIsModalOpen(false);
       setIsEditMode(false);
       setEditingUserId(null);
       setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        nid: '',
-        gender: 'MALE',
-        dob: '',
-        streetAddress: '',
-        roleId: '',
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        nid: "",
+        gender: "MALE",
+        dob: "",
+        streetAddress: "",
+        roleId: "",
       });
       refetch();
     } catch (error) {
-      toast.error('Error saving user');
-      console.error('Error saving user:', error);
+      toast.error("Error saving user");
+      console.error("Error saving user:", error);
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
-      try {
-        await deleteUserMutation.mutateAsync(id);
-        refetch();
-      } catch (error) {
-        console.error('Error deleting user:', error);
-      }
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -149,11 +177,15 @@ export default function StaffManagement() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
-            <p className="text-gray-600 mt-1">Manage and monitor all staff members</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Staff Management
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage and monitor all staff members
+            </p>
           </div>
-          
-          <button 
+
+          <button
             className="bg-[#0872B3] hover:bg-[0872C1] text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
             onClick={() => {
               setIsModalOpen(true);
@@ -175,34 +207,47 @@ export default function StaffManagement() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Staff</p>
-                <p className="text-2xl font-bold text-gray-900">{hrUsers.length}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {hrUsers.length}
+                </p>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <Users className="w-6 h-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Staff</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Staff
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {hrUsers.filter((user: HrUser) => user.status === 'active').length}
+                  {
+                    hrUsers.filter((user: HrUser) => user.status === "active")
+                      .length
+                  }
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Users className="w-6 h-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Fleet Managers</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Fleet Managers
+                </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {hrUsers.filter((user: HrUser) => user.role === 'fleetmanager').length}
+                  {
+                    hrUsers.filter(
+                      (user: HrUser) => user.role === "fleetmanager"
+                    ).length
+                  }
                 </p>
               </div>
             </div>
@@ -231,9 +276,11 @@ export default function StaffManagement() {
                 onChange={(e) => setFilterRole(e.target.value)}
                 className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               >
-                {roles.map(role => (
+                {roles.map((role) => (
                   <option key={role} value={role}>
-                    {role === 'All' ? 'All Roles' : role.charAt(0).toUpperCase() + role.slice(1)}
+                    {role === "All"
+                      ? "All Roles"
+                      : role.charAt(0).toUpperCase() + role.slice(1)}
                   </option>
                 ))}
               </select>
@@ -247,9 +294,11 @@ export default function StaffManagement() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               >
-                {statuses.map(status => (
+                {statuses.map((status) => (
                   <option key={status} value={status}>
-                    {status === 'All' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status === "All"
+                      ? "All Status"
+                      : status.charAt(0).toUpperCase() + status.slice(1)}
                   </option>
                 ))}
               </select>
@@ -259,9 +308,9 @@ export default function StaffManagement() {
             {/* Clear Filters */}
             <button
               onClick={() => {
-                setSearchTerm('');
-                setFilterRole('All');
-                setFilterStatus('All');
+                setSearchTerm("");
+                setFilterRole("All");
+                setFilterStatus("All");
               }}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
             >
@@ -281,7 +330,10 @@ export default function StaffManagement() {
           ) : isError ? (
             <div className="text-center py-12">
               <p className="text-red-600">Error loading staff data</p>
-              <button onClick={() => refetch()} className="mt-2 text-blue-600 hover:underline">
+              <button
+                onClick={() => refetch()}
+                className="mt-2 text-blue-600 hover:underline"
+              >
                 Try Again
               </button>
             </div>
@@ -290,18 +342,32 @@ export default function StaffManagement() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Name</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Email</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Phone</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">NID</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Name
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Phone
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      NID
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Role
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredStaff.map((user: HrUser) => (
-                    <tr 
+                    <tr
                       key={user.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
@@ -310,33 +376,48 @@ export default function StaffManagement() {
                           <div className="text-sm font-medium text-gray-900">
                             {user.firstName} {user.lastName}
                           </div>
-                          <div className="text-sm text-gray-500">{user.organizationName}</div>
+                          <div className="text-sm text-gray-500">
+                            {user.organizationName}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{user.phone}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{user.nid}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {user.email}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {user.phone}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {user.nid}
+                      </td>
                       <td className="px-6 py-4">
                         <span className={getRoleBadge(user.role)}>
-                          {user.role === 'fleetmanager' ? 'Fleet Manager' : 'Staff'}
+                          {user.role === "fleetmanager"
+                            ? "Fleet Manager"
+                            : "Staff"}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={getStatusBadge(user.status)}>
-                          {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                          {user.status.charAt(0).toUpperCase() +
+                            user.status.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => router.push(`/dashboard/hr/staff-management/${user.id}`)}
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/hr/staff-management/${user.id}`
+                              )
+                            }
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          
-                          <button 
+
+                          <button
                             onClick={() => {
                               setIsEditMode(true);
                               setEditingUserId(user.id);
@@ -347,9 +428,15 @@ export default function StaffManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          
-                          <button 
-                            onClick={() => handleDelete(user.id, `${user.firstName} ${user.lastName}`)}
+
+                          <button
+                            onClick={() => {
+                              setUserToDelete({
+                                id: user.id,
+                                name: `${user.firstName} ${user.lastName}`,
+                              });
+                              setIsDeleteModalOpen(true);
+                            }}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete Staff"
                             disabled={deleteUserMutation.isPending}
@@ -369,8 +456,12 @@ export default function StaffManagement() {
           {!isLoading && !isError && filteredStaff.length === 0 && (
             <div className="text-center py-12">
               <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p className="text-lg font-medium text-gray-900">No staff members found</p>
-              <p className="text-sm text-gray-500">Try adjusting your search or filter criteria</p>
+              <p className="text-lg font-medium text-gray-900">
+                No staff members found
+              </p>
+              <p className="text-sm text-gray-500">
+                Try adjusting your search or filter criteria
+              </p>
             </div>
           )}
         </div>
@@ -388,7 +479,7 @@ export default function StaffManagement() {
             <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
               <div className="flex items-center justify-between p-6 border-b">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {isEditMode ? 'Edit Staff Member' : 'Add New Staff Member'}
+                  {isEditMode ? "Edit Staff Member" : "Add New Staff Member"}
                 </h2>
                 <button
                   onClick={() => {
@@ -401,7 +492,7 @@ export default function StaffManagement() {
                   <X className="w-6 h-6" />
                 </button>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -417,7 +508,7 @@ export default function StaffManagement() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Last Name *
@@ -447,7 +538,7 @@ export default function StaffManagement() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Phone *
@@ -478,7 +569,7 @@ export default function StaffManagement() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Gender *
@@ -510,7 +601,7 @@ export default function StaffManagement() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Role *
@@ -525,7 +616,10 @@ export default function StaffManagement() {
                       <option value="">Select Role</option>
                       {hrRoles.map((role: HrRole) => (
                         <option key={role.id} value={role.id}>
-                          {role.name === 'fleetmanager' ? 'Fleet Manager' : role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                          {role.name === "fleetmanager"
+                            ? "Fleet Manager"
+                            : role.name.charAt(0).toUpperCase() +
+                              role.name.slice(1)}
                         </option>
                       ))}
                     </select>
@@ -561,15 +655,71 @@ export default function StaffManagement() {
                   </button>
                   <button
                     type="submit"
-                    disabled={createUserMutation.isPending || updateUserMutation.isPending}
+                    disabled={
+                      createUserMutation.isPending ||
+                      updateUserMutation.isPending
+                    }
                     className="px-4 py-2 bg-[#0872B3] hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {(createUserMutation.isPending || updateUserMutation.isPending)
-                      ? (isEditMode ? 'Updating...' : 'Adding...')
-                      : (isEditMode ? 'Update Staff Member' : 'Add Staff Member')}
+                    {createUserMutation.isPending ||
+                    updateUserMutation.isPending
+                      ? isEditMode
+                        ? "Updating..."
+                        : "Adding..."
+                      : isEditMode
+                      ? "Update Staff Member"
+                      : "Add Staff Member"}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {isDeleteModalOpen && userToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Trash2 className="text-red-600 text-xl w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Delete Staff Member</h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{userToDelete.name}</span>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={deleteUserMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await deleteUserMutation.mutateAsync(userToDelete.id);
+                      refetch();
+                      setIsDeleteModalOpen(false);
+                      setUserToDelete(null);
+                    } catch (error) {
+                      console.error("Error deleting user:", error);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  disabled={deleteUserMutation.isPending}
+                >
+                  {deleteUserMutation.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

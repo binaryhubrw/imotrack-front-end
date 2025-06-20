@@ -298,3 +298,79 @@ export const useDeleteHrUser = () => {
     },
   });
 }
+
+//__________FLEET MANAGER CRUD____________________________________________________________________________ HR: Get roles
+
+export const useFMVehiclesStatuses = () => {
+  return useQuery({
+    queryKey: ['fm-vehicles-statuses'],
+    queryFn: async () => {
+      const { data } = await api.get('/fleetmanager/vehicles/statuses');
+      return data;
+    },
+  });
+}
+
+export const useFMVehicles = () => {
+  return useQuery({
+    queryKey: ['fm-vehicles'],
+    queryFn: async ()=>{
+      const { data } = await api.get('/fleetmanager/vehicles');    
+      return data;
+    }
+  })  
+}
+
+export const useCreateFMVehicles = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vehicleData: unknown) => {
+      const { data } = await api.post('/fleetmanager/vehicles', vehicleData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
+    },
+  });
+}
+
+export const useGetFMVehicle = (id: string) => {
+  return useQuery({
+    queryKey: ['fm-vehicle', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/fleetmanager/vehicles/${id}`);
+      return data;
+    },
+    enabled: !!id, // Only run query if id is available
+  });
+}
+
+export const useUpdateFMVehicle = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: unknown }) => {
+      const { data } = await api.put(`/fleetmanager/vehicles/${id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['fm-vehicle', variables.id] });
+    },
+  });
+}
+
+export const useDeleteFMVehicle = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/fleetmanager/vehicles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
+    },
+  });
+}
