@@ -117,11 +117,11 @@ export default function HrDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <StatCard
             title="Total Staff"
-            value={`${staffCount} Employees`}
+            value={`${staffCount} Staffs`}
             icon={Users}
             bgColor="bg-blue-100"
             textColor="text-blue-600"
-            href="/dashboard/staff-management"
+            href="/dashboard/hr/staff-management"
           />
           
           <StatCard

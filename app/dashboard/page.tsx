@@ -21,7 +21,7 @@ export default function DashboardPage() {
           router.push('/dashboard/admin');
           break;
         case 'fleetmanager':
-          router.push('/dashboard/fleet-manager');
+          router.push('/dashboard/fleetmanager');
           break;
         case 'hr':
           router.push('/dashboard/hr');

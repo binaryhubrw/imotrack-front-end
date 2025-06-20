@@ -15,6 +15,7 @@ import {
   faCodePullRequest,
   faCog,
   faSignOutAlt,
+  faCodeCommit,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -51,7 +52,7 @@ export default function DashboardLayout({
           router.push('/dashboard/admin');
           break;
         case 'fleetmanager':
-          router.push('/dashboard/fleet-manager');
+          router.push('/dashboard/fleetmanager');
           break;
         case 'hr':
           router.push('/dashboard/hr');
@@ -101,7 +102,7 @@ export default function DashboardLayout({
       ],
       fleetmanager: [
         {
-          href: "/dashboard/fleet-manager/vehicles",
+          href: "/dashboard/fleet-manager/vehicles-info",
           label: "Vehicles",
           icon: <FontAwesomeIcon icon={faCar} />,
         },
@@ -111,9 +112,14 @@ export default function DashboardLayout({
           icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
         },
         {
-          href: "/dashboard/fleet-manager/requests",
+          href: "/dashboard/fleet-manager/request-management",
           label: "Requests",
           icon: <FontAwesomeIcon icon={faCodePullRequest} />,
+        },
+        {
+          href: "/dashboard/fleet-manager/request-overview",
+          label: "Request Overview",
+          icon: <FontAwesomeIcon icon={faCodeCommit} />,
         },
       ],
       staff: [

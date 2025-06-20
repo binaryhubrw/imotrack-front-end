@@ -89,7 +89,7 @@ export default function FleetManagerDashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Stats Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          <Link href={"/dashboard/vehicles"}>
+          <Link href={"/dashboard/fleet-manager/vehicles-info"}>
             <StatCard
               icon={Car}
               title="Vehicles"
@@ -105,7 +105,7 @@ export default function FleetManagerDashboard() {
             bgColor="bg-[#0872B3]"
             textColor="text-[#0872B3]"
           />
-          <Link href={"/dashboard/issue-management"}>
+          <Link href={"/dashboard/fleet-manager/issue-management"}>
             <StatCard
               icon={FileText}
               title="Issue Management"
@@ -114,7 +114,7 @@ export default function FleetManagerDashboard() {
               textColor="text-[#0872B3]"
             />
           </Link>
-          <Link href={"/dashboard/request-overview"}>
+          <Link href={"/dashboard/fleet-manager/request-overview"}>
             <StatCard
               icon={BarChart3}
               title="Request Overview"
