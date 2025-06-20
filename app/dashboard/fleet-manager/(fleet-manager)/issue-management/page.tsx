@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function IssueManagementPage() {
+  return (
+    <div>
+      pp
+    </div>
+  )
+}
+
 // 'use client';
 // import React, { useState } from 'react';
 // import { Filter, Search } from 'lucide-react';

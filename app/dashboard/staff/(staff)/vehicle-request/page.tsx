@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function Vrz() {
+  return (
+    <div>
+      fgh
+    </div>
+  )
+}
+
 // "use client";
 // import { Star, Search, X } from "lucide-react";
 // import React, { useState } from "react";

@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function Not() {
+  return (
+    <div>
+      not
+    </div>
+  )
+}
+
 // 'use client';
 // import React, { useState } from 'react';
 // import { Bell, CheckCircle, AlertTriangle, Info, Eye } from 'lucide-react';

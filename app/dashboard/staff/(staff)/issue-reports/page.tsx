@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function ISR() {
+  return (
+    <div>
+      uyyu
+    </div>
+  )
+}
+
 // "use client";
 // import React, { useState } from "react";
 // import { Download, AlertTriangle } from "lucide-react";

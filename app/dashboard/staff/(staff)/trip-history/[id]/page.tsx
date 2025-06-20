@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function TH() {
+  return (
+    <div>
+      thp
+    </div>
+  )
+}
+
 // 'use client';
 // import React from 'react';
 // import { useParams, useRouter } from 'next/navigation';
