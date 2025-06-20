@@ -1,204 +1,131 @@
-'use client'
-import { Check, X, Filter, Calendar, User, MapPin, Users, Car, Fuel } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+"use client";
 
-export default function VehicleRequestPage() {
+import { useState } from "react";
+import { UserPlus, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+function statusBadge(status: string) {
+  const base = "inline-block px-3 py-1 text-xs font-semibold rounded-full";
+  if (status === "Pending") return <span className={base + " bg-yellow-100 text-yellow-800"}>Pending</span>;
+  if (status === "Approved") return <span className={base + " bg-green-100 text-green-700"}>Approved</span>;
+  return <span className={base + " bg-pink-100 text-pink-700"}>Declined</span>;
+}
+
+export default function RecentRequests() {
+  const [requests] = useState([
+    { id: "VR-001", requester: "John Doe", department: "Computer Science", reason: "Field Trip", date: "2024-03-15", status: "Pending" },
+    { id: "VR-002", requester: "Jane Smith", department: "Engineering", reason: "Official Meeting", date: "2024-03-16", status: "Approved" },
+    { id: "VR-003", requester: "Mike Johnson", department: "Business", reason: "Campus Transfer", date: "2024-03-14", status: "Declined" },
+    { id: "VR-004", requester: "John Doe", department: "Computer Science", reason: "Field Trip", date: "2024-03-15", status: "Pending" },
+    { id: "VR-005", requester: "Jane Smith", department: "Engineering", reason: "Official Meeting", date: "2024-03-16", status: "Approved" },
+    { id: "VR-006", requester: "Mike Johnson", department: "Business", reason: "Campus Transfer", date: "2024-03-14", status: "Declined" },
+  ]);
+  const [dept, setDept] = useState("");
+  const [stat, setStat] = useState("");
+
+  const filtered = requests.filter(
+    r => (dept === "" || r.department === dept) && (stat === "" || r.status === stat)
+  );
+
+  const departments = ["All Departments", ...Array.from(new Set(requests.map(r => r.department)))];
+  const statuses = ["All Status", "Pending", "Approved", "Declined"];
+
   const router = useRouter()
-  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
-  const [actioned, setActioned] = useState(false)
-
-  const handleAction = (newStatus: 'approved' | 'rejected') => {
-    setStatus(newStatus)
-    setActioned(true)
-    setTimeout(() => {
-      router.push(`/dashboard/request-overview?updated=VR-002&status=${newStatus}`)
-    }, 700) // short delay for feedback
-  }
-
   return (
-    <div className="container mx-auto py-10 max-w-5xl bg-gray-50 min-h-screen px-4">
-      {/* Filter Card */}
-      <section className="bg-white rounded-xl border shadow-md mb-8 px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3 text-gray-600 font-semibold">
-          <Filter className="w-5 h-5" />
-          <span>Filter Requests</span>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Status</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Requests</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Date Range</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Car className="w-3 h-3" />Reason</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Reasons</option>
-              <option value="meeting">Meeting</option>
-              <option value="field">Field Work</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <input
-            type="search"
-            placeholder="Search by name or ID"
-            className="h-9 mt-5 px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </section>
-
-      {/* Main Request Card */}
-      <section className="bg-white rounded-2xl border shadow-lg p-8">
-        {/* Request Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">Request <span className="text-blue-600">#VR-002</span></h2>
-          {status === 'pending' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Pending</span>
-          )}
-          {status === 'approved' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">Approved</span>
-          )}
-          {status === 'rejected' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium">Rejected</span>
-          )}
-        </div>
-
-        {/* Requester & Trip Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500 flex items-center gap-1"><User className="w-4 h-4" />Requester</p>
-              <p className="font-semibold text-gray-800">Jane Smith</p>
+    <div className="p-4 min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] w-full">
+      {/* Remove max-w-3xl and mx-auto to allow full width */}
+      <div className="w-full">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-6 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <UserPlus className="w-7 h-7 text-[#0872B3]" />
+              <h2 className="text-xl font-bold text-[#0872B3]">Recent Requests</h2>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">Department</p>
-              <p className="font-semibold text-gray-800">Engineering</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Reason</p>
-              <p className="font-semibold text-gray-800">Official Meeting</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500 flex items-center gap-1"><Users className="w-4 h-4" />Passengers</p>
-              <p className="font-semibold text-gray-800">5</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="w-4 h-4" />Destination</p>
-              <p className="font-semibold text-gray-800">Nyaguta Campus</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Estimated Distance</p>
-              <p className="font-semibold text-gray-800">180 km</p>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500">Start Date</p>
-              <p className="font-semibold text-gray-800">2024-03-18</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">End Date</p>
-              <p className="font-semibold text-gray-800">2024-03-30</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Vehicle Info */}
-        <div className="mb-8">
-          <p className="text-xs text-gray-500 flex items-center gap-1"><Car className="w-4 h-4" />Requested Vehicle</p>
-          <p className="font-semibold text-gray-800">LR 004 - Toyota Hilux</p>
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-gray-200 my-8"></div>
-
-        {/* Assignment & Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500">Driver Assignment</p>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-                <option value="vwanjau">V.Wanjau</option>
-                <option value="jdoe">J.Doe</option>
-                <option value="psmith">P.Smith</option>
-              </select>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Initial Odometer (km)</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                24,578
+            <div className="flex gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-44">
+                <select
+                  className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-2.5 text-base bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] transition"
+                  value={dept}
+                  onChange={e => setDept(e.target.value === "All Departments" ? "" : e.target.value)}
+                >
+                  {departments.map(dep => (
+                    <option key={dep} value={dep}>{dep}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
+              </div>
+              <div className="relative w-full sm:w-40">
+                <select
+                  className="appearance-none w-full rounded-lg border border-gray-300 px-4 py-2.5 text-base bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] transition"
+                  value={stat}
+                  onChange={e => setStat(e.target.value === "All Status" ? "" : e.target.value)}
+                >
+                  {statuses.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </span>
               </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500">Vehicle Assignment</p>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-                <option value="patrol">PatrolUnit23346</option>
-                <option value="suv1">SUV-001</option>
-                <option value="truck1">Truck-002</option>
-              </select>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">End Odometer (km)</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                34,557
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500 flex items-center gap-1"><Fuel className="w-4 h-4" />Provided Fuel</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                2.5L
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Distance of Travel</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                9,980 km
-              </div>
-            </div>
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-[15px]">
+              <thead>
+                <tr className="text-gray-700 bg-gray-50 uppercase text-xs">
+                  <th className="py-3 px-6 font-semibold">Request ID</th>
+                  <th className="py-3 px-6 font-semibold">Requester</th>
+                  <th className="py-3 px-6 font-semibold">Department</th>
+                  <th className="py-3 px-6 font-semibold">Reason</th>
+                  <th className="py-3 px-6 font-semibold">Date</th>
+                  <th className="py-3 px-6 font-semibold">Status</th>
+                  <th className="py-3 px-6 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-10 text-gray-400 text-lg">No requests found.</td>
+                  </tr>
+                ) : (
+                  filtered.map((request, idx) => (
+                    <tr
+                    onClick={() => router.push('/dashboard/request-management')} 
+                      key={request.id}
+                      className={`
+                        ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        hover:bg-blue-50/70 transition-colors cursor-pointer duration-150
+                      `}
+                      style={{ height: "56px" }}
+                    >
+                      <td className="py-3 px-6 font-mono">{request.id}</td>
+                      <td className="py-3 px-6">{request.requester}</td>
+                      <td className="py-3 px-6">{request.department}</td>
+                      <td className="py-3 px-6">{request.reason}</td>
+                      <td className="py-3 px-6">{request.date}</td>
+                      <td className="py-3 px-6">{statusBadge(request.status)}</td>
+                      <td className="py-3 px-6">
+                        <button
+                          className="p-2 rounded hover:bg-blue-100 transition"
+                          title="View Details"
+                          aria-label="View Details"
+                        >
+                          <Eye className="w-5 h-5 text-[#0872B3]" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col md:flex-row gap-4 mt-6">
-          <button
-            onClick={() => handleAction('approved')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-green-400 ${actioned ? 'bg-green-200 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-            title="Approve this request"
-            disabled={actioned}
-          >
-            <Check className="h-5 w-5" />
-            Approve
-          </button>
-          <button
-            onClick={() => handleAction('rejected')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-red-400 ${actioned ? 'bg-red-200 text-white cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
-            title="Reject this request"
-            disabled={actioned}
-          >
-            <X className="h-5 w-5" />
-            Reject
-          </button>
-        </div>
-      </section>
+      </div>
     </div>
-  )
+  );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { UserPlus, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-function statusBadge(status) {
+function statusBadge(status: string) {
   const base = "inline-block px-3 py-1 text-xs font-semibold rounded-full";
   if (status === "Pending") return <span className={base + " bg-yellow-100 text-yellow-800"}>Pending</span>;
   if (status === "Approved") return <span className={base + " bg-green-100 text-green-700"}>Approved</span>;

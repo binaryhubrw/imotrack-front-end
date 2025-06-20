@@ -95,7 +95,7 @@ export default function IssueManagementPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const handleAction = (newStatus) => {
+  const handleAction = (newStatus: Issue['status']) => {
     setNewStatus(newStatus);
     if (typeof window !== "undefined") {
       localStorage.setItem("VR-002-status", newStatus);
@@ -122,7 +122,13 @@ export default function IssueManagementPage() {
     setLocalIssues((prev) =>
       prev.map((r) =>
         r.id === 2
-          ? { ...r, status: typeof window !== "undefined" && localStorage.getItem("VR-002-status") ? localStorage.getItem("VR-002-status") : r.status }
+          ? {
+              ...r,
+              status:
+                typeof window !== "undefined" && ["pending", "in-progress", "resolved"].includes(localStorage.getItem("VR-002-status") || "")
+                  ? (localStorage.getItem("VR-002-status") as Issue["status"])
+                  : r.status,
+            }
           : r
       )
     );
@@ -198,13 +204,15 @@ export default function IssueManagementPage() {
                         <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
-                            issue.status === "Pending"
+                            issue.status === "pending"
                               ? "bg-yellow-100 text-yellow-800"
-                              : issue.status === "Approved"
+                              : issue.status === "in-progress"
+                              ? "bg-blue-100 text-blue-800"
+                              : issue.status === "resolved"
                               ? "bg-green-100 text-green-700"
                               : "bg-pink-100 text-pink-700"
                           }`}>
-                            {issue.status}
+                            {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
                           </span>
                           <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(issue.priority)}`}>
                             {issue.priority}
