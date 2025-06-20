@@ -17,7 +17,7 @@ import {
 
 
 
-export default function ProfilePage() {
+export default function HRProfilePage() {
   const { user: authUser } = useAuth();
   const { data: userDetails, isLoading, error } = useUserDetails(authUser?.id || '');
 
@@ -109,46 +109,53 @@ export default function ProfilePage() {
     },
   ] : [];
 
+  // HR-specific fields (if available)
+  const hrFields = userDetails && authUser.role === 'hr' ? [
+    {
+      icon: faShieldAlt,
+      label: 'Staff Status',
+      value: userDetails.status || 'Active',
+    },
+  ] : [];
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* Profile Header */}
-          <div className="px-4 py-5 sm:px-6 bg-[#0872b3] text-white">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg leading-6 font-medium">Profile Information</h3>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-full capitalize">
-                {authUser.role}
-              </div>
-            </div>
-            <p className="mt-1 max-w-2xl text-sm text-white/80">
-              Personal details and account information
-            </p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-8 px-4">
+      <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg p-6">
+        {/* Profile content will go here */}
+        <div className="mt-6 flex justify-center">
+          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">
+            Edit Profile
+          </button>
+        </div>
+        <div className="mt-8 flex justify-center">
+          <span className="px-4 py-1 rounded-full bg-green-100 text-green-700 font-semibold text-sm">
+            Active
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div>
+            <div className="text-xs text-gray-500">Email</div>
+            <div className="font-medium text-gray-800">john.doe@company.com</div>
           </div>
-
-          {/* Profile Content */}
-          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-            <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
-              {/* Basic Items */}
-              {basicItems.map((item, index) => (
-                <div key={index} className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <FontAwesomeIcon icon={item.icon} /> {item.label}
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">{item.value}</dd>
-                </div>
-              ))}
-
-              {/* Extended Items */}
-              {extendedItems.map((item, index) => (
-                <div key={index} className="sm:col-span-1">
-                  <dt className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                    <FontAwesomeIcon icon={item.icon} /> {item.label}
-                  </dt>
-                  <dd className="mt-1 text-sm text-gray-900">{item.value}</dd>
-                </div>
-              ))}
-            </dl>
+          <div>
+            <div className="text-xs text-gray-500">Phone</div>
+            <div className="font-medium text-gray-800">+250 788 123 456</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Date of Birth</div>
+            <div className="font-medium text-gray-800">15/05/1985</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">NID</div>
+            <div className="font-medium text-gray-800">1234567890123456</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Gender</div>
+            <div className="font-medium text-gray-800">Male</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">Address</div>
+            <div className="font-medium text-gray-800">123 Main St, Kigali</div>
           </div>
         </div>
       </div>

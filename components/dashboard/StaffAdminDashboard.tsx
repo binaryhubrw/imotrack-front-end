@@ -1,5 +1,3 @@
-
-
 import React, { useState } from "react";
 import {
   XAxis,
@@ -13,10 +11,14 @@ import {
 } from "recharts";
 import { Users, Car, Clock, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import AddStaffModal from "@/components/AddStaffModal";
+import MakeNewRequestModal from "@/components/MakeNewRequestModal";
 
 export default function StaffAdminDashboard() {
   const [performanceFilter, setPerformanceFilter] = useState("Last Month");
   const [departmentFilter, setDepartmentFilter] = useState("All Departments");
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [isCarRequestOpen, setIsCarRequestOpen] = useState(false);
 
   // Performance trends data
   const performanceData = [
@@ -36,7 +38,7 @@ export default function StaffAdminDashboard() {
     { name: "IT", value: 4.4 },
   ];
 
-  const departmentColors = {
+  const departmentColors: { [key: string]: string } = {
     HR: "#FF6384",
     Sales: "#36A2EB",
     Marketing: "#FFCE56",
@@ -59,9 +61,46 @@ export default function StaffAdminDashboard() {
     "IT",
   ];
 
+  // Dummy handler for staff add
+  const handleAddStaff = (staffData: any) => {
+    // TODO: Integrate with backend or state
+    console.log("Staff added:", staffData);
+  };
+  // Dummy handler for car request
+  const handleCarRequest = (requestData: any) => {
+    // TODO: Integrate with backend or state
+    console.log("Car request:", requestData);
+  };
+
   return (
     <div className="min-h-screen bg-white p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Top Action Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end items-center gap-3 mb-6">
+          <button
+            className="bg-[#0872B3] hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow transition-colors"
+            onClick={() => setIsAddStaffOpen(true)}
+          >
+            <span>+ Add Staff</span>
+          </button>
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow transition-colors"
+            onClick={() => setIsCarRequestOpen(true)}
+          >
+            <span>+ New Car Request</span>
+          </button>
+        </div>
+        {/* Modals */}
+        <AddStaffModal
+          isOpen={isAddStaffOpen}
+          onClose={() => setIsAddStaffOpen(false)}
+          onAddStaff={handleAddStaff}
+        />
+        <MakeNewRequestModal
+          isOpen={isCarRequestOpen}
+          onClose={() => setIsCarRequestOpen(false)}
+          onSubmitRequest={handleCarRequest}
+        />
         {/* Top Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Total Staff */}

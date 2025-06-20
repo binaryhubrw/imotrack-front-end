@@ -50,7 +50,7 @@ const MakeNewRequestModal: React.FC<MakeNewRequestModalProps> = ({ isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50 overflow-auto p-4">
+    <div className="fixed inset-0 z-50 flex justify-center items-center overflow-auto p-4 bg-black bg-opacity-40 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-auto p-6 relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-800">Make New Request</h2>

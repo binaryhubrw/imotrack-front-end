@@ -254,7 +254,10 @@ export default function DashboardLayout({
               {showSettings && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
                   <button
-                    onClick={() => setShowSettings(false)}
+                    onClick={() => {
+                      setShowSettings(false);
+                      router.push('/dashboard/profile');
+                    }}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
                   >
                     <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
