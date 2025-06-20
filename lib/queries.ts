@@ -11,6 +11,8 @@ import {
   CreateUserDto,
   UpdateUserDto,
   UserDetails,
+  CreateHrUserDto,
+  UpdateHrUserDto,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
 
@@ -220,4 +222,79 @@ export const useRoles = () => {
   });
 };
 
+//HR CRUD____________________________________________________________________________ HR: Get roles
+export const useHrRoles = () => {
+  return useQuery({
+    queryKey: ['hr-roles'],
+    queryFn: async () => {
+      const { data } = await api.get('/hr/roles');
+      return data;
+    },
+  });
+};
 
+export const useHrUsers = () => {
+  return useQuery({
+    queryKey: ['hr-users'],
+    queryFn: async () => {
+      const { data } = await api.get('/hr/users');
+      return data;
+    },
+  })
+}
+
+export const useHrUser = (id: string) => {
+  return useQuery({
+    queryKey: ['hr-user', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/hr/users/${id}`);
+      return data;
+    },
+    enabled: !!id, // Only run query if id is available
+  })
+}
+
+
+// HR: Create user
+export const useCreateHrUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (userData: CreateHrUserDto) => {
+      const { data } = await api.post('/hr/users', userData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-users'] });
+    },
+  });
+};
+
+export const useUpdateHrUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<UpdateHrUserDto> }) => {
+      const { data } = await api.put(`/hr/users/${id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hr-users'] });
+      queryClient.invalidateQueries({ queryKey: ['hr-user', variables.id] });
+    },
+  });
+}
+
+export const useDeleteHrUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/hr/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-users'] });
+    },
+  });
+}

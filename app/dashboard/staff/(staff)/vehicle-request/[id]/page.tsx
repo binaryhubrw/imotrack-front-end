@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function Vri() {
+  return (
+    <div>
+      chrid
+    </div>
+  )
+}
+
 // 'use client';
 // import React, { useEffect, useState } from 'react';
 // import { useRouter } from 'next/navigation';

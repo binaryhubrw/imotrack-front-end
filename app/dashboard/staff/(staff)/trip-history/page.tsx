@@ -1,3 +1,13 @@
+import React from 'react'
+
+export default function TRH() {
+  return (
+    <div>
+      trh
+    </div>
+  )
+}
+
 // 'use client';
 // import React, { useState } from 'react';
 // import { Eye, X, Car, Download } from 'lucide-react';

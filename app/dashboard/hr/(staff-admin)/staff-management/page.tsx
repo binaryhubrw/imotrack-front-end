@@ -1,188 +1,217 @@
 'use client'
 import React, { useState } from 'react';
-import { Plus, Filter, Edit, Trash2, Eye, Search, ChevronDown, Users } from 'lucide-react';
+import { Plus, Filter, Edit, Trash2, Eye, Search, ChevronDown, Users, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import AddStaffModal from '@/components/AddStaffModal';
-
-// Define the structure of a staff member
-type Staff = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  department: string;
-  role: string;
-  status: string;
-};
-
-// Define the structure for new staff data from the modal
-interface NewStaffData {
-  firstName: string;
-  lastName: string;
-  nid: string;
-  gender: string;
-  email: string;
-  phoneNumber: string;
-  organization: string;
-  role: string;
-  dob: string;
-  streetAddress: string;
-  licenseNumber?: string; // Optional for non-driver roles
-  licenseExpiryDate?: string; // Optional for non-driver roles
-}
-
-// Define user roles and permissions
-type Role = 'Admin' | 'Manager' | 'HR' | 'Staff';
-type PermissionAction = 'view' | 'edit' | 'delete' | 'add';
+import { useHrUsers, useHrRoles, useCreateHrUser, useUpdateHrUser, useDeleteHrUser, useHrUser } from '@/lib/queries';
+import { CreateHrUserDto, HrRole, HrUser, UpdateHrUserDto } from '@/types/next-auth';
+import { toast } from 'sonner';
 
 export default function StaffManagement() {
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterDepartment, setFilterDepartment] = useState<string>('All');
-  const [filterStatus, setFilterStatus] = useState<string>('All');
   const [filterRole, setFilterRole] = useState<string>('All');
+  const [filterStatus, setFilterStatus] = useState<string>('All');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-  // Simulate current user role (in real apps, this comes from context or auth)
-  const [currentUserRole] = useState<Role>('Admin');
-
-  const staffData: Staff[] = [
-    {
-      id: 'EMP001',
-      name: 'John Doe',
-      email: 'john.doe@ur.ac.rw',
-      phone: '+250 788 123 456',
-      department: 'Administration',
-      role: 'Staff',
-      status: 'Active'
-    },
-    {
-      id: 'EMP002',
-      name: 'Jane Smith',
-      email: 'jane.smith@ur.ac.rw',
-      phone: '+250 788 234 567',
-      department: 'Transport',
-      role: 'Driver',
-      status: 'Active'
-    },
-    {
-      id: 'EMP003',
-      name: 'Robert Johnson',
-      email: 'robert.j@ur.ac.rw',
-      phone: '+250 788 345 678',
-      department: 'Finance',
-      role: 'Manager',
-      status: 'Active'
-    },
-    {
-      id: 'EMP004',
-      name: 'Sarah Williams',
-      email: 'sarah.w@ur.ac.rw',
-      phone: '+250 788 456 789',
-      department: 'IT',
-      role: 'Staff',
-      status: 'On Leave'
-    },
-    {
-      id: 'EMP005',
-      name: 'Michael Brown',
-      email: 'michael.b@ur.ac.rw',
-      phone: '+250 788 567 890',
-      department: 'Transport',
-      role: 'Driver',
-      status: 'Active'
-    }
-  ];
+  const [formData, setFormData] = useState<CreateHrUserDto>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    nid: '',
+    gender: 'MALE',
+    dob: '',
+    streetAddress: '',
+    roleId: '',
+  });
 
   const router = useRouter();
+  
+  // API hooks
+  const { data: hrUsers = [], isError, refetch } = useHrUsers();
+  const { data: hrRoles = [] } = useHrRoles();
+  const createUserMutation = useCreateHrUser();
+  const updateUserMutation = useUpdateHrUser();
+  const deleteUserMutation = useDeleteHrUser();
+  const { data: editingUserData, isLoading } = useHrUser(editingUserId || '');
 
-  const departments: string[] = ['All', 'Administration', 'Transport', 'Finance', 'IT'];
-  const statuses: string[] = ['All', 'Active', 'On Leave', 'Inactive'];
-  const roles: string[] = ['All', 'Staff', 'Driver', 'Manager', 'Admin'];
+  const statuses: string[] = ['All', 'active', 'inactive'];
+  const roles = ['All', ...hrRoles.map((role: HrRole) => role.name)];
 
-  // Permission check
-  const hasPermission = (action: PermissionAction, targetRole: string | null = null): boolean => {
-    const permissions: Record<Role, PermissionAction[]> = {
-      'Admin': ['view', 'edit', 'delete', 'add'],
-      'Manager': ['view', 'edit', 'add'],
-      'HR': ['view', 'edit', 'add'],
-      'Staff': ['view']
-    };
+  const filteredStaff = hrUsers.filter((user: HrUser) => {
+    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.nid.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const userPermissions = permissions[currentUserRole] || ['view'];
+    const matchesRole = filterRole === 'All' || user.role === filterRole;
+    const matchesStatus = filterStatus === 'All' || user.status === filterStatus;
 
-    if ((action === 'edit' || action === 'delete') && targetRole) {
-      const roleHierarchy = ['Staff', 'Driver', 'Manager', 'Admin'];
-      const currentUserLevel = roleHierarchy.indexOf(currentUserRole);
-      const targetRoleLevel = roleHierarchy.indexOf(targetRole);
-
-      if (targetRoleLevel >= currentUserLevel && currentUserRole !== 'Admin') {
-        return false;
-      }
-    }
-
-    return userPermissions.includes(action);
-  };
-
-  const filteredStaff = staffData.filter((staff: Staff) => {
-    const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.id.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesDepartment = filterDepartment === 'All' || staff.department === filterDepartment;
-    const matchesStatus = filterStatus === 'All' || staff.status === filterStatus;
-    const matchesRole = filterRole === 'All' || staff.role === filterRole;
-
-    return matchesSearch && matchesDepartment && matchesStatus && matchesRole;
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   const getStatusBadge = (status: string): string => {
     const statusStyles: Record<string, string> = {
-      'Active': 'bg-green-100 text-green-800',
-      'On Leave': 'bg-yellow-100 text-yellow-800',
-      'Inactive': 'bg-red-100 text-red-800'
+      'active': 'bg-green-100 text-green-800',
+      'inactive': 'bg-red-100 text-red-800'
     };
-
-    return `px-2 py-1 rounded-full text-xs font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`;
+    return `px-3 py-1 rounded-full text-xs font-medium ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`;
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleRowClick = (staffId: string, staffRole: string) => {
-    if (hasPermission('view')) {
-      router.push(`/dashboard/staff-management/${staffId}`);
+  const getRoleBadge = (role: string): string => {
+    const roleStyles: Record<string, string> = {
+      'staff': 'bg-blue-100 text-blue-800',
+      'fleetmanager': 'bg-purple-100 text-purple-800'
+    };
+    return `px-3 py-1 rounded-full text-xs font-medium ${roleStyles[role] || 'bg-gray-100 text-gray-800'}`;
+  };
 
+  // When entering edit mode, prefill form
+  React.useEffect(() => {
+    if (isEditMode && editingUserId && editingUserData) {
+      setFormData({
+        firstName: editingUserData.firstName,
+        lastName: editingUserData.lastName,
+        email: editingUserData.email,
+        phone: editingUserData.phone,
+        nid: editingUserData.nid,
+        gender: editingUserData.gender,
+        dob: editingUserData.dob,
+        streetAddress: editingUserData.streetAddress,
+        roleId: editingUserData.roleId,
+      });
+    }
+    if (!isEditMode) {
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        nid: '',
+        gender: 'MALE',
+        dob: '',
+        streetAddress: '',
+        roleId: '',
+      });
+    }
+  }, [isEditMode, editingUserId, editingUserData]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isEditMode && editingUserId) {
+        await updateUserMutation.mutateAsync({ id: editingUserId, updates: formData as UpdateHrUserDto });
+        toast.success('User updated successfully');
+      } else {
+        await createUserMutation.mutateAsync(formData);
+        toast.success('User created successfully');
+      }
+      setIsModalOpen(false);
+      setIsEditMode(false);
+      setEditingUserId(null);
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        nid: '',
+        gender: 'MALE',
+        dob: '',
+        streetAddress: '',
+        roleId: '',
+      });
+      refetch();
+    } catch (error) {
+      toast.error('Error saving user');
+      console.error('Error saving user:', error);
     }
   };
 
-  const handleAddStaff = (newStaffData: NewStaffData) => {
-    // In a real application, you would send this data to your backend API
-    console.log('New staff added:', newStaffData);
-    // You might also want to update your local staffData state or refetch data
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete ${name}?`)) {
+      try {
+        await deleteUserMutation.mutateAsync(id);
+        refetch();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+      }
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   return (
-    <div className="min-h-screen bg-white p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-black">Staff Management</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Staff Management</h1>
             <p className="text-gray-600 mt-1">Manage and monitor all staff members</p>
           </div>
           
-          {hasPermission('add') && (
-            <button 
-              className="bg-[#0872B3] hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-              onClick={() => setIsModalOpen(true)}
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Staff</span>
-            </button>
-          )}
+          <button 
+            className="bg-[#0872B3] hover:bg-[0872C1] text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-sm"
+            onClick={() => {
+              setIsModalOpen(true);
+              setIsEditMode(false);
+              setEditingUserId(null);
+            }}
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Staff</span>
+          </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                <p className="text-2xl font-bold text-gray-900">{hrUsers.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active Staff</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {hrUsers.filter((user: HrUser) => user.status === 'active').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Fleet Managers</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {hrUsers.filter((user: HrUser) => user.role === 'fleetmanager').length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters and Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -191,22 +220,8 @@ export default function StaffManagement() {
                 placeholder="Search staff..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               />
-            </div>
-
-            {/* Department Filter */}
-            <div className="relative">
-              <select
-                value={filterDepartment}
-                onChange={(e) => setFilterDepartment(e.target.value)}
-                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-[#0872B3] focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
-              >
-                {departments.map(dept => (
-                  <option key={dept} value={dept}>{dept === 'All' ? 'All Departments' : dept}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
             {/* Role Filter */}
@@ -214,10 +229,12 @@ export default function StaffManagement() {
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-[#0872B3] focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
+                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               >
                 {roles.map(role => (
-                  <option key={role} value={role}>{role === 'All' ? 'All Roles' : role}</option>
+                  <option key={role} value={role}>
+                    {role === 'All' ? 'All Roles' : role.charAt(0).toUpperCase() + role.slice(1)}
+                  </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -228,10 +245,12 @@ export default function StaffManagement() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-[#0872B3] focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
+                className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm cursor-pointer hover:border-blue-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors"
               >
                 {statuses.map(status => (
-                  <option key={status} value={status}>{status === 'All' ? 'All Status' : status}</option>
+                  <option key={status} value={status}>
+                    {status === 'All' ? 'All Status' : status.charAt(0).toUpperCase() + status.slice(1)}
+                  </option>
                 ))}
               </select>
               <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -241,9 +260,8 @@ export default function StaffManagement() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                setFilterDepartment('All');
-                setFilterStatus('All');
                 setFilterRole('All');
+                setFilterStatus('All');
               }}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
             >
@@ -255,114 +273,306 @@ export default function StaffManagement() {
 
         {/* Staff Table */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Staff ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Name</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Email</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Phone</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Department</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredStaff.map((staff) => (
-                  <tr 
-                    key={staff.id}
-                    onClick={() => handleRowClick(staff.id, staff.role)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm font-medium text-[#0872B3]" onClick={(e) => e.stopPropagation()}>{staff.id}</td>
-                    <td className="px-6 py-4 text-sm text-black font-medium">{staff.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{staff.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{staff.phone}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{staff.department}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{staff.role}</td>
-                    <td className="px-6 py-4">
-                      <span className={getStatusBadge(staff.status)}>
-                        {staff.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        {hasPermission('view') && (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2">Loading staff...</span>
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12">
+              <p className="text-red-600">Error loading staff data</p>
+              <button onClick={() => refetch()} className="mt-2 text-blue-600 hover:underline">
+                Try Again
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Name</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Email</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Phone</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">NID</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Role</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Status</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredStaff.map((user: HrUser) => (
+                    <tr 
+                      key={user.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">{user.organizationName}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{user.phone}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{user.nid}</td>
+                      <td className="px-6 py-4">
+                        <span className={getRoleBadge(user.role)}>
+                          {user.role === 'fleetmanager' ? 'Fleet Manager' : 'Staff'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={getStatusBadge(user.status)}>
+                          {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-router.push(`/dashboard/staff-management/${staff.id}`);
-
-                            }}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            onClick={() => router.push(`/dashboard/hr/staff-management/${user.id}`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                        )}
-                        
-                        {hasPermission('edit', staff.role) && (
+                          
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                             router.push( `/dashboard/staff-management/${staff.id}/edit`);
+                            onClick={() => {
+                              setIsEditMode(true);
+                              setEditingUserId(user.id);
+                              setIsModalOpen(true);
                             }}
-                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Edit Staff"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                        )}
-                        
-                        {hasPermission('delete', staff.role) && (
+                          
                           <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Are you sure you want to delete ${staff.name}?`)) {
-                                // Handle delete
-                                console.log('Delete staff:', staff.id);
-                              }
-                            }}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            onClick={() => handleDelete(user.id, `${user.firstName} ${user.lastName}`)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete Staff"
+                            disabled={deleteUserMutation.isPending}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Empty State */}
-          {filteredStaff.length === 0 && (
+          {!isLoading && !isError && filteredStaff.length === 0 && (
             <div className="text-center py-12">
-              <div className="text-gray-500 mb-4">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No staff members found</p>
-                <p className="text-sm">Try adjusting your search or filter criteria</p>
-              </div>
+              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <p className="text-lg font-medium text-gray-900">No staff members found</p>
+              <p className="text-sm text-gray-500">Try adjusting your search or filter criteria</p>
             </div>
           )}
         </div>
 
         {/* Results Summary */}
-        {filteredStaff.length > 0 && (
+        {!isLoading && filteredStaff.length > 0 && (
           <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredStaff.length} of {staffData.length} staff members
+            Showing {filteredStaff.length} of {hrUsers.length} staff members
           </div>
         )}
 
-        <AddStaffModal 
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onAddStaff={handleAddStaff}
-        />
+        {/* Add/Edit Staff Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-white/70 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-fadeIn">
+              <div className="flex items-center justify-between p-6 border-b">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {isEditMode ? 'Edit Staff Member' : 'Add New Staff Member'}
+                </h2>
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setIsEditMode(false);
+                    setEditingUserId(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name *
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="+250788123456"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      National ID *
+                    </label>
+                    <input
+                      type="text"
+                      name="nid"
+                      value={formData.nid}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender *
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    >
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Birth *
+                    </label>
+                    <input
+                      type="date"
+                      name="dob"
+                      value={formData.dob}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role *
+                    </label>
+                    <select
+                      name="roleId"
+                      value={formData.roleId}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    >
+                      <option value="">Select Role</option>
+                      {hrRoles.map((role: HrRole) => (
+                        <option key={role.id} value={role.id}>
+                          {role.name === 'fleetmanager' ? 'Fleet Manager' : role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Street Address *
+                  </label>
+                  <input
+                    type="text"
+                    name="streetAddress"
+                    value={formData.streetAddress}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="KN 7 Ave, Kigali"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setIsEditMode(false);
+                      setEditingUserId(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createUserMutation.isPending || updateUserMutation.isPending}
+                    className="px-4 py-2 bg-[#0872B3] hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {(createUserMutation.isPending || updateUserMutation.isPending)
+                      ? (isEditMode ? 'Updating...' : 'Adding...')
+                      : (isEditMode ? 'Update Staff Member' : 'Add Staff Member')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

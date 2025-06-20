@@ -377,3 +377,65 @@ export type ReportFilterParams = PaginationParams & {
   start_date?: Date;
   end_date?: Date;
 };
+
+// HR user creation payload type
+export interface CreateHrUserDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nid: string;
+  gender: 'MALE' | 'FEMALE';
+  dob: string;
+  streetAddress: string;
+  roleId: string;
+}
+
+// HR user creation payload type
+export interface UpdateHrUserDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nid: string;
+  gender: 'MALE' | 'FEMALE';
+  dob: string;
+  streetAddress: string;
+  roleId: string;
+}
+
+// Types based on your API responses
+interface HrUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nid: string;
+  gender: "MALE" | "FEMALE";
+  dob: string;
+  streetAddress: string;
+  role: string;
+  organizationName: string;
+  status: string;
+}
+
+
+export interface HrRole {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface CreateHRUserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nid: string;
+  gender: "MALE" | "FEMALE";
+  dob: string;
+  streetAddress: string;
+  roleId: string;
+  organizationName: string;
+}

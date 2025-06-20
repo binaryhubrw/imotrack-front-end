@@ -371,7 +371,7 @@ export default function RequestDetails() {
               <p className="text-gray-600 mb-4">Please provide a reason for rejecting this request:</p>
               <textarea 
                 className="w-full border border-gray-300 rounded-lg p-3 mb-6 focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
-                rows="4"
+                // rows="4"
                 placeholder="Enter rejection reason..."
               ></textarea>
               <div className="flex space-x-3 justify-end">
