@@ -175,8 +175,7 @@ export type Vehicle = {
   fuel_type?: string;
   last_service_date?: Date;
   created_at: Date;
-  organization_id: string;
-  organization?: Organization;
+  organization_name: string;
   trips?: Trip[];
   requests?: Request[];
 };
@@ -419,6 +418,15 @@ interface HrUser {
   organizationName: string;
   status: string;
 }
+// Add a type for StatCard props
+interface StatCardProps {
+  icon: React.ElementType;
+  title: string;
+  value: string;
+  bgColor: string;
+  textColor: string;
+}
+
 
 
 export interface HrRole {

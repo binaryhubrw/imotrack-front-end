@@ -1,7 +1,7 @@
-
-
 "use client";
 import React, { useState, useMemo } from "react";
+import { useParams } from "next/navigation";
+import { useGetFMVehicle } from '@/lib/queries';
 import {
   Car,
   History,
@@ -13,24 +13,6 @@ import {
   Calendar,
   Award,
 } from "lucide-react";
-
-interface VehicleInfo {
-  id: string;
-  type: string;
-  model: string;
-  capacity: number;
-  plateNo: string;
-  status: "Active" | "Maintenance" | "Inactive";
-  initialOdometer: number;
-  currentOdometer: number;
-  inUseSince: string;
-  lastUsed: string;
-  lastTripInitial: number;
-  lastTripFinal: number;
-  fuelType: string;
-  insurance: string;
-  nextMaintenance: string;
-}
 
 interface Driver {
   id: string;
@@ -63,6 +45,9 @@ interface Trip {
 }
 
 const VehicleDetails: React.FC = () => {
+  const params = useParams();
+  const vehicleId = params?.id as string;
+  const { data: vehicle, isLoading, isError } = useGetFMVehicle(vehicleId);
   const [activeTab, setActiveTab] = useState<"info" | "trips" | "drivers">(
     "info"
   );
@@ -70,24 +55,26 @@ const VehicleDetails: React.FC = () => {
   const [tripsPerPage] = useState(5);
   const [driversPerPage] = useState(6);
 
-  // Enhanced mock data
-  const vehicleInfo: VehicleInfo = {
-    id: "VR-001",
-    type: "Bus",
-    model: "Toyota Coaster",
-    capacity: 34,
-    plateNo: "RAA-276 C",
-    status: "Maintenance",
-    initialOdometer: 200,
-    currentOdometer: 700,
-    inUseSince: "12/12/1998",
-    lastUsed: "12/12/2024",
-    lastTripInitial: 670,
-    lastTripFinal: 700,
-    fuelType: "Diesel",
-    insurance: "Active until 2025-12-31",
-    nextMaintenance: "2025-06-15",
-  };
+  // Replace mock vehicleInfo with real data
+  const vehicleInfo = vehicle
+    ? {
+        id: vehicle.id,
+        type: vehicle.model, // No explicit type field, use model/manufacturer
+        model: vehicle.model,
+        capacity: vehicle.capacity ?? '-',
+        plateNo: vehicle.plate_number,
+        status: vehicle.status,
+        initialOdometer: vehicle.odometer, // No initial, just odometer
+        currentOdometer: vehicle.odometer,
+        inUseSince: vehicle.created_at ? new Date(vehicle.created_at).toLocaleDateString() : '-',
+        lastUsed: vehicle.last_service_date ? new Date(vehicle.last_service_date).toLocaleDateString() : '-',
+        lastTripInitial: '-', // TODO: from trips API
+        lastTripFinal: '-', // TODO: from trips API
+        fuelType: vehicle.fuel_type ?? '-',
+        insurance: '-', // TODO: from insurance API/field
+        nextMaintenance: '-', // TODO: from maintenance API/field
+      }
+    : null;
 
   const drivers: Driver[] = [
     {
@@ -241,7 +228,7 @@ const VehicleDetails: React.FC = () => {
       return (
         (!tripFilters.date || trip.date.includes(tripFilters.date)) &&
         (!tripFilters.plate ||
-          vehicleInfo.plateNo
+          vehicleInfo?.plateNo
             .toLowerCase()
             .includes(tripFilters.plate.toLowerCase())) &&
         (!tripFilters.requester ||
@@ -252,7 +239,7 @@ const VehicleDetails: React.FC = () => {
           trip.reason.toLowerCase().includes(tripFilters.reason.toLowerCase()))
       );
     });
-  }, [trips, tripFilters]);
+  }, [trips, tripFilters, vehicleInfo]);
 
   const filteredDrivers = useMemo(() => {
     return drivers.filter((driver) => {
@@ -345,10 +332,10 @@ const VehicleDetails: React.FC = () => {
             </h3>
             <span
               className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusColor(
-                vehicleInfo.status
+                vehicleInfo?.status || ''
               )}`}
             >
-              {vehicleInfo.status}
+              {vehicleInfo?.status}
             </span>
           </div>
         </div>
@@ -360,7 +347,7 @@ const VehicleDetails: React.FC = () => {
                 Vehicle ID
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.id}
+                {vehicleInfo?.id}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -368,7 +355,7 @@ const VehicleDetails: React.FC = () => {
                 Vehicle Type
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.type}
+                {vehicleInfo?.type}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -376,7 +363,7 @@ const VehicleDetails: React.FC = () => {
                 Vehicle Model
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.model}
+                {vehicleInfo?.model}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -384,7 +371,7 @@ const VehicleDetails: React.FC = () => {
                 Capacity
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.capacity}
+                {vehicleInfo?.capacity}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -392,7 +379,7 @@ const VehicleDetails: React.FC = () => {
                 Plate No
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.plateNo}
+                {vehicleInfo?.plateNo}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -400,7 +387,7 @@ const VehicleDetails: React.FC = () => {
                 Fuel Type
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.fuelType}
+                {vehicleInfo?.fuelType}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -408,7 +395,7 @@ const VehicleDetails: React.FC = () => {
                 Initial Odometer (km)
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.initialOdometer.toLocaleString()}
+                {vehicleInfo?.initialOdometer.toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -416,7 +403,7 @@ const VehicleDetails: React.FC = () => {
                 Current Odometer (km)
               </div>
               <div className="font-bold text-lg text-[#0872B3]">
-                {vehicleInfo.currentOdometer.toLocaleString()}
+                {vehicleInfo?.currentOdometer.toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -424,7 +411,7 @@ const VehicleDetails: React.FC = () => {
                 In use since
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.inUseSince}
+                {vehicleInfo?.inUseSince}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -432,7 +419,7 @@ const VehicleDetails: React.FC = () => {
                 Recently used on
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.lastUsed}
+                {vehicleInfo?.lastUsed}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -440,7 +427,7 @@ const VehicleDetails: React.FC = () => {
                 Last Trip Initial (km)
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.lastTripInitial.toLocaleString()}
+                {vehicleInfo?.lastTripInitial.toLocaleString()}
               </div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -448,7 +435,7 @@ const VehicleDetails: React.FC = () => {
                 Last Trip Final (km)
               </div>
               <div className="font-bold text-lg text-gray-900">
-                {vehicleInfo.lastTripFinal.toLocaleString()}
+                {vehicleInfo?.lastTripFinal.toLocaleString()}
               </div>
             </div>
           </div>
@@ -463,7 +450,7 @@ const VehicleDetails: React.FC = () => {
                     Next Maintenance
                   </div>
                   <div className="text-lg font-bold text-[#0872B3]">
-                    {vehicleInfo.nextMaintenance}
+                    {vehicleInfo?.nextMaintenance}
                   </div>
                 </div>
               </div>
@@ -474,7 +461,7 @@ const VehicleDetails: React.FC = () => {
                     Insurance Status
                   </div>
                   <div className="text-lg font-bold text-green-600">
-                    {vehicleInfo.insurance}
+                    {vehicleInfo?.insurance}
                   </div>
                 </div>
               </div>
@@ -534,7 +521,7 @@ const VehicleDetails: React.FC = () => {
                     {trip.date}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {vehicleInfo.plateNo}
+                    {vehicleInfo?.plateNo}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {trip.requester}
@@ -704,7 +691,7 @@ const VehicleDetails: React.FC = () => {
                     {trip.date}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {vehicleInfo.plateNo}
+                    {vehicleInfo?.plateNo}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {trip.requester}
@@ -917,6 +904,14 @@ const VehicleDetails: React.FC = () => {
       </div>
     </div>
   );
+
+  // Loading and error states
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
+  }
+  if (isError || !vehicleInfo) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">Vehicle not found</div>;
+  }
 
   return (
     <div className="space-y-8">

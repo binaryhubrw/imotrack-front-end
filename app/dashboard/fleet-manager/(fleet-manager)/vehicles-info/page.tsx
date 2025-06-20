@@ -1,109 +1,82 @@
-
-
 'use client'
 import React, { useState } from 'react';
-import { 
-  Car, 
-  Search, 
-  Filter, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Fuel,
-  Calendar,
-  MapPin
-} from 'lucide-react';
+import { Car, Search, Filter, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Fuel, Calendar, MapPin, X } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useFMVehicles, useCreateFMVehicles, useUpdateFMVehicle, useDeleteFMVehicle, useFMVehiclesStatuses } from '@/lib/queries';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-const VehiclesDashboard = () => {
+// Updated interfaces to match API response
+interface Vehicle {
+  id: string;
+  plate_number: string;
+  vehicle_type: string;
+  vehicle_model: string;
+  manufacturer: string;
+  year: number;
+  capacity?: number;
+  odometer?: number;
+  status: string;
+  fuel_type?: string;
+  last_service_date?: string;
+  created_at: string;
+  organization_name?: string;
+}
+
+interface CreateVehicleDto {
+  plate_number: string;
+  vehicle_type: string;
+  vehicle_model: string;
+  manufacturer: string;
+  year: number;
+  capacity?: number;
+  odometer?: number;
+  status: string;
+  fuel_type?: string;
+  last_service_date?: string;
+}
+
+interface UpdateVehicleDto extends CreateVehicleDto {}
+
+const getStatusColor = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case 'AVAILABLE':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'OCCUPIED':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'MAINTENANCE':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'OUT_OF_SERVICE':
+      return 'bg-gray-200 text-gray-600 border-gray-300';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+export default function VehiclesDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const { register, handleSubmit, reset } = useForm<CreateVehicleDto>();
+  const router = useRouter();
 
-  const router = useRouter()
-  // Mock vehicle data - replace with your actual data
-  const vehicles = [
-    {
-      id: 'VH001',
-      make: 'Toyota',
-      model: 'Camry',
-      year: 2022,
-      color: 'Silver',
-      vin: '1HGBH41JXMN109186',
-      licensePlate: 'ABC-1234',
-      status: 'Active',
-      mileage: 15420,
-      fuelType: 'Gasoline',
-      lastService: '2024-01-15',
-      location: 'Main Depot'
-    },
-    {
-      id: 'VH002',
-      make: 'Ford',
-      model: 'F-150',
-      year: 2023,
-      color: 'Blue',
-      vin: '1FTFW1ET5DKE12345',
-      licensePlate: 'XYZ-5678',
-      status: 'In Service',
-      mileage: 8750,
-      fuelType: 'Gasoline',
-      lastService: '2024-02-20',
-      location: 'Service Center'
-    },
-    {
-      id: 'VH003',
-      make: 'Tesla',
-      model: 'Model 3',
-      year: 2023,
-      color: 'White',
-      vin: '5YJ3E1EA4KF123456',
-      licensePlate: 'ELC-9999',
-      status: 'Active',
-      mileage: 12340,
-      fuelType: 'Electric',
-      lastService: '2024-01-28',
-      location: 'Main Depot'
-    },
-    {
-      id: 'VH004',
-      make: 'Honda',
-      model: 'Civic',
-      year: 2021,
-      color: 'Black',
-      vin: '19XFC2F59ME123456',
-      licensePlate: 'DEF-4567',
-      status: 'Maintenance',
-      mileage: 25680,
-      fuelType: 'Gasoline',
-      lastService: '2024-02-10',
-      location: 'Service Center'
-    },
-    {
-      id: 'VH005',
-      make: 'Chevrolet',
-      model: 'Silverado',
-      year: 2022,
-      color: 'Red',
-      vin: '3GCUYDED4NG123456',
-      licensePlate: 'GHI-7890',
-      status: 'Active',
-      mileage: 18920,
-      fuelType: 'Gasoline',
-      lastService: '2024-01-05',
-      location: 'Main Depot'
-    }
-  ];
+  // Fetch vehicles
+  const { data: vehicles, isLoading, isError } = useFMVehicles();
+  const createVehicle = useCreateFMVehicles();
+  const updateVehicle = useUpdateFMVehicle();
+  const deleteVehicle = useDeleteFMVehicle();
+  const { data: statusOptions = [], isLoading: isStatusLoading, isError: isStatusError } = useFMVehiclesStatuses() as { data: { value: string; label: string }[]; isLoading: boolean; isError: boolean };
 
   // Filter vehicles based on search term
-  const filteredVehicles = vehicles.filter(vehicle =>
-    vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.licensePlate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vehicle.vin.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredVehicles = (vehicles || []).filter((vehicle: Vehicle) =>
+    vehicle.manufacturer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.vehicle_model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.plate_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vehicle.vehicle_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Pagination logic
@@ -112,19 +85,95 @@ const VehiclesDashboard = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentVehicles = filteredVehicles.slice(startIndex, endIndex);
 
- 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'in service':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'maintenance':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Add Vehicle
+  const onAddVehicle = async (data: CreateVehicleDto) => {
+    try {
+      // Format the date properly for the API
+      const formattedData = {
+        ...data,
+        year: Number(data.year),
+        capacity: data.capacity ? Number(data.capacity) : undefined,
+        odometer: data.odometer ? Number(data.odometer) : undefined,
+        last_service_date: data.last_service_date || undefined,
+      };
+      
+      await createVehicle.mutateAsync(formattedData);
+      toast.success('Vehicle added successfully');
+      setShowAddModal(false);
+      reset();
+    } catch (error) {
+      console.error('Add vehicle error:', error);
+      toast.error('Failed to add vehicle');
     }
   };
+
+  // Edit Vehicle
+  const onEditVehicle = async (data: UpdateVehicleDto) => {
+    if (!selectedVehicle) return;
+    try {
+      const formattedData = {
+        ...data,
+        year: Number(data.year),
+        capacity: data.capacity ? Number(data.capacity) : undefined,
+        odometer: data.odometer ? Number(data.odometer) : undefined,
+        last_service_date: data.last_service_date || undefined,
+      };
+      
+      await updateVehicle.mutateAsync({ id: selectedVehicle.id, updates: formattedData });
+      toast.success('Vehicle updated successfully');
+      setShowEditModal(false);
+      setSelectedVehicle(null);
+      reset();
+    } catch (error) {
+      console.error('Update vehicle error:', error);
+      toast.error('Failed to update vehicle');
+    }
+  };
+
+  // Delete Vehicle
+  const onDeleteVehicle = async () => {
+    if (!selectedVehicle) return;
+    try {
+      await deleteVehicle.mutateAsync(selectedVehicle.id);
+      toast.success('Vehicle deleted successfully');
+      setShowDeleteModal(false);
+      setSelectedVehicle(null);
+    } catch (error) {
+      console.error('Delete vehicle error:', error);
+      toast.error('Failed to delete vehicle');
+    }
+  };
+
+  // Prefill edit form with selected vehicle data
+  const openEditModal = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setShowEditModal(true);
+    
+    // Format the date for form input (YYYY-MM-DD)
+    const formattedDate = vehicle.last_service_date 
+      ? new Date(vehicle.last_service_date).toISOString().split('T')[0]
+      : '';
+    
+    reset({
+      vehicle_model: vehicle.vehicle_model,
+      vehicle_type: vehicle.vehicle_type,
+      manufacturer: vehicle.manufacturer,
+      year: vehicle.year,
+      capacity: vehicle.capacity,
+      plate_number: vehicle.plate_number,
+      odometer: vehicle.odometer,
+      status: vehicle.status,
+      fuel_type: vehicle.fuel_type,
+      last_service_date: formattedDate,
+    });
+  };
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  }
+  if (isError) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">Failed to load vehicles.</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -136,7 +185,10 @@ const VehiclesDashboard = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Vehicles</h1>
               <p className="text-gray-600">Manage your fleet vehicles and track their status</p>
             </div>
-            <button className="cursor-pointer bg-[#0872B3] hover:bg-[#0872B3] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+            <button
+              className="cursor-pointer bg-[#0872B3] hover:bg-[#055a8c] text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              onClick={() => { setShowAddModal(true); reset(); }}
+            >
               <Plus size={20} />
               Add Vehicle
             </button>
@@ -158,12 +210,6 @@ const VehiclesDashboard = () => {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div className="flex gap-2">
-                <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Filter size={16} />
-                  Filter
-                </button>
-              </div>
             </div>
           </div>
 
@@ -172,74 +218,66 @@ const VehiclesDashboard = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vehicle
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mileage
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Service
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mileage</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Service</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentVehicles.map((vehicle) => (
-                  <tr 
-                    key={vehicle.id}
-                    onClick={() => router.push(`/dashboard/vehicles-info/$${vehicle.id}`)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
+                {currentVehicles.map((vehicle: Vehicle) => (
+                  <tr key={vehicle.id} className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => router.push(`/dashboard/fleet-manager/vehicles-info/${vehicle.id}`)} >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="bg-gray-100 p-2 rounded-lg mr-4">
                           <Car className="text-gray-600" size={20} />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {vehicle.make} {vehicle.model}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {vehicle.year} • {vehicle.color}
-                          </div>
+                          <div className="text-sm font-medium text-gray-900">{vehicle.manufacturer} {vehicle.vehicle_model}</div>
+                          <div className="text-sm text-gray-500">{vehicle.year} • {vehicle.vehicle_type}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{vehicle.licensePlate}</div>
-                      <div className="text-sm text-gray-500">VIN: {vehicle.vin.slice(-6)}</div>
+                      <div className="text-sm text-gray-900">{vehicle.plate_number}</div>
+                      <div className="text-sm text-gray-500">Capacity: {vehicle.capacity || 0} seats</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(vehicle.status)}`}>
-                        {vehicle.status}
+                        {vehicle.status.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <Fuel className="mr-1 text-gray-400" size={16} />
-                        {vehicle.mileage.toLocaleString()} mi
+                        {vehicle.odometer?.toLocaleString() || 0} mi
                       </div>
-                      <div className="text-sm text-gray-500">{vehicle.fuelType}</div>
+                      <div className="text-sm text-gray-500">{vehicle.fuel_type || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <Calendar className="mr-1 text-gray-400" size={16} />
-                        {new Date(vehicle.lastService).toLocaleDateString()}
+                        {vehicle.last_service_date ? new Date(vehicle.last_service_date).toLocaleDateString() : 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <MapPin className="mr-1 text-gray-400" size={16} />
-                        {vehicle.location}
+                        {vehicle.organization_name || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => openEditModal(vehicle)} className="text-blue-600 hover:text-blue-900">
+                          <Edit size={18} />
+                        </button>
+                        <button onClick={() => { setSelectedVehicle(vehicle); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-900">
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -255,19 +293,17 @@ const VehiclesDashboard = () => {
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredVehicles.length)} of {filteredVehicles.length} vehicles
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
+                <button 
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                  disabled={currentPage === 1} 
                   className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft size={16} />
                 </button>
-                <span className="px-3 py-1 text-sm">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
+                <span className="px-3 py-1 text-sm">Page {currentPage} of {totalPages}</span>
+                <button 
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} 
+                  disabled={currentPage === totalPages} 
                   className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight size={16} />
@@ -276,9 +312,304 @@ const VehiclesDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Add Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 z-50">
+            <div className="relative bg-white rounded-xl p-8 max-w-xl w-full shadow-2xl border border-gray-100 my-6 md:my-12 overflow-y-auto max-h-[90vh] animate-fadeIn">
+              <button 
+                onClick={() => { setShowAddModal(false); reset(); }} 
+                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors" 
+                aria-label="Close" 
+                type="button"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-6 underline text-gray-900">Add New Vehicle</h2>
+              <form onSubmit={handleSubmit(onAddVehicle)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Model</label>
+                    <input 
+                      {...register('vehicle_model', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Manufacturer</label>
+                    <input 
+                      {...register('manufacturer', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Type</label>
+                    <input 
+                      {...register('vehicle_type', { required: true })} 
+                      placeholder="e.g., Sedan, SUV, Truck"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Year</label>
+                    <input 
+                      type="number" 
+                      {...register('year', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Plate Number</label>
+                    <input 
+                      {...register('plate_number', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Capacity</label>
+                    <input 
+                      type="number" 
+                      {...register('capacity')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Odometer (miles)</label>
+                    <input 
+                      type="number" 
+                      {...register('odometer')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Fuel Type</label>
+                    <input 
+                      {...register('fuel_type')} 
+                      placeholder="e.g., Petrol, Diesel, Electric"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Status</label>
+                    {isStatusLoading ? (
+                      <div className="text-gray-400 text-sm">Loading statuses...</div>
+                    ) : isStatusError ? (
+                      <div className="text-red-500 text-sm">Failed to load statuses</div>
+                    ) : (
+                      <select 
+                        {...register('status', { required: true })} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Status</option>
+                        {statusOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Last Service Date</label>
+                    <input 
+                      type="date" 
+                      {...register('last_service_date')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-center gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold" 
+                    onClick={() => { setShowAddModal(false); reset(); }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="bg-[#0872B3] hover:bg-[#055a8c] text-white px-6 py-2 rounded-lg font-semibold" 
+                    disabled={createVehicle.isPending}
+                  >
+                    {createVehicle.isPending ? 'Adding...' : 'Submit'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {showEditModal && selectedVehicle && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 md:p-8 z-50">
+            <div className="relative bg-white rounded-xl p-8 max-w-xl w-full shadow-2xl border border-gray-100 my-6 md:my-12 overflow-y-auto max-h-[90vh] animate-fadeIn">
+              <button 
+                onClick={() => { setShowEditModal(false); setSelectedVehicle(null); reset(); }} 
+                className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors" 
+                aria-label="Close" 
+                type="button"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+              <h2 className="text-2xl md:text-3xl font-bold text-center mb-6 underline text-gray-900">Edit Vehicle</h2>
+              <form onSubmit={handleSubmit(onEditVehicle)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Model</label>
+                    <input 
+                      {...register('vehicle_model', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Manufacturer</label>
+                    <input 
+                      {...register('manufacturer', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Type</label>
+                    <input 
+                      {...register('vehicle_type', { required: true })} 
+                      placeholder="e.g., Sedan, SUV, Truck"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Year</label>
+                    <input 
+                      type="number" 
+                      {...register('year', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Plate Number</label>
+                    <input 
+                      {...register('plate_number', { required: true })} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Capacity</label>
+                    <input 
+                      type="number" 
+                      {...register('capacity')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Odometer (miles)</label>
+                    <input 
+                      type="number" 
+                      {...register('odometer')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Fuel Type</label>
+                    <input 
+                      {...register('fuel_type')} 
+                      placeholder="e.g., Petrol, Diesel, Electric"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Status</label>
+                    {isStatusLoading ? (
+                      <div className="text-gray-400 text-sm">Loading statuses...</div>
+                    ) : isStatusError ? (
+                      <div className="text-red-500 text-sm">Failed to load statuses</div>
+                    ) : (
+                      <select 
+                        {...register('status', { required: true })} 
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Select Status</option>
+                        {statusOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">Last Service Date</label>
+                    <input 
+                      type="date" 
+                      {...register('last_service_date')} 
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" 
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-center gap-4 mt-6">
+                  <button 
+                    type="button" 
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold" 
+                    onClick={() => { setShowEditModal(false); setSelectedVehicle(null); reset(); }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="bg-[#0872B3] hover:bg-[#055a8c] text-white px-6 py-2 rounded-lg font-semibold" 
+                    disabled={updateVehicle.isPending}
+                  >
+                    {updateVehicle.isPending ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Modal */}
+        {showDeleteModal && selectedVehicle && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Trash2 className="text-red-600 text-xl w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900">Delete Vehicle</h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{selectedVehicle.plate_number}</span>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-4">
+                <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors" disabled={deleteVehicle.isPending}>Cancel</button>
+                <button onClick={onDeleteVehicle} disabled={deleteVehicle.isPending} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  {deleteVehicle.isPending ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Deleting...</>) : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default VehiclesDashboard;
+}

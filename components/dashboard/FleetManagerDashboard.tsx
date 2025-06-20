@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { Car, User, FileText, BarChart3 } from "lucide-react";
 import Link from "next/link";
+import { useFMVehicles } from "@/lib/queries";
 
 // Add a type for StatCard props
 interface StatCardProps {
@@ -47,6 +48,9 @@ export default function FleetManagerDashboard() {
     { day: "Saturday", requested: 840, approved: 150, declined: 720 },
     { day: "Sunday", requested: 720, approved: 200, declined: 480 },
   ];
+
+  const {data: vehicles, isLoading: isVehiclesLoading, isVehiclesError} = useFMVehicles();
+  console.log("Vehicle Data:", vehicles);
 
   // Mock data for recent activities
   const recentActivities = [

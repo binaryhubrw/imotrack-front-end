@@ -1,8 +1,7 @@
-
-
 'use client';
-import React, { useState } from 'react';
-import { Filter, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Filter, Search} from 'lucide-react';
+import { useRouter } from "next/navigation";
 
 // Define types for TypeScript
 interface Issue {
@@ -55,6 +54,11 @@ export default function IssueManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [newStatus, setNewStatus] = useState<Issue['status']>('pending');
+  const [localIssues, setLocalIssues] = useState(issues);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showStatusEdit, setShowStatusEdit] = useState(false);
+  const router = useRouter();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -82,13 +86,46 @@ export default function IssueManagementPage() {
     }
   };
 
-  const filteredIssues = issues.filter(issue => {
+  const filteredIssues = localIssues.filter(issue => {
     const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          issue.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  const handleAction = (newStatus) => {
+    setNewStatus(newStatus);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("VR-002-status", newStatus);
+    }
+    setShowSuccess(true);
+    setTimeout(() => {
+      setShowSuccess(false);
+      router.push("/dashboard/request-overview");
+    }, 1200);
+  };
+
+  const handleStatusUpdate = () => {
+    if (!selectedIssue) return;
+    setLocalIssues((prev) =>
+      prev.map((issue) =>
+        issue.id === selectedIssue.id ? { ...issue, status: newStatus as Issue['status'] } : issue
+      )
+    );
+    setSelectedIssue((prev) => prev ? { ...prev, status: newStatus as Issue['status'] } : prev);
+    setShowStatusEdit(false);
+  };
+
+  useEffect(() => {
+    setLocalIssues((prev) =>
+      prev.map((r) =>
+        r.id === 2
+          ? { ...r, status: typeof window !== "undefined" && localStorage.getItem("VR-002-status") ? localStorage.getItem("VR-002-status") : r.status }
+          : r
+      )
+    );
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
@@ -159,7 +196,13 @@ export default function IssueManagementPage() {
                         <h3 className="font-medium text-gray-900">{issue.title}</h3>
                         <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(issue.status)}`}>
+                          <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
+                            issue.status === "Pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : issue.status === "Approved"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-pink-100 text-pink-700"
+                          }`}>
                             {issue.status}
                           </span>
                           <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(issue.priority)}`}>
@@ -191,15 +234,11 @@ export default function IssueManagementPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Status</p>
-                      <p className={`mt-1 px-2 py-1 rounded-full text-xs inline-block ${getStatusColor(selectedIssue.status)}`}>
-                        {selectedIssue.status}
-                      </p>
+                      <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${getStatusColor(selectedIssue.status)}`}>{selectedIssue.status.charAt(0).toUpperCase() + selectedIssue.status.slice(1)}</span>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Priority</p>
-                      <p className={`mt-1 px-2 py-1 rounded-full text-xs inline-block ${getPriorityColor(selectedIssue.priority)}`}>
-                        {selectedIssue.priority}
-                      </p>
+                      <p className={`mt-1 px-2 py-1 rounded-full text-xs inline-block ${getPriorityColor(selectedIssue.priority)}`}>{selectedIssue.priority}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Reported By</p>
@@ -211,9 +250,40 @@ export default function IssueManagementPage() {
                     </div>
                   </div>
                   <div className="pt-4 border-t">
-                    <button className="w-full bg-[#0872B3] text-white px-4 py-2 rounded-lg hover:bg-[#065d94] transition-colors">
-                      Update Status
-                    </button>
+                    {!showStatusEdit ? (
+                      <button
+                        onClick={() => setShowStatusEdit(true)}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition"
+                      >
+                        Update Status
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <select
+                          className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          value={newStatus}
+                          onChange={e => setNewStatus(e.target.value as Issue['status'])}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                        </select>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleStatusUpdate}
+                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setShowStatusEdit(false)}
+                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
