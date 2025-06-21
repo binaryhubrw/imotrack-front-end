@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Filter, Search} from 'lucide-react';
-import { useRouter } from "next/navigation";
 
 // Define types for TypeScript
 interface Issue {
@@ -56,9 +55,7 @@ export default function IssueManagementPage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [newStatus, setNewStatus] = useState<Issue['status']>('pending');
   const [localIssues, setLocalIssues] = useState(issues);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showStatusEdit, setShowStatusEdit] = useState(false);
-  const router = useRouter();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -94,17 +91,7 @@ export default function IssueManagementPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const handleAction = (newStatus) => {
-    setNewStatus(newStatus);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("VR-002-status", newStatus);
-    }
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      router.push("/dashboard/request-overview");
-    }, 1200);
-  };
+
 
   const handleStatusUpdate = () => {
     if (!selectedIssue) return;

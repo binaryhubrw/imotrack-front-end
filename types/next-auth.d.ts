@@ -447,3 +447,17 @@ interface CreateHRUserData {
   roleId: string;
   organizationName: string;
 }
+
+
+interface CreateStaffUserDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nid: string;
+  gender: "MALE" | "FEMALE";
+  dob: string;
+  streetAddress: string;
+  organizationName: string;
+
+}

@@ -298,6 +298,70 @@ export const useDeleteHrUser = () => {
     },
   });
 }
+//__________STAFF CRUD____________________________________________________________________________ HR: Get roles
+
+export const useStaffs = ()=>{
+  return useQuery({
+    queryKey: ['staff'],
+    queryFn: async () => {
+      const { data } = await api.get('/staff');
+      return data;
+    },
+  });
+}
+
+export const useStaffDetails = (id: string) => {
+  return useQuery({
+    queryKey: ['staff', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/staff/${id}`);
+      return data;
+    },
+    enabled: !!id, // Only run query if id is available
+  });
+}
+export const useCreateStaff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (staffData: CreateStaffUserDto) => {
+      const { data } = await api.post('/staff', staffData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    }
+    ,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    },
+  });
+};
+export const useUpdateStaff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<UpdateStaffUserDto> }) => {
+      const { data } = await api.put(`/staff/${id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: (_, variables) => { 
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['staff', variables.id] });
+    }
+  });
+};
+export const useDeleteStaff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/staff/${id}`);
+    },
+    onSuccess: () => {  
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    } 
+  });
+};   
+
 
 //__________FLEET MANAGER CRUD____________________________________________________________________________ HR: Get roles
 
