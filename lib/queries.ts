@@ -325,6 +325,16 @@ export const useStaffRequest = (id: string) => {
   });
 }
 
+export const useGetAvailableVehicles =()=>{
+  return useQuery({
+    queryKey: ['available-vehicles'],
+    queryFn: async () => {
+      const { data } = await api.get('/staff/vehicles/available');
+      return data;
+    },
+  });
+}
+
 export const useCreateStaffRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
