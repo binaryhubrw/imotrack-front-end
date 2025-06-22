@@ -461,3 +461,20 @@ interface CreateStaffUserDto {
   organizationName: string;
 
 }
+
+export interface StaffRequest {
+  trip_purpose: string;
+  start_location: string;
+  end_location: string;
+  start_date: string;
+  end_date: string;
+  full_name: string;
+  passengers_number: number;
+  comments?: string;
+}
+
+export interface StaffRequestUpdate {
+  trip_purpose?: string;
+  passengers_number?: string;
+  comments?: string;
+}

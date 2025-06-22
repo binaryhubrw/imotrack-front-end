@@ -49,7 +49,7 @@ export default function FleetManagerDashboard() {
     { day: "Sunday", requested: 720, approved: 200, declined: 480 },
   ];
 
-  const {data: vehicles, isLoading: isVehiclesLoading, isVehiclesError} = useFMVehicles();
+  const {data: vehicles} = useFMVehicles();
   console.log("Vehicle Data:", vehicles);
 
   // Mock data for recent activities

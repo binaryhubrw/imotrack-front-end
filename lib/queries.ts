@@ -13,6 +13,8 @@ import {
   UserDetails,
   CreateHrUserDto,
   UpdateHrUserDto,
+  StaffRequestUpdate,
+  StaffRequest,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
 
@@ -298,70 +300,73 @@ export const useDeleteHrUser = () => {
     },
   });
 }
+
+
 //__________STAFF CRUD____________________________________________________________________________ HR: Get roles
 
-export const useStaffs = ()=>{
+export const useStaffRequests = () => {
   return useQuery({
-    queryKey: ['staff'],
+    queryKey: ['staff-requests'],
     queryFn: async () => {
-      const { data } = await api.get('/staff');
+      const { data } = await api.get('/staff/requests');
       return data;
     },
   });
 }
 
-export const useStaffDetails = (id: string) => {
+export const useStaffRequest = (id: string) => {
   return useQuery({
-    queryKey: ['staff', id],
+    queryKey: ['staff-request', id],
     queryFn: async () => {
-      const { data } = await api.get(`/staff/${id}`);
+      const { data } = await api.get(`/staff/requests/${id}`);
       return data;
     },
     enabled: !!id, // Only run query if id is available
   });
 }
-export const useCreateStaff = () => {
+
+export const useCreateStaffRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (staffData: CreateStaffUserDto) => {
-      const { data } = await api.post('/staff', staffData, {
+    mutationFn: async (requestData: StaffRequest) => {
+      const { data } = await api.post('/staff/requests', requestData, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
-    }
-    ,
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
     },
   });
-};
-export const useUpdateStaff = () => {
+}
+
+export const useUpdateStaffRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Partial<UpdateStaffUserDto> }) => {
-      const { data } = await api.put(`/staff/${id}`, updates, {
+    mutationFn: async ({ id, updates }: { id: string; updates: StaffRequestUpdate }) => {
+      const { data } = await api.put(`/staff/requests/${id}`, updates, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
     },
-    onSuccess: (_, variables) => { 
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-      queryClient.invalidateQueries({ queryKey: ['staff', variables.id] });
-    }
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-request', variables.id] });
+    },
   });
-};
-export const useDeleteStaff = () => {
+}
+
+export const useCancelStaffRequest = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/staff/${id}`);
+      await api.patch(`/staff/requests/${id}/cancel`);
     },
-    onSuccess: () => {  
-      queryClient.invalidateQueries({ queryKey: ['staff'] });
-    } 
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
+    },
   });
-};   
-
+}
 
 //__________FLEET MANAGER CRUD____________________________________________________________________________ HR: Get roles
 

@@ -228,61 +228,94 @@ export default function VehiclesDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentVehicles.map((vehicle: Vehicle) => (
-                  <tr key={vehicle.id} className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => router.push(`/dashboard/fleet-manager/vehicles-info/${vehicle.id}`)} >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="bg-gray-100 p-2 rounded-lg mr-4">
-                          <Car className="text-gray-600" size={20} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{vehicle.manufacturer} {vehicle.vehicle_model}</div>
-                          <div className="text-sm text-gray-500">{vehicle.year} • {vehicle.vehicle_type}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{vehicle.plate_number}</div>
-                      <div className="text-sm text-gray-500">Capacity: {vehicle.capacity || 0} seats</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(vehicle.status)}`}>
-                        {vehicle.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Fuel className="mr-1 text-gray-400" size={16} />
-                        {vehicle.odometer?.toLocaleString() || 0} mi
-                      </div>
-                      <div className="text-sm text-gray-500">{vehicle.fuel_type || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Calendar className="mr-1 text-gray-400" size={16} />
-                        {vehicle.last_service_date ? new Date(vehicle.last_service_date).toLocaleDateString() : 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <MapPin className="mr-1 text-gray-400" size={16} />
-                        {vehicle.organization_name || 'N/A'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => openEditModal(vehicle)} className="text-blue-600 hover:text-blue-900">
-                          <Edit size={18} />
-                        </button>
-                        <button onClick={() => { setSelectedVehicle(vehicle); setShowDeleteModal(true); }} className="text-red-600 hover:text-red-900">
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+  {currentVehicles.map((vehicle: Vehicle) => (
+    <tr
+      key={vehicle.id}
+      className="hover:bg-gray-50 cursor-pointer transition-colors"
+      onClick={() =>
+        router.push(`/dashboard/fleet-manager/vehicles-info/${vehicle.id}`)
+      }
+    >
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="bg-gray-100 p-2 rounded-lg mr-4">
+            <Car className="text-gray-600" size={20} />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {vehicle.manufacturer} {vehicle.vehicle_model}
+            </div>
+            <div className="text-sm text-gray-500">
+              {vehicle.year} • {vehicle.vehicle_type}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">{vehicle.plate_number}</div>
+        <div className="text-sm text-gray-500">
+          Capacity: {vehicle.capacity || 0} seats
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span
+          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(
+            vehicle.status
+          )}`}
+        >
+          {vehicle.status.replace('_', ' ')}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center text-sm text-gray-900">
+          <Fuel className="mr-1 text-gray-400" size={16} />
+          {vehicle.odometer?.toLocaleString() || 0} mi
+        </div>
+        <div className="text-sm text-gray-500">
+          {vehicle.fuel_type || 'N/A'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center text-sm text-gray-900">
+          <Calendar className="mr-1 text-gray-400" size={16} />
+          {vehicle.last_service_date
+            ? new Date(vehicle.last_service_date).toLocaleDateString()
+            : 'N/A'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center text-sm text-gray-900">
+          <MapPin className="mr-1 text-gray-400" size={16} />
+          {vehicle.organization_name || 'N/A'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right">
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(vehicle);
+            }}
+            className="text-blue-600 hover:text-blue-900"
+          >
+            <Edit size={18} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedVehicle(vehicle);
+              setShowDeleteModal(true);
+            }}
+            className="text-red-600 hover:text-red-900"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
             </table>
           </div>
 
