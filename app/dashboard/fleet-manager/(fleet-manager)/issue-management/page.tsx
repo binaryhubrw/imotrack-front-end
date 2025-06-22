@@ -106,11 +106,23 @@ export default function IssueManagementPage() {
 
   useEffect(() => {
     setLocalIssues((prev) =>
-      prev.map((r) =>
-        r.id === 2
-          ? { ...r, status: typeof window !== "undefined" && localStorage.getItem("VR-002-status") ? localStorage.getItem("VR-002-status") : r.status }
-          : r
-      )
+      prev.map((r) => {
+        if (r.id === 2) {
+          let status = r.status;
+          if (typeof window !== "undefined") {
+            const storedStatus = localStorage.getItem("VR-002-status");
+            if (
+              storedStatus === "pending" ||
+              storedStatus === "in-progress" ||
+              storedStatus === "resolved"
+            ) {
+              status = storedStatus as Issue['status'];
+            }
+          }
+          return { ...r, status };
+        }
+        return r;
+      })
     );
   }, []);
 
@@ -184,11 +196,13 @@ export default function IssueManagementPage() {
                         <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
                         <div className="flex items-center gap-2 mt-2">
                           <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
-                            issue.status === "Pending"
+                            issue.status === "pending"
                               ? "bg-yellow-100 text-yellow-800"
-                              : issue.status === "Approved"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-pink-100 text-pink-700"
+                              : issue.status === "in-progress"
+                              ? "bg-blue-100 text-blue-800"
+                              : issue.status === "resolved"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
                           }`}>
                             {issue.status}
                           </span>

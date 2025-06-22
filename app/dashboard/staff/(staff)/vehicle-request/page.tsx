@@ -1,142 +1,23 @@
-
-
 "use client";
-import { Star, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Star, Search, X, Pencil, Trash2 } from "lucide-react";
+import { useStaffRequests, useCreateStaffRequest, useUpdateStaffRequest, useCancelStaffRequest } from '@/lib/queries';
+import type { StaffRequestStatus, StaffRequestResponse, StaffRequest, StaffRequestUpdate } from '@/types/next-auth';
 
-const requests = [
-  {
-    id: "REQ-001",
-    date: "2024-02-22",
-    purpose: "Field Trip",
-    destination: "Huye Campus",
-    passengers: 15,
-    status: "Pending",
-    startDate: "2024-02-23",
-    endDate: "2024-02-23",
-  },
-  {
-    id: "REQ-002",
-    date: "2024-02-21",
-    purpose: "Conference",
-    destination: "Kigali Convention Center",
-    passengers: 4,
-    status: "Approved",
-    startDate: "2024-02-22",
-    endDate: "2024-02-22",
-  },
-  {
-    id: "REQ-003",
-    date: "2024-02-20",
-    purpose: "Research Visit",
-    destination: "Kigali Heights",
-    passengers: 3,
-    status: "Rejected",
-    startDate: "2024-02-21",
-    endDate: "2024-02-21",
-  },
-  {
-    id: "REQ-004",
-    date: "2024-02-18",
-    purpose: "Workshop",
-    destination: "Rubavu Beach",
-    passengers: 8,
-    status: "Active",
-    startDate: "2024-02-19",
-    endDate: "2024-02-20",
-  },
-  {
-    id: "REQ-005",
-    date: "2024-02-15",
-    purpose: "Team Building",
-    destination: "Nyungwe Forest",
-    passengers: 10,
-    status: "Pending",
-    startDate: "2024-02-16",
-    endDate: "2024-02-17",
-  },
-  {
-    id: "REQ-006",
-    date: "2024-02-10",
-    purpose: "Site Visit",
-    destination: "Musanze",
-    passengers: 6,
-    status: "Completed",
-    startDate: "2024-02-11",
-    endDate: "2024-02-12",
-  },
-  {
-    id: "REQ-007",
-    date: "2024-02-08",
-    purpose: "Seminar",
-    destination: "Karongi",
-    passengers: 5,
-    status: "Active",
-    startDate: "2024-02-09",
-    endDate: "2024-02-10",
-  },
-  {
-    id: "REQ-008",
-    date: "2024-02-07",
-    purpose: "Inspection",
-    destination: "Bugesera",
-    passengers: 7,
-    status: "Pending",
-    startDate: "2024-02-08",
-    endDate: "2024-02-08",
-  },
-  {
-    id: "REQ-009",
-    date: "2024-02-06",
-    purpose: "Training",
-    destination: "Rwamagana",
-    passengers: 12,
-    status: "Completed",
-    startDate: "2024-02-07",
-    endDate: "2024-02-07",
-  },
-  {
-    id: "REQ-010",
-    date: "2024-02-05",
-    purpose: "Field Trip",
-    destination: "Gicumbi",
-    passengers: 9,
-    status: "Rejected",
-    startDate: "2024-02-06",
-    endDate: "2024-02-06",
-  },
-];
-
-function statusBadge(status: string) {
-  const base =
-    "px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1";
+function statusBadge(status: StaffRequestStatus) {
+  const base = "px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1";
   switch (status) {
-    case "Pending":
-      return (
-        <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>
-      );
-    case "Approved":
-      return (
-        <span className={`${base} bg-green-100 text-green-800`}>
-          Approved
-          <span title="Ready for Issue Submission">
-            <Star className="w-4 h-4 text-blue-500 ml-1" fill="#3b82f6" />
-          </span>
-        </span>
-      );
-    case "Active":
-      return (
-        <span className={`${base} bg-purple-100 text-purple-800`}>Active</span>
-      );
-    case "Completed":
-      return (
-        <span className={`${base} bg-blue-100 text-blue-800`}>Completed</span>
-      );
-    case "Rejected":
-      return (
-        <span className={`${base} bg-red-100 text-red-800`}>Rejected</span>
-      );
+    case "PENDING":
+      return <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>;
+    case "APPROVED":
+      return <span className={`${base} bg-green-100 text-green-800`}>Approved <span title="Ready for Issue Submission"><Star className="w-4 h-4 text-blue-500 ml-1" fill="#3b82f6" /></span></span>;
+    case "ACTIVE":
+      return <span className={`${base} bg-purple-100 text-purple-800`}>Active</span>;
+    case "COMPLETED":
+      return <span className={`${base} bg-blue-100 text-blue-800`}>Completed</span>;
+    case "REJECTED":
+      return <span className={`${base} bg-red-100 text-red-800`}>Rejected</span>;
     default:
       return <span className={base}>{status}</span>;
   }
@@ -144,32 +25,141 @@ function statusBadge(status: string) {
 
 export default function VehicleRequestsPage() {
   const router = useRouter();
+  const { data: requests = [], isLoading, refetch } = useStaffRequests();
+  const createRequest = useCreateStaffRequest();
+  const updateRequest = useUpdateStaffRequest();
+  const cancelRequest = useCancelStaffRequest();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [time, setTime] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [form, setForm] = useState<StaffRequest>({
+    trip_purpose: "",
+    start_location: "",
+    end_location: "",
+    start_date: "",
+    end_date: "",
+    full_name: "",
+    passengers_number: 1,
+    comments: "",
+  });
+  const [editModal, setEditModal] = useState<{ open: boolean; request: StaffRequestResponse | null }>({ open: false, request: null });
+  const [editForm, setEditForm] = useState<StaffRequestUpdate>({});
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ open: boolean; requestId: string | null }>({ open: false, requestId: null });
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
+  // Filtering
   const filtered = requests.filter((req) => {
     const matchesSearch =
       req.id.toLowerCase().includes(search.toLowerCase()) ||
-      req.purpose.toLowerCase().includes(search.toLowerCase()) ||
-      req.destination.toLowerCase().includes(search.toLowerCase());
+      req.trip_purpose.toLowerCase().includes(search.toLowerCase()) ||
+      req.end_location.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = status === "" || req.status === status;
     // For demo, time filter is not implemented
     return matchesSearch && matchesStatus;
   });
 
   const handleRowClick = (id: string) => {
-    router.push(`/dashboard/vehicle-request/${id}`);
+    router.push(`/dashboard/staff/vehicle-request/${id}`);
   };
 
-  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setShowModal(false);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 2000);
+  function handleFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: name === 'passengers_number' ? Number(value) : value }));
   }
+
+  async function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    try {
+      await createRequest.mutateAsync(form);
+      setShowModal(false);
+      setSuccess(true);
+      setForm({
+        trip_purpose: "",
+        start_location: "",
+        end_location: "",
+        start_date: "",
+        end_date: "",
+        full_name: "",
+        passengers_number: 1,
+        comments: "",
+      });
+      setTimeout(() => setSuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to create request:", err);
+      // Optionally show error
+      setSuccess(false);
+    }
+  }
+
+  // Edit modal handlers
+  const openEditModal = (request: StaffRequestResponse) => {
+    setEditForm({
+      trip_purpose: request.trip_purpose,
+      passengers_number: String(request.passengers_number),
+      comments: request.comments || '',
+    });
+    setEditModal({ open: true, request });
+  };
+  const closeEditModal = () => {
+    setEditModal({ open: false, request: null });
+    setEditForm({});
+    setEditError(null);
+  };
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: name === 'passengers_number' ? Number(value) : value }));
+  };
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editModal.request) return;
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      await updateRequest.mutateAsync({ id: editModal.request.id, updates: editForm });
+      closeEditModal();
+      refetch();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setEditError(err.message || 'Failed to update request');
+      } else {
+        setEditError('Failed to update request');
+      }
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  // Cancel modal handlers
+  const openCancelModal = (requestId: string) => {
+    setCancelModal({ open: true, requestId });
+    setCancelError(null);
+  };
+  const closeCancelModal = () => {
+    setCancelModal({ open: false, requestId: null });
+    setCancelError(null);
+  };
+  const handleCancelRequest = async () => {
+    if (!cancelModal.requestId) return;
+    setCancelLoading(true);
+    setCancelError(null);
+    try {
+      await cancelRequest.mutateAsync(cancelModal.requestId);
+      closeCancelModal();
+      refetch();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setCancelError(err.message || 'Failed to cancel request');
+      } else {
+        setCancelError('Failed to cancel request');
+      }
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
@@ -196,11 +186,11 @@ export default function VehicleRequestsPage() {
                 onChange={(e) => setStatus(e.target.value)}
               >
                 <option value="">All Status</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Active">Active</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Completed">Completed</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="ACTIVE">Active</option>
+                <option value="REJECTED">Rejected</option>
+                <option value="COMPLETED">Completed</option>
               </select>
               <select
                 className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
@@ -231,61 +221,65 @@ export default function VehicleRequestsPage() {
             <table className="min-w-full text-[14px]">
               <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
                 <tr className="text-gray-700">
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Request ID
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">Date</th>
+                  <th className="px-6 py-4 text-left font-semibold">Request ID</th>
+                  <th className="px-6 py-4 text-left font-semibold">Requested</th>
                   <th className="px-6 py-4 text-left font-semibold">Purpose</th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Destination
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Passengers
-                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">Destination</th>
+                  <th className="px-6 py-4 text-left font-semibold">Passengers</th>
                   <th className="px-6 py-4 text-left font-semibold">Status</th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    Start Date
-                  </th>
-                  <th className="px-6 py-4 text-left font-semibold">
-                    End Date
-                  </th>
+                  <th className="px-6 py-4 text-left font-semibold">Start Date</th>
+                  <th className="px-6 py-4 text-left font-semibold">End Date</th>
+                  <th className="px-6 py-4 text-left font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {isLoading ? (
+                  <tr><td colSpan={10} className="text-center py-12 text-gray-400 text-lg">Loading...</td></tr>
+                ) : filtered.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="text-center py-12 text-gray-400 text-lg"
-                    >
-                      No requests found.
-                    </td>
+                    <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">No requests found.</td>
                   </tr>
                 ) : (
                   filtered.map((req, idx) => (
                     <tr
                       key={req.id}
                       className={`
-              ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-              hover:bg-blue-50/70
-              cursor-pointer
-              transition-colors
-              duration-150
-              rounded-lg
-            `}
+                        ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        hover:bg-blue-50/70
+                        cursor-pointer
+                        transition-colors
+                        duration-150
+                        rounded-lg
+                      `}
                       style={{ height: "64px" }}
                       onClick={() => handleRowClick(req.id)}
                     >
                       <td className="px-6 py-4 font-mono">{req.id}</td>
-                      <td className="px-6 py-4">{req.date}</td>
-                      <td className="px-6 py-4">{req.purpose}</td>
-                      <td className="px-6 py-4">{req.destination}</td>
-                      <td className="px-6 py-4 text-center">
-                        {req.passengers}
-                      </td>
+                      <td className="px-6 py-4">{new Date(req.requested_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4">{req.trip_purpose}</td>
+                      <td className="px-6 py-4">{req.end_location}</td>
+                      <td className="px-6 py-4 text-center">{req.passengers_number}</td>
                       <td className="px-6 py-4">{statusBadge(req.status)}</td>
-                      <td className="px-6 py-4">{req.startDate}</td>
-                      <td className="px-6 py-4">{req.endDate}</td>
+                      <td className="px-6 py-4">{new Date(req.start_date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4">{new Date(req.end_date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-right">
+                        {req.status === 'PENDING' && (
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={e => { e.stopPropagation(); openEditModal(req); }}
+                              className="px-3 py-1 bg-[#0872B3] text-white rounded hover:bg-[#065d8f] text-xs flex items-center gap-1"
+                            >
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button
+                              onClick={e => { e.stopPropagation(); openCancelModal(req.id); }}
+                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs flex items-center gap-1"
+                            >
+                              <Trash2 size={14} /> Cancel
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -304,52 +298,49 @@ export default function VehicleRequestsPage() {
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
-            <h2
-              className="text-2xl font-bold text-center mb-8"
-              style={{ color: "#0872B3" }}
-            >
+            <h2 className="text-2xl font-bold text-center mb-8" style={{ color: "#0872B3" }}>
               Vehicle Request
             </h2>
             <form onSubmit={handleFormSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div>
-                    <label
-                      className="block text-sm font-semibold mb-1"
-                      style={{ color: "#0872B3" }}
-                    >
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
                       Full Name
                     </label>
                     <input
                       type="text"
+                      name="full_name"
+                      value={form.full_name}
+                      onChange={handleFormChange}
                       required
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       placeholder="Full Name"
                     />
                   </div>
                   <div>
-                    <label
-                      className="block text-sm font-semibold mb-1"
-                      style={{ color: "#0872B3" }}
-                    >
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
                       Reason
                     </label>
                     <input
                       type="text"
+                      name="trip_purpose"
+                      value={form.trip_purpose}
+                      onChange={handleFormChange}
                       required
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       placeholder="Reason"
                     />
                   </div>
                   <div>
-                    <label
-                      className="block text-sm font-semibold mb-1"
-                      style={{ color: "#0872B3" }}
-                    >
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
                       Destination
                     </label>
                     <input
                       type="text"
+                      name="end_location"
+                      value={form.end_location}
+                      onChange={handleFormChange}
                       required
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       placeholder="Destination"
@@ -358,41 +349,70 @@ export default function VehicleRequestsPage() {
                 </div>
                 <div className="space-y-6">
                   <div>
-                    <label
-                      className="block text-sm font-semibold mb-1"
-                      style={{ color: "#0872B3" }}
-                    >
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
                       Passengers
                     </label>
                     <input
                       type="number"
+                      name="passengers_number"
                       min={1}
+                      value={form.passengers_number}
+                      onChange={handleFormChange}
                       required
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       placeholder="Passengers"
                     />
                   </div>
                   <div>
-                    <label
-                      className="block text-sm font-semibold mb-1"
-                      style={{ color: "#0872B3" }}
-                    >
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
                       Trip Dates
                     </label>
                     <div className="flex gap-4">
                       <input
                         type="date"
+                        name="start_date"
+                        value={form.start_date}
+                        onChange={handleFormChange}
                         required
                         className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                         placeholder="Start Date"
                       />
                       <input
                         type="date"
+                        name="end_date"
+                        value={form.end_date}
+                        onChange={handleFormChange}
                         required
                         className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                         placeholder="End Date"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
+                      Start Location
+                    </label>
+                    <input
+                      type="text"
+                      name="start_location"
+                      value={form.start_location}
+                      onChange={handleFormChange}
+                      required
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
+                      placeholder="Start Location"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
+                      Comments
+                    </label>
+                    <textarea
+                      name="comments"
+                      value={form.comments}
+                      onChange={handleFormChange}
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
+                      placeholder="Comments (optional)"
+                    />
                   </div>
                 </div>
               </div>
@@ -400,10 +420,97 @@ export default function VehicleRequestsPage() {
                 type="submit"
                 className="w-full mt-4 py-2 rounded font-bold text-white text-base"
                 style={{ background: "#0872B3" }}
+                disabled={createRequest.isPending}
               >
-                Submit
+                {createRequest.isPending ? 'Submitting...' : 'Submit'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Edit Modal */}
+      {editModal.open && editModal.request && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2"><Pencil className="text-blue-600" /> Edit Request</h3>
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Purpose</label>
+                <input
+                  type="text"
+                  name="trip_purpose"
+                  value={editForm.trip_purpose || ''}
+                  onChange={handleEditChange}
+                  required
+                  className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Passengers</label>
+                <input
+                  type="number"
+                  name="passengers_number"
+                  min={1}
+                  value={editForm.passengers_number || 1}
+                  onChange={handleEditChange}
+                  required
+                  className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Comments</label>
+                <textarea
+                  name="comments"
+                  value={editForm.comments || ''}
+                  onChange={handleEditChange}
+                  className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
+                />
+              </div>
+              {editError && <div className="text-red-600 text-sm mb-2">{editError}</div>}
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  disabled={editLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#0872B3] text-white rounded-lg hover:bg-[#065d8f] transition-colors flex items-center gap-2"
+                  disabled={editLoading}
+                >
+                  {editLoading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>) : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Cancel Modal */}
+      {cancelModal.open && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2"><Trash2 className="text-red-600" /> Cancel Request</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to cancel this request? This action cannot be undone.</p>
+            {cancelError && <div className="text-red-600 text-sm mb-2">{cancelError}</div>}
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={closeCancelModal}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                disabled={cancelLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCancelRequest}
+                disabled={cancelLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {cancelLoading ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Cancelling...</>) : 'Yes, Cancel'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -15,6 +15,7 @@ import {
   UpdateHrUserDto,
   StaffRequestUpdate,
   StaffRequest,
+  StaffRequestResponse,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
 
@@ -305,10 +306,10 @@ export const useDeleteHrUser = () => {
 //__________STAFF CRUD____________________________________________________________________________ HR: Get roles
 
 export const useStaffRequests = () => {
-  return useQuery({
+  return useQuery<StaffRequestResponse[], Error>({
     queryKey: ['staff-requests'],
     queryFn: async () => {
-      const { data } = await api.get('/staff/requests');
+      const { data } = await api.get<StaffRequestResponse[]>('/staff/requests');
       return data;
     },
   });

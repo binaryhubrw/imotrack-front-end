@@ -1,4 +1,6 @@
 "use client";
+import { useStaffRequests } from "@/lib/queries";
+import { StaffRequestStatus } from "@/types/next-auth";
 import { BarChart, CheckCircle, AlertTriangle, Ban, Eye, Pencil } from "lucide-react";
 import React from "react";
 import {
@@ -15,163 +17,93 @@ import {
   Legend
 } from "recharts";
 
-const lineData = [
-  { month: "Jan", requests: 12 },
-  { month: "Feb", requests: 19 },
-  { month: "Mar", requests: 16 },
-  { month: "Apr", requests: 9 },
-  { month: "May", requests: 11 },
-  { month: "Jun", requests: 14 }
-];
+const STATUS_LABELS: Record<StaffRequestStatus, string> = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+  COMPLETED: 'Completed',
+  ACTIVE: 'Active',
+};
 
-const donutData = [
-  { name: "Pending", value: 3, color: "#fde047" },
-  { name: "Approved", value: 12, color: "#4ade80" },
-  { name: "Completed", value: 8, color: "#60a5fa" },
-  { name: "Rejected", value: 2, color: "#f87171" }
-];
+const STATUS_COLORS: Record<StaffRequestStatus, string> = {
+  PENDING: '#fde047',
+  APPROVED: '#4ade80',
+  REJECTED: '#f87171',
+  COMPLETED: '#60a5fa',
+  ACTIVE: '#a78bfa',
+};
 
-const stats = [
-  {
-    label: "Pending Requests",
-    value: 3,
-    icon: <AlertTriangle className="w-6 h-6 text-yellow-500" />,
-  },
-  {
-    label: "Approved Requests",
-    value: 12,
-    icon: <CheckCircle className="w-6 h-6 text-green-500" />,
-  },
-  {
-    label: "Completed Trips",
-    value: 8,
-    icon: <BarChart className="w-6 h-6 text-blue-500" />,
-  },
-  {
-    label: "Rejected Requests",
-    value: 2,
-    icon: <Ban className="w-6 h-6 text-red-500" />,
-  },
-];
-
-const requests = [
-  {
-    id: "REQ-001",
-    date: "2024-02-22",
-    purpose: "Field Trip",
-    destination: "Huye Campus",
-    passengers: 15,
-    status: "Pending",
-    startDate: "2024-02-23",
-    endDate: "2024-02-23",
-  },
-  {
-    id: "REQ-002",
-    date: "2024-02-21",
-    purpose: "Conference",
-    destination: "Kigali Convention Center",
-    passengers: 4,
-    status: "Approved",
-    startDate: "2024-02-22",
-    endDate: "2024-02-22",
-  },
-];
-
-const statusBadge = (status: string) => {
+function statusBadge(status: StaffRequestStatus) {
   const base = "px-3 py-1 rounded-full text-xs font-semibold";
   switch (status) {
-    case "Pending":
+    case "PENDING":
       return <span className={`${base} bg-yellow-100 text-yellow-800`}>Pending</span>;
-    case "Approved":
+    case "APPROVED":
       return <span className={`${base} bg-green-100 text-green-800`}>Approved</span>;
-    case "Completed":
+    case "COMPLETED":
       return <span className={`${base} bg-blue-100 text-blue-800`}>Completed</span>;
-    case "Rejected":
+    case "REJECTED":
       return <span className={`${base} bg-red-100 text-red-800`}>Rejected</span>;
+    case "ACTIVE":
+      return <span className={`${base} bg-purple-100 text-purple-800`}>Active</span>;
     default:
       return <span className={base}>{status}</span>;
   }
-};
-
-const RechartsLineChart = () => (
-  <div className="w-full h-48">
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={lineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis 
-          dataKey="month" 
-          axisLine={false}
-          tickLine={false}
-          tick={{ fontSize: 12, fill: '#666' }}
-        />
-        <YAxis 
-          axisLine={false}
-          tickLine={false}
-          tick={{ fontSize: 12, fill: '#666' }}
-          domain={[0, 'dataMax + 2']}
-        />
-        <Tooltip 
-          contentStyle={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
-        />
-        <Line 
-          type="monotone" 
-          dataKey="requests" 
-          stroke="#2563eb" 
-          strokeWidth={3}
-          dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
-          activeDot={{ r: 7, stroke: '#2563eb', strokeWidth: 2, fill: 'white' }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  </div>
-);
-
-const RechartsDonutChart = () => (
-  <div className="w-full h-48">
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={donutData}
-          cx="50%"
-          cy="50%"
-          innerRadius={60}
-          outerRadius={80}
-          paddingAngle={2}
-          dataKey="value"
-        >
-          {donutData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip 
-          contentStyle={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
-        />
-        <Legend 
-          verticalAlign="middle"
-          align="right"
-          layout="vertical"
-          iconSize={12}
-          wrapperStyle={{
-            paddingLeft: '20px',
-            fontSize: '12px'
-          }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
-  </div>
-);
+}
 
 export default function DashboardPage() {
+  const { data: requests = [], isLoading } = useStaffRequests();
+
+  // Compute stats
+  const stats = [
+    {
+      label: "Pending Requests",
+      value: requests.filter(r => r.status === "PENDING").length,
+      icon: <AlertTriangle className="w-6 h-6 text-yellow-500" />,
+    },
+    {
+      label: "Approved Requests",
+      value: requests.filter(r => r.status === "APPROVED").length,
+      icon: <CheckCircle className="w-6 h-6 text-green-500" />,
+    },
+    {
+      label: "Completed Trips",
+      value: requests.filter(r => r.status === "COMPLETED").length,
+      icon: <BarChart className="w-6 h-6 text-blue-500" />,
+    },
+    {
+      label: "Rejected Requests",
+      value: requests.filter(r => r.status === "REJECTED").length,
+      icon: <Ban className="w-6 h-6 text-red-500" />,
+    },
+  ];
+
+  // Chart data: group by month for line chart
+  const lineData = (() => {
+    const monthMap: Record<string, number> = {};
+    requests.forEach(r => {
+      const month = new Date(r.requested_at).toLocaleString('default', { month: 'short' });
+      monthMap[month] = (monthMap[month] || 0) + 1;
+    });
+    return Object.entries(monthMap).map(([month, requests]) => ({ month, requests }));
+  })();
+
+  // Donut chart: status distribution
+  const donutData = Object.entries(STATUS_LABELS).map(([status, label]) => ({
+    name: label,
+    value: requests.filter(r => r.status === status).length,
+    color: STATUS_COLORS[status as StaffRequestStatus],
+  }));
+
+  // Recent requests (show up to 5)
+  const recentRequests = [...requests]
+    .sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime())
+    .slice(0, 5);
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  }
+
   return (
     <div className="p-4 md:p-8 bg-gray-50 min-h-screen">
       {/* Top Stats */}
@@ -196,11 +128,81 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
           <div className="font-semibold text-gray-700 mb-4">Monthly Trip Requests</div>
-          <RechartsLineChart />
+          <div className="w-full h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={lineData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#666' }}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: '#666' }}
+                  domain={[0, 'dataMax + 2']}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="requests" 
+                  stroke="#2563eb" 
+                  strokeWidth={3}
+                  dot={{ fill: '#2563eb', strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 7, stroke: '#2563eb', strokeWidth: 2, fill: 'white' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
           <div className="font-semibold text-gray-700 mb-4">Request Status Distribution</div>
-          <RechartsDonutChart />
+          <div className="w-full h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={donutData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {donutData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
+                <Legend 
+                  verticalAlign="middle"
+                  align="right"
+                  layout="vertical"
+                  iconSize={12}
+                  wrapperStyle={{
+                    paddingLeft: '20px',
+                    fontSize: '12px'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -226,16 +228,16 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {requests.map((req) => (
+              {recentRequests.map((req) => (
                 <tr key={req.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2 font-mono">{req.id}</td>
-                  <td className="px-4 py-2">{req.date}</td>
-                  <td className="px-4 py-2">{req.purpose}</td>
-                  <td className="px-4 py-2">{req.destination}</td>
-                  <td className="px-4 py-2 text-center">{req.passengers}</td>
+                  <td className="px-4 py-2">{new Date(req.requested_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">{req.trip_purpose}</td>
+                  <td className="px-4 py-2">{req.end_location}</td>
+                  <td className="px-4 py-2 text-center">{req.passengers_number}</td>
                   <td className="px-4 py-2">{statusBadge(req.status)}</td>
-                  <td className="px-4 py-2">{req.startDate}</td>
-                  <td className="px-4 py-2">{req.endDate}</td>
+                  <td className="px-4 py-2">{new Date(req.start_date).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">{new Date(req.end_date).toLocaleDateString()}</td>
                   <td className="px-4 py-2 flex gap-2">
                     <button className="p-1 rounded hover:bg-gray-100" aria-label="View">
                       <Eye className="w-4 h-4 text-gray-500" />

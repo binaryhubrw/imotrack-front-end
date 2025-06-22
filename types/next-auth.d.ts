@@ -478,3 +478,41 @@ export interface StaffRequestUpdate {
   passengers_number?: string;
   comments?: string;
 }
+
+// Staff request status as per backend
+export type StaffRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED' | 'ACTIVE';
+
+// API response for GET /staff/requests
+export interface StaffRequestResponse {
+  id: string;
+  vehicle_id: string | null;
+  requested_at: string;
+  trip_purpose: string;
+  start_location: string;
+  end_location: string;
+  start_date: string;
+  end_date: string;
+  status: StaffRequestStatus;
+  reviewed_at?: string | null;
+  comments?: string | null;
+  requester_id: string;
+  reviewed_by?: string | null;
+  full_name: string;
+  passengers_number: number;
+  vehicle?: {
+    id: string;
+    plate_number: string;
+    vehicle_type: string;
+    vehicle_model: string;
+    manufacturer: string;
+    year: number;
+    capacity: number;
+    status: string;
+  } | null;
+  requester?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+}

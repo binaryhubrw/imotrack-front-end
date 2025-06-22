@@ -36,7 +36,7 @@ interface CreateVehicleDto {
   last_service_date?: string;
 }
 
-interface UpdateVehicleDto extends CreateVehicleDto {}
+type UpdateVehicleDto = CreateVehicleDto
 
 const getStatusColor = (status: string) => {
   switch (status?.toUpperCase()) {
