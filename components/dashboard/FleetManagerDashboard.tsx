@@ -11,9 +11,10 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { Car, User, FileText, BarChart3 } from "lucide-react";
+import { Car, FileText, BarChart3 } from "lucide-react";
 import Link from "next/link";
-import { useFMVehicles } from "@/lib/queries";
+import { useFMVehicles, useFmRequests } from "@/lib/queries";
+import type { Vehicle } from '@/types/next-auth';
 
 // Add a type for StatCard props
 interface StatCardProps {
@@ -25,7 +26,7 @@ interface StatCardProps {
 }
 
 const StatCard = ({ icon: Icon, title, value, bgColor, textColor }: StatCardProps) => (
-  <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+  <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 flex flex-col justify-between min-h-[110px] flex-1">
     <div className="flex items-center justify-between">
       <div>
         <p className="text-gray-600 text-sm font-medium mb-1">{title}</p>
@@ -39,94 +40,58 @@ const StatCard = ({ icon: Icon, title, value, bgColor, textColor }: StatCardProp
 );
 
 export default function FleetManagerDashboard() {
-  const chartData = [
-    { day: "Monday", requested: 850, approved: 150, declined: 750 },
-    { day: "Tuesday", requested: 720, approved: 200, declined: 480 },
-    { day: "Wednesday", requested: 720, approved: 480, declined: 200 },
-    { day: "Thursday", requested: 840, approved: 480, declined: 320 },
-    { day: "Friday", requested: 980, approved: 480, declined: 480 },
-    { day: "Saturday", requested: 840, approved: 150, declined: 720 },
-    { day: "Sunday", requested: 720, approved: 200, declined: 480 },
-  ];
+  const { data: vehicles = [], isLoading: isLoadingVehicles } = useFMVehicles();
+  const { data: requests = [], isLoading: isLoadingRequests } = useFmRequests();
 
-  const {data: vehicles} = useFMVehicles();
-  console.log("Vehicle Data:", vehicles);
+  // Compute stats
+  const totalVehicles = vehicles.length;
+  const availableVehicles = vehicles.filter((v: Vehicle) => v.status?.toUpperCase() === 'AVAILABLE').length;
+  const totalRequests = requests.length;
+  const pendingRequests = requests.filter(r => r.status?.toUpperCase() === 'PENDING').length;
 
-  // Mock data for recent activities
-  const recentActivities = [
-    {
-      id: 1,
-      date: "2024-03-10",
-      vehicle: "Toyota Camry",
-      activity: "Maintenance Check",
-      status: "Completed",
-      notes: "Regular service and oil change",
-    },
-    {
-      id: 2,
-      date: "2024-03-09",
-      vehicle: "Ford F-150",
-      activity: "Fuel Refill",
-      status: "Completed",
-      notes: "Full tank refill",
-    },
-    {
-      id: 3,
-      date: "2024-03-08",
-      vehicle: "Tesla Model 3",
-      activity: "Battery Check",
-      status: "Pending",
-      notes: "Scheduled maintenance",
-    },
-    {
-      id: 4,
-      date: "2024-03-07",
-      vehicle: "Honda Civic",
-      activity: "Tire Rotation",
-      status: "Completed",
-      notes: "Regular maintenance",
-    },
-  ];
+  // Recent requests (up to 5)
+  const recentRequests = [...requests]
+    .sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime())
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Stats Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+
           <Link href={"/dashboard/fleet-manager/vehicles-info"}>
             <StatCard
               icon={Car}
-              title="Vehicles"
-              value="24 Total"
+              title="Total Vehicles"
+              value={isLoadingVehicles ? '...' : totalVehicles.toString()}
               bgColor="bg-[#0872B3]"
               textColor="text-[#0872B3]"
             />
           </Link>
           <StatCard
-            icon={User}
-            title="Drivers"
-            value="18 Active"
-            bgColor="bg-[#0872B3]"
-            textColor="text-[#0872B3]"
+            icon={Car}
+            title="Available Vehicles"
+            value={isLoadingVehicles ? '...' : availableVehicles.toString()}
+            bgColor="bg-green-600"
+            textColor="text-green-100"
           />
-          <Link href={"/dashboard/fleet-manager/issue-management"}>
-            <StatCard
-              icon={FileText}
-              title="Issue Management"
-              value="5 Pending"
-              bgColor="bg-[#0872B3]"
-              textColor="text-[#0872B3]"
-            />
-          </Link>
           <Link href={"/dashboard/fleet-manager/request-overview"}>
             <StatCard
               icon={BarChart3}
-              title="Request Overview"
-              value="156 Total"
+              title="Total Requests"
+              value={isLoadingRequests ? '...' : totalRequests.toString()}
               bgColor="bg-[#0872B3]"
               textColor="text-[#0872B3]"
             />
           </Link>
+          <StatCard
+            icon={FileText}
+            title="Pending Requests"
+            value={isLoadingRequests ? '...' : pendingRequests.toString()}
+            bgColor="bg-yellow-500"
+            textColor="text-yellow-100"
+          />
         </div>
 
         {/* Charts Section */}
@@ -161,12 +126,12 @@ export default function FleetManagerDashboard() {
             {/* Bar Chart */}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={chartData}
+                data={vehicles}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
-                  dataKey="day"
+                  dataKey="status"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: "#666" }}
@@ -175,26 +140,13 @@ export default function FleetManagerDashboard() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: "#666" }}
-                  domain={[0, 1000]}
-                  ticks={[0, 250, 500, 750, 1000]}
+                  domain={[0, totalVehicles]}
                 />
                 <Tooltip />
                 <Legend />
                 <Bar
-                  dataKey="requested"
+                  dataKey="status"
                   fill="#16a34a"
-                  radius={[2, 2, 0, 0]}
-                  maxBarSize={60}
-                />
-                <Bar
-                  dataKey="approved"
-                  fill="#15803d"
-                  radius={[2, 2, 0, 0]}
-                  maxBarSize={60}
-                />
-                <Bar
-                  dataKey="declined"
-                  fill="#ea580c"
                   radius={[2, 2, 0, 0]}
                   maxBarSize={60}
                 />
@@ -204,12 +156,12 @@ export default function FleetManagerDashboard() {
             {/* Line Chart */}
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={chartData}
+                data={vehicles}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis
-                  dataKey="day"
+                  dataKey="status"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: "#666" }}
@@ -218,23 +170,14 @@ export default function FleetManagerDashboard() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: "#666" }}
-                  domain={[0, 1000]}
-                  ticks={[0, 250, 500, 750, 1000]}
+                  domain={[0, totalVehicles]}
                 />
                 <Tooltip />
                 <Legend />
                 <Line
                   type="monotone"
-                  dataKey="approved"
-                  stroke="#15803d"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  activeDot={{ r: 8 }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="declined"
-                  stroke="#ea580c"
+                  dataKey="status"
+                  stroke="#16a34a"
                   strokeWidth={3}
                   dot={{ r: 5 }}
                   activeDot={{ r: 8 }}
@@ -244,63 +187,36 @@ export default function FleetManagerDashboard() {
           </div>
         </div>
 
-        {/* Recent Activities Table */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mt-8">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Recent Activities
-            </h2>
-            <p className="text-gray-600 mt-1">Latest updates from your fleet</p>
-          </div>
+        {/* Recent Requests Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Requests</h2>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vehicle
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activity
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Notes
-                  </th>
+                  <th className="px-4 py-2 text-left font-semibold">Request ID</th>
+                  <th className="px-4 py-2 text-left font-semibold">Date</th>
+                  <th className="px-4 py-2 text-left font-semibold">Purpose</th>
+                  <th className="px-4 py-2 text-left font-semibold">Destination</th>
+                  <th className="px-4 py-2 text-left font-semibold">Passengers</th>
+                  <th className="px-4 py-2 text-left font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentActivities.map((activity) => (
-                  <tr key={activity.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(activity.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {activity.vehicle}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {activity.activity}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          activity.status === "Completed"
-                            ? "bg-green-100 text-green-800 border-green-200"
-                            : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                        }`}
-                      >
-                        {activity.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {activity.notes}
-                    </td>
-                  </tr>
-                ))}
+              <tbody>
+                {recentRequests.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-6 text-gray-400">No recent requests.</td></tr>
+                ) : (
+                  recentRequests.map((req) => (
+                    <tr key={req.id} className="border-t cursor-pointer border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-2 font-mono">{req.id}</td>
+                      <td className="px-4 py-2">{new Date(req.requested_at).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">{req.trip_purpose}</td>
+                      <td className="px-4 py-2">{req.end_location}</td>
+                      <td className="px-4 py-2 text-center">{req.passengers_number}</td>
+                      <td className="px-4 py-2">{req.status}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

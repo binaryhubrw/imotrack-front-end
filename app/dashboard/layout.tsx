@@ -195,12 +195,12 @@ export default function DashboardLayout({
           </button>
         </div>
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-2 space-y-2">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-base
+              className={`flex items-center gap-3 px-2 py-3 rounded-lg transition-colors duration-200 text-sm
                 ${pathname === item.href
                   ? 'bg-blue-900/50 text-white'
                   : 'text-blue-100 hover:bg-blue-900/30 hover:text-white'}

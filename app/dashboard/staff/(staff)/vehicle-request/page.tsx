@@ -217,73 +217,75 @@ export default function VehicleRequestsPage() {
               Request submitted successfully!
             </div>
           )}
-          <div className="bg-white rounded-1xl shadow-xl border border-gray-100 overflow-x-auto">
-            <table className="min-w-full text-[14px]">
-              <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
-                <tr className="text-gray-700">
-                  <th className="px-6 py-4 text-left font-semibold">Requested</th>
-                  <th className="px-6 py-4 text-left font-semibold">Purpose</th>
-                  <th className="px-6 py-4 text-left font-semibold">Destination</th>
-                  <th className="px-6 py-4 text-left font-semibold">Passengers</th>
-                  <th className="px-6 py-4 text-left font-semibold">Status</th>
-                  <th className="px-6 py-4 text-left font-semibold">Start Date</th>
-                  <th className="px-6 py-4 text-left font-semibold">End Date</th>
-                  <th className="px-6 py-4 text-left font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr><td colSpan={10} className="text-center py-12 text-gray-400 text-lg">Loading...</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">No requests found.</td>
-                  </tr>
-                ) : (
-                  filtered.map((req, idx) => (
-                    <tr
-                      key={req.id}
-                      className={`
-                        ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                        hover:bg-blue-50/70
-                        cursor-pointer
-                        transition-colors
-                        duration-150
-                        rounded-lg
-                      `}
-                      style={{ height: "64px" }}
-                      onClick={() => handleRowClick(req.id)}
+          <div className="w-full">
+  <div className="rounded-1xl shadow-xl border border-gray-100 bg-white 
+                  overflow-x-auto sm:overflow-x-auto md:overflow-x-auto lg:overflow-visible">
+    <table className="min-w-[800px] w-full text-[14px]">
+      <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
+        <tr className="text-gray-700">
+          <th className="px-6 py-4 text-left font-semibold">Requested</th>
+          <th className="px-6 py-4 text-left font-semibold">Purpose</th>
+          <th className="px-6 py-4 text-left font-semibold">Destination</th>
+          <th className="px-6 py-4 text-left font-semibold">Passengers</th>
+          <th className="px-6 py-4 text-left font-semibold">Status</th>
+          <th className="px-6 py-4 text-left font-semibold">Start Date</th>
+          <th className="px-6 py-4 text-left font-semibold">End Date</th>
+          <th className="px-6 py-4 text-left font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {isLoading ? (
+          <tr>
+            <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">Loading...</td>
+          </tr>
+        ) : filtered.length === 0 ? (
+          <tr>
+            <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">No requests found.</td>
+          </tr>
+        ) : (
+          filtered.map((req, idx) => (
+            <tr
+              key={req.id}
+              className={`
+                ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                hover:bg-blue-50/70 cursor-pointer transition-colors duration-150 rounded-lg
+              `}
+              style={{ height: "64px" }}
+              onClick={() => handleRowClick(req.id)}
+            >
+              <td className="px-6 py-4">{new Date(req.requested_at).toLocaleDateString()}</td>
+              <td className="px-6 py-4">{req.trip_purpose}</td>
+              <td className="px-6 py-4">{req.end_location}</td>
+              <td className="px-6 py-4 text-center">{req.passengers_number}</td>
+              <td className="px-6 py-4">{statusBadge(req.status)}</td>
+              <td className="px-6 py-4">{new Date(req.start_date).toLocaleDateString()}</td>
+              <td className="px-6 py-4">{new Date(req.end_date).toLocaleDateString()}</td>
+              <td className="px-6 py-4 text-right">
+                {req.status === 'PENDING' && (
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={e => { e.stopPropagation(); openEditModal(req); }}
+                      className="px-3 py-1 bg-[#0872B3] text-white rounded hover:bg-[#065d8f] text-xs flex items-center gap-1"
                     >
-                      <td className="px-6 py-4">{new Date(req.requested_at).toLocaleDateString()}</td>
-                      <td className="px-6 py-4">{req.trip_purpose}</td>
-                      <td className="px-6 py-4">{req.end_location}</td>
-                      <td className="px-6 py-4 text-center">{req.passengers_number}</td>
-                      <td className="px-6 py-4">{statusBadge(req.status)}</td>
-                      <td className="px-6 py-4">{new Date(req.start_date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4">{new Date(req.end_date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-right">
-                        {req.status === 'PENDING' && (
-                          <div className="flex gap-2 justify-end">
-                            <button
-                              onClick={e => { e.stopPropagation(); openEditModal(req); }}
-                              className="px-3 py-1 bg-[#0872B3] text-white rounded hover:bg-[#065d8f] text-xs flex items-center gap-1"
-                            >
-                              <Pencil size={14} /> Edit
-                            </button>
-                            <button
-                              onClick={e => { e.stopPropagation(); openCancelModal(req.id); }}
-                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs flex items-center gap-1"
-                            >
-                              <Trash2 size={14} /> Cancel
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); openCancelModal(req.id); }}
+                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs flex items-center gap-1"
+                    >
+                      <Trash2 size={14} /> Cancel
+                    </button>
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
         </div>
       </div>
       {/* Modal for New Request */}

@@ -1,9 +1,10 @@
 'use client'
-import { Check, X, Filter, Calendar, User, MapPin, Users, Car } from "lucide-react"
+import { Check, X, User, MapPin, Users, Car } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useMemo } from "react"
 import { useFmRequests, useFMApproveRequest, useFMRejectRequest, useFMVehicles } from '@/lib/queries';
 import { toast } from 'sonner';
+import type { Vehicle } from '@/types/next-auth';
 
 export default function VehicleRequestPage() {
   const router = useRouter();
@@ -66,51 +67,10 @@ export default function VehicleRequestPage() {
   }
 
   return (
-    <div className="container mx-auto py-10 max-w-5xl bg-gray-50 min-h-screen px-4">
-      {/* Filter Card */}
-      <section className="bg-white rounded-xl border shadow-md mb-8 px-6 py-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-3 text-gray-600 font-semibold">
-          <Filter className="w-5 h-5" />
-          <span>Filter Requests</span>
-        </div>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Status</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Requests</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Calendar className="w-3 h-3" />Date Range</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 flex items-center gap-1"><Car className="w-3 h-3" />Reason</span>
-            <select className="h-9 w-[130px] px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-              <option value="all">All Reasons</option>
-              <option value="meeting">Meeting</option>
-              <option value="field">Field Work</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <input
-            type="search"
-            placeholder="Search by name or ID"
-            className="h-9 mt-5 px-3 py-1 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </section>
-
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-10 px-2">
       {/* Main Request Card */}
-      <section className="bg-white rounded-2xl border shadow-lg p-8">
+      <section className="bg-white rounded-2xl border shadow-lg p-2 sm:p-4 w-full max-w-4xl mx-auto">
+
         {/* Request Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <h2 className="text-2xl font-bold tracking-tight">Request <span className="text-blue-600">#{request.id}</span></h2>
@@ -161,7 +121,7 @@ export default function VehicleRequestPage() {
         </div>
 
         {/* Vehicle Info */}
-        <div className="mb-8">
+        <div className="mb-4">
           <p className="text-xs text-gray-500 flex items-center gap-1"><Car className="w-4 h-4" />Requested Vehicle</p>
           <p className="font-semibold text-gray-800">{request.vehicle?.plate_number ? `${request.vehicle.plate_number} - ${request.vehicle.vehicle_model}` : 'Not assigned'}</p>
         </div>
@@ -176,7 +136,7 @@ export default function VehicleRequestPage() {
             disabled={actioned || loadingAction === 'approve'}
           >
             <option value="">Select a vehicle...</option>
-            {vehicles.filter(v => v.status?.toUpperCase() === 'AVAILABLE').map(vehicle => (
+            {vehicles.filter((v: Vehicle) => v.status?.toUpperCase() === 'AVAILABLE').map((vehicle: Vehicle) => (
               <option key={vehicle.id} value={vehicle.id}>
                 {vehicle.plate_number} - {vehicle.vehicle_model} ({vehicle.manufacturer})
               </option>
@@ -188,7 +148,7 @@ export default function VehicleRequestPage() {
         <div className="border-t border-gray-200 my-8"></div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col md:flex-row gap-4 mt-6">
+        <div className="flex flex-col md:flex-row gap-2 mt-4">
           <button
             onClick={handleApprove}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-green-400 ${actioned ? 'bg-green-200 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'} ${loadingAction === 'approve' ? 'opacity-60' : ''}`}

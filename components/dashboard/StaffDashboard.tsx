@@ -1,7 +1,8 @@
 "use client";
 import { useStaffRequests } from "@/lib/queries";
 import { StaffRequestStatus } from "@/types/next-auth";
-import { BarChart, CheckCircle, AlertTriangle, Ban, Eye, Pencil } from "lucide-react";
+import { BarChart, CheckCircle, AlertTriangle, Ban } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React from "react";
 import {
   LineChart,
@@ -53,7 +54,7 @@ function statusBadge(status: StaffRequestStatus) {
 
 export default function DashboardPage() {
   const { data: requests = [], isLoading } = useStaffRequests();
-
+  const router = useRouter();
   // Compute stats
   const stats = [
     {
@@ -210,7 +211,6 @@ export default function DashboardPage() {
       <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <div className="font-bold text-lg text-gray-800">Recent Vehicle Requests</div>
-          <button className="text-blue-600 hover:underline text-sm font-medium">+ New Request</button>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
@@ -224,12 +224,11 @@ export default function DashboardPage() {
                 <th className="px-4 py-2 text-left font-semibold">Status</th>
                 <th className="px-4 py-2 text-left font-semibold">Start Date</th>
                 <th className="px-4 py-2 text-left font-semibold">End Date</th>
-                <th className="px-4 py-2 text-left font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {recentRequests.map((req) => (
-                <tr key={req.id} className="border-t border-gray-100 hover:bg-gray-50">
+                <tr onClick={() => router.push(`/dashboard/staff/vehicle-request/${req.id}`)} key={req.id} className="border-t cursor-pointer border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2 font-mono">{req.id}</td>
                   <td className="px-4 py-2">{new Date(req.requested_at).toLocaleDateString()}</td>
                   <td className="px-4 py-2">{req.trip_purpose}</td>
@@ -239,12 +238,6 @@ export default function DashboardPage() {
                   <td className="px-4 py-2">{new Date(req.start_date).toLocaleDateString()}</td>
                   <td className="px-4 py-2">{new Date(req.end_date).toLocaleDateString()}</td>
                   <td className="px-4 py-2 flex gap-2">
-                    <button className="p-1 rounded hover:bg-gray-100" aria-label="View">
-                      <Eye className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-1 rounded hover:bg-gray-100" aria-label="Edit">
-                      <Pencil className="w-4 h-4 text-gray-500" />
-                    </button>
                   </td>
                 </tr>
               ))}
