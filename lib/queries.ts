@@ -454,3 +454,40 @@ export const useDeleteFMVehicle = () => {
     },
   });
 }
+
+// FMRequests
+export const useFmRequests = () => {
+  return useQuery<StaffRequestResponse[], Error>({
+    queryKey: ['fm-requests'],
+    queryFn: async () => {
+      const { data } = await api.get<StaffRequestResponse[]>('/fleetmanager/requests');
+      return data;
+    },
+  });
+}
+
+export const useFMApproveRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, vehicleId }: { requestId: string; vehicleId: string }) => {
+      const { data } = await api.post(`/fleetmanager/requests/approve`, { requestId, vehicleId });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fm-requests'] });
+    },
+  });
+}
+
+export const useFMRejectRequest = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requestId, comment }: { requestId: string; comment?: string }) => {
+      const { data } = await api.post(`/fleetmanager/requests/reject`, { requestId, comment });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fm-requests'] });
+    },
+  });
+}

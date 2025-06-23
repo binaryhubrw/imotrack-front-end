@@ -1,44 +1,44 @@
-
-
 "use client";
 
 import { useState } from "react";
 import { UserPlus, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useFmRequests } from '@/lib/queries';
 
-function statusBadge(status: unknown) {
+function statusBadge(status: string) {
   const base = "inline-block px-3 py-1 text-xs font-semibold rounded-full";
-  if (status === "Pending") return <span className={base + " bg-yellow-100 text-yellow-800"}>Pending</span>;
-  if (status === "Approved") return <span className={base + " bg-green-100 text-green-700"}>Approved</span>;
-  return <span className={base + " bg-pink-100 text-pink-700"}>Declined</span>;
+  if (status?.toUpperCase() === "PENDING") return <span className={base + " bg-yellow-100 text-yellow-800"}>Pending</span>;
+  if (status?.toUpperCase() === "APPROVED") return <span className={base + " bg-green-100 text-green-700"}>Approved</span>;
+  if (status?.toUpperCase() === "REJECTED") return <span className={base + " bg-pink-100 text-pink-700"}>Rejected</span>;
+  if (status?.toUpperCase() === "COMPLETED") return <span className={base + " bg-blue-100 text-blue-700"}>Completed</span>;
+  if (status?.toUpperCase() === "ACTIVE") return <span className={base + " bg-indigo-100 text-indigo-700"}>Active</span>;
+  return <span className={base + " bg-gray-100 text-gray-700"}>{status}</span>;
 }
 
 export default function RecentRequests() {
-  const [requests] = useState([
-    { id: "VR-001", requester: "John Doe", department: "Computer Science", reason: "Field Trip", date: "2024-03-15", status: "Pending" },
-    { id: "VR-002", requester: "Jane Smith", department: "Engineering", reason: "Official Meeting", date: "2024-03-16", status: "Approved" },
-    { id: "VR-003", requester: "Mike Johnson", department: "Business", reason: "Campus Transfer", date: "2024-03-14", status: "Declined" },
-    { id: "VR-004", requester: "John Doe", department: "Computer Science", reason: "Field Trip", date: "2024-03-15", status: "Pending" },
-    { id: "VR-005", requester: "Jane Smith", department: "Engineering", reason: "Official Meeting", date: "2024-03-16", status: "Approved" },
-    { id: "VR-006", requester: "Mike Johnson", department: "Business", reason: "Campus Transfer", date: "2024-03-14", status: "Declined" },
-  ]);
+  const { data: requests = [], isLoading, isError } = useFmRequests();
   const [dept, setDept] = useState("");
   const [stat, setStat] = useState("");
+  const router = useRouter();
 
-  const filtered = requests.filter(
-    r => (dept === "" || r.department === dept) && (stat === "" || r.status === stat)
-  );
+  // Extract unique departments from real data
+  const departments = [
+    "All Departments",
+    ...Array.from(new Set((requests || []).map(r => ((r.requester as any)?.department) ? (r.requester as any).department : 'Unknown')))
+  ];
+  const statuses = ["All Status", "PENDING", "APPROVED", "REJECTED", "COMPLETED", "ACTIVE"];
 
-  const departments = ["All Departments", ...Array.from(new Set(requests.map(r => r.department)))];
-  const statuses = ["All Status", "Pending", "Approved", "Declined"];
+  // Filtering logic for real data
+  const filtered = (requests || []).filter(r => {
+    const department = (r.requester as any)?.department || '';
+    const status = r.status?.toUpperCase() || '';
+    return (dept === '' || department === dept) && (stat === '' || status === stat);
+  });
 
-  const router = useRouter()
   return (
     <div className="p-4 min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] w-full">
-      {/* Remove max-w-3xl and mx-auto to allow full width */}
       <div className="w-full">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-6 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <UserPlus className="w-7 h-7 text-[#0872B3]" />
@@ -75,7 +75,6 @@ export default function RecentRequests() {
               </div>
             </div>
           </div>
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-[15px]">
               <thead>
@@ -90,14 +89,16 @@ export default function RecentRequests() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-10 text-gray-400 text-lg">No requests found.</td>
-                  </tr>
+                {isLoading ? (
+                  <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-lg">Loading...</td></tr>
+                ) : isError ? (
+                  <tr><td colSpan={7} className="text-center py-10 text-red-500 text-lg">Failed to load requests.</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-10 text-gray-400 text-lg">No requests found.</td></tr>
                 ) : (
                   filtered.map((request, idx) => (
                     <tr
-                    onClick={() => router.push('/dashboard/request-management')} 
+                      onClick={() => router.push(`/dashboard/fleet-manager/request-management?id=${request.id}`)}
                       key={request.id}
                       className={`
                         ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -106,16 +107,17 @@ export default function RecentRequests() {
                       style={{ height: "56px" }}
                     >
                       <td className="py-3 px-6 font-mono">{request.id}</td>
-                      <td className="py-3 px-6">{request.requester}</td>
-                      <td className="py-3 px-6">{request.department}</td>
-                      <td className="py-3 px-6">{request.reason}</td>
-                      <td className="py-3 px-6">{request.date}</td>
+                      <td className="py-3 px-6">{request.full_name || (request.requester?.first_name + ' ' + request.requester?.last_name)}</td>
+                      <td className="py-3 px-6">{(request.requester as any)?.department || '-'}</td>
+                      <td className="py-3 px-6">{request.trip_purpose}</td>
+                      <td className="py-3 px-6">{request.requested_at ? new Date(request.requested_at).toLocaleDateString() : '-'}</td>
                       <td className="py-3 px-6">{statusBadge(request.status)}</td>
                       <td className="py-3 px-6">
                         <button
                           className="p-2 rounded hover:bg-blue-100 transition"
                           title="View Details"
                           aria-label="View Details"
+                          onClick={e => { e.stopPropagation(); router.push(`/dashboard/fleet-manager/request-management?id=${request.id}`); }}
                         >
                           <Eye className="w-5 h-5 text-[#0872B3]" />
                         </button>

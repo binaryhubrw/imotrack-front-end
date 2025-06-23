@@ -516,3 +516,12 @@ export interface StaffRequestResponse {
     email: string;
   } | null;
 }
+export interface RequestApprove{
+  requestId: string;
+  vehicleId: string;
+}
+
+export interface RequestReject {
+  requestId: string;
+  comment?: string;
+}

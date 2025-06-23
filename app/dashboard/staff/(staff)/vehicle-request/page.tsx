@@ -221,7 +221,6 @@ export default function VehicleRequestsPage() {
             <table className="min-w-full text-[14px]">
               <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
                 <tr className="text-gray-700">
-                  <th className="px-6 py-4 text-left font-semibold">Request ID</th>
                   <th className="px-6 py-4 text-left font-semibold">Requested</th>
                   <th className="px-6 py-4 text-left font-semibold">Purpose</th>
                   <th className="px-6 py-4 text-left font-semibold">Destination</th>
@@ -254,7 +253,6 @@ export default function VehicleRequestsPage() {
                       style={{ height: "64px" }}
                       onClick={() => handleRowClick(req.id)}
                     >
-                      <td className="px-6 py-4 font-mono">{req.id}</td>
                       <td className="px-6 py-4">{new Date(req.requested_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4">{req.trip_purpose}</td>
                       <td className="px-6 py-4">{req.end_location}</td>

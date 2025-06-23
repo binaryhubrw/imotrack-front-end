@@ -1,19 +1,68 @@
 'use client'
-import { Check, X, Filter, Calendar, User, MapPin, Users, Car, Fuel } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { Check, X, Filter, Calendar, User, MapPin, Users, Car } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useMemo } from "react"
+import { useFmRequests, useFMApproveRequest, useFMRejectRequest, useFMVehicles } from '@/lib/queries';
+import { toast } from 'sonner';
 
 export default function VehicleRequestPage() {
-  const router = useRouter()
-  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
-  const [actioned, setActioned] = useState(false)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestId = searchParams.get('id');
 
-  const handleAction = (newStatus: 'approved' | 'rejected') => {
-    setStatus(newStatus)
-    setActioned(true)
-    setTimeout(() => {
-      router.push(`/dashboard/request-overview?updated=VR-002&status=${newStatus}`)
-    }, 700) // short delay for feedback
+  const { data: requests = [], isLoading } = useFmRequests();
+  const approveRequest = useFMApproveRequest();
+  const rejectRequest = useFMRejectRequest();
+  const { data: vehicles = [] } = useFMVehicles();
+  const [comment, setComment] = useState('');
+  const [actioned, setActioned] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<'approve' | 'reject' | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+
+  // Find the request by ID
+  const request = useMemo(() => requests.find(r => r.id === requestId), [requests, requestId]);
+
+  const handleApprove = async () => {
+    if (!request) return;
+    setLoadingAction('approve');
+    try {
+      const vehicleId = selectedVehicleId;
+      if (!vehicleId) {
+        toast.error('Please select a vehicle to assign.');
+        setLoadingAction(null);
+        return;
+      }
+      await approveRequest.mutateAsync({ requestId: request.id, vehicleId });
+      toast.success('Request approved!');
+      setActioned(true);
+      setTimeout(() => router.push('/dashboard/fleet-manager/request-overview'), 1000);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to approve request');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!request) return;
+    setLoadingAction('reject');
+    try {
+      await rejectRequest.mutateAsync({ requestId: request.id, comment });
+      toast.success('Request rejected!');
+      setActioned(true);
+      setTimeout(() => router.push('/dashboard/fleet-manager/request-overview'), 1000);
+    } catch {
+      toast.error('Failed to reject request');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  }
+  if (!request) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">Request not found</div>;
   }
 
   return (
@@ -64,16 +113,8 @@ export default function VehicleRequestPage() {
       <section className="bg-white rounded-2xl border shadow-lg p-8">
         {/* Request Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">Request <span className="text-blue-600">#VR-002</span></h2>
-          {status === 'pending' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Pending</span>
-          )}
-          {status === 'approved' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-green-100 text-green-800 font-medium">Approved</span>
-          )}
-          {status === 'rejected' && (
-            <span className="inline-block px-3 py-1 text-xs rounded-full bg-red-100 text-red-800 font-medium">Rejected</span>
-          )}
+          <h2 className="text-2xl font-bold tracking-tight">Request <span className="text-blue-600">#{request.id}</span></h2>
+          <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${request.status?.toUpperCase() === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : request.status?.toUpperCase() === 'APPROVED' ? 'bg-green-100 text-green-800' : request.status?.toUpperCase() === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>{request.status}</span>
         </div>
 
         {/* Requester & Trip Info */}
@@ -81,39 +122,40 @@ export default function VehicleRequestPage() {
           <div className="space-y-4">
             <div>
               <p className="text-xs text-gray-500 flex items-center gap-1"><User className="w-4 h-4" />Requester</p>
-              <p className="font-semibold text-gray-800">Jane Smith</p>
+              <p className="font-semibold text-gray-800">{request.full_name || (request.requester?.first_name + ' ' + request.requester?.last_name)}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Department</p>
-              <p className="font-semibold text-gray-800">Engineering</p>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <p className="font-semibold text-gray-800">{(request.requester as any)?.department || '-'}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">Reason</p>
-              <p className="font-semibold text-gray-800">Official Meeting</p>
+              <p className="font-semibold text-gray-800">{request.trip_purpose}</p>
             </div>
           </div>
           <div className="space-y-4">
             <div>
               <p className="text-xs text-gray-500 flex items-center gap-1"><Users className="w-4 h-4" />Passengers</p>
-              <p className="font-semibold text-gray-800">5</p>
+              <p className="font-semibold text-gray-800">{request.passengers_number}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500 flex items-center gap-1"><MapPin className="w-4 h-4" />Destination</p>
-              <p className="font-semibold text-gray-800">Nyaguta Campus</p>
+              <p className="font-semibold text-gray-800">{request.end_location}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Estimated Distance</p>
-              <p className="font-semibold text-gray-800">180 km</p>
+              <p className="text-xs text-gray-500">Start Location</p>
+              <p className="font-semibold text-gray-800">{request.start_location}</p>
             </div>
           </div>
           <div className="space-y-4">
             <div>
               <p className="text-xs text-gray-500">Start Date</p>
-              <p className="font-semibold text-gray-800">2024-03-18</p>
+              <p className="font-semibold text-gray-800">{request.start_date}</p>
             </div>
             <div>
               <p className="text-xs text-gray-500">End Date</p>
-              <p className="font-semibold text-gray-800">2024-03-30</p>
+              <p className="font-semibold text-gray-800">{request.end_date}</p>
             </div>
           </div>
         </div>
@@ -121,82 +163,59 @@ export default function VehicleRequestPage() {
         {/* Vehicle Info */}
         <div className="mb-8">
           <p className="text-xs text-gray-500 flex items-center gap-1"><Car className="w-4 h-4" />Requested Vehicle</p>
-          <p className="font-semibold text-gray-800">LR 004 - Toyota Hilux</p>
+          <p className="font-semibold text-gray-800">{request.vehicle?.plate_number ? `${request.vehicle.plate_number} - ${request.vehicle.vehicle_model}` : 'Not assigned'}</p>
+        </div>
+
+        {/* Vehicle Selection for Approval */}
+        <div className="mb-8">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Assign Vehicle to Request</label>
+          <select
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            value={selectedVehicleId}
+            onChange={e => setSelectedVehicleId(e.target.value)}
+            disabled={actioned || loadingAction === 'approve'}
+          >
+            <option value="">Select a vehicle...</option>
+            {vehicles.filter(v => v.status?.toUpperCase() === 'AVAILABLE').map(vehicle => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.plate_number} - {vehicle.vehicle_model} ({vehicle.manufacturer})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Divider */}
         <div className="border-t border-gray-200 my-8"></div>
 
-        {/* Assignment & Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500">Driver Assignment</p>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-                <option value="vwanjau">V.Wanjau</option>
-                <option value="jdoe">J.Doe</option>
-                <option value="psmith">P.Smith</option>
-              </select>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Initial Odometer (km)</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                24,578
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500">Vehicle Assignment</p>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
-                <option value="patrol">PatrolUnit23346</option>
-                <option value="suv1">SUV-001</option>
-                <option value="truck1">Truck-002</option>
-              </select>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">End Odometer (km)</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                34,557
-              </div>
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <p className="text-xs text-gray-500 flex items-center gap-1"><Fuel className="w-4 h-4" />Provided Fuel</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                2.5L
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Distance of Travel</p>
-              <div className="flex items-center h-10 px-3 border border-gray-200 rounded-lg bg-gray-100 font-semibold text-gray-700">
-                9,980 km
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Action Buttons */}
         <div className="flex flex-col md:flex-row gap-4 mt-6">
           <button
-            onClick={() => handleAction('approved')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-green-400 ${actioned ? 'bg-green-200 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+            onClick={handleApprove}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-green-400 ${actioned ? 'bg-green-200 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'} ${loadingAction === 'approve' ? 'opacity-60' : ''}`}
             title="Approve this request"
-            disabled={actioned}
+            disabled={actioned || loadingAction === 'approve' || !selectedVehicleId}
           >
             <Check className="h-5 w-5" />
-            Approve
+            {loadingAction === 'approve' ? 'Approving...' : 'Approve'}
           </button>
-          <button
-            onClick={() => handleAction('rejected')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-red-400 ${actioned ? 'bg-red-200 text-white cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
-            title="Reject this request"
-            disabled={actioned}
-          >
-            <X className="h-5 w-5" />
-            Reject
-          </button>
+          <div className="flex flex-col gap-2">
+            <textarea
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Rejection comment (optional)"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              disabled={actioned || loadingAction === 'reject'}
+            />
+            <button
+              onClick={handleReject}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition focus:ring-2 focus:ring-red-400 ${actioned ? 'bg-red-200 text-white cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'} ${loadingAction === 'reject' ? 'opacity-60' : ''}`}
+              title="Reject this request"
+              disabled={actioned || loadingAction === 'reject'}
+            >
+              <X className="h-5 w-5" />
+              {loadingAction === 'reject' ? 'Rejecting...' : 'Reject'}
+            </button>
+          </div>
         </div>
       </section>
     </div>
