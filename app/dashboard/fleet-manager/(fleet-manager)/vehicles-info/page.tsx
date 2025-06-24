@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Car, Search, Plus, Edit, Trash2, ChevronLeft, ChevronRight, Fuel, Calendar, MapPin, X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useFMVehicles, useCreateFMVehicles, useUpdateFMVehicle, useDeleteFMVehicle, useFMVehiclesStatuses } from '@/lib/queries';
@@ -38,37 +38,6 @@ interface CreateVehicleDto {
 
 type UpdateVehicleDto = CreateVehicleDto
 
-// --- MOCK DATA FOR DROPDOWNS ---
-// In a real app, this might come from an API
-const vehicleData: Record<string, Record<string, number[]>> = {
-  Sedan: {
-    Corolla: [4, 5],
-    Civic: [4, 5],
-    Camry: [5],
-  },
-  SUV: {
-    RAV4: [5, 7],
-    'CR-V': [5],
-    Explorer: [7],
-  },
-  Truck: {
-    'F-150': [3, 5, 6],
-    Hilux: [2, 5],
-    Tacoma: [4, 5],
-  },
-  Van: {
-    Sienna: [7, 8],
-    Transit: [8, 12, 15],
-  },
-  Bus: {
-    Coaster: [22, 29],
-    'Rosa': [25, 30],
-  },
-};
-
-const vehicleTypes = Object.keys(vehicleData);
-// --- END MOCK DATA ---
-
 const getStatusColor = (status: string) => {
   switch (status?.toUpperCase()) {
     case 'AVAILABLE':
@@ -84,10 +53,6 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const MANUFACTURERS = [
-  'Toyota', 'Honda', 'Ford', 'Nissan', 'Mitsubishi', 'Mercedes-Benz', 'BMW', 'Volkswagen', 'Hyundai', 'Kia', 'Other'
-];
-
 export default function VehiclesDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,25 +61,8 @@ export default function VehiclesDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const { register, handleSubmit, reset, watch } = useForm<CreateVehicleDto>();
+  const { register, handleSubmit, reset } = useForm<CreateVehicleDto>();
   const router = useRouter();
-
-  // Watch for changes in the vehicle type dropdown
-  const selectedVehicleType = watch('vehicle_type');
-
-  // Get models and capacities based on selections
-  const vehicleModels = useMemo(() => {
-    return selectedVehicleType ? Object.keys(vehicleData[selectedVehicleType]) : [];
-  }, [selectedVehicleType]);
-
-  const selectedVehicleModel = watch('vehicle_model');
-
-  const vehicleCapacities = useMemo(() => {
-    if (selectedVehicleType && selectedVehicleModel) {
-      return vehicleData[selectedVehicleType][selectedVehicleModel] || [];
-    }
-    return [];
-  }, [selectedVehicleType, selectedVehicleModel]);
 
   // Fetch vehicles
   const { data: vehicles, isLoading, isError } = useFMVehicles();
@@ -140,7 +88,7 @@ export default function VehiclesDashboard() {
   // Add Vehicle
   const onAddVehicle = async (data: CreateVehicleDto) => {
     try {
-      // Format the date properly for the API
+      // Format the data properly for the API
       const formattedData = {
         ...data,
         year: Number(data.year),
@@ -411,53 +359,39 @@ export default function VehiclesDashboard() {
                 <X className="w-5 h-5 text-gray-500" />
               </button>
               <h2 className="text-2xl font-bold text-center mb-8 text-[#0872B3]">Add New Vehicle</h2>
-              {/* <p className="text-center text-gray-500 mb-8">Fill in the details below to add a new vehicle to the fleet.</p> */}
               
               <form onSubmit={handleSubmit(onAddVehicle)} className="space-y-6">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Vehicle Type</label>
-                    <select 
+                    <input 
                       {...register('vehicle_type', { required: true })}
+                      placeholder="e.g., Sedan, SUV, Truck, Van, Bus"
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
-                    >
-                      <option value="">Select Type</option>
-                      {vehicleTypes.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Vehicle Model</label>
-                    <select 
+                    <input 
                       {...register('vehicle_model', { required: true })}
-                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring disabled:bg-gray-100"
-                      disabled={!selectedVehicleType}
+                      placeholder="e.g., Corolla, RAV4, F-150"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
-                    >
-                      <option value="">Select Model</option>
-                      {vehicleModels.map((model) => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <div>
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Manufacturer</label>
-                    <select 
+                    <input 
                       {...register('manufacturer', { required: true })}
+                      placeholder="e.g., Toyota, Honda, Ford"
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
-                    >
-                      <option value="">Select Manufacturer</option>
-                      {MANUFACTURERS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Year of Manufacture</label>
@@ -476,23 +410,20 @@ export default function VehiclesDashboard() {
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Plate Number</label>
                     <input 
                       {...register('plate_number', { required: true })} 
+                      placeholder="e.g., RAA 123A"
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                       required 
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Capacity (Seats)</label>
-                    <select 
-                      {...register('capacity', { required: true })}
-                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring disabled:bg-gray-100"
-                      disabled={!selectedVehicleModel}
+                    <input 
+                      type="number"
+                      {...register('capacity', { required: true, min: 1, max: 50 })}
+                      placeholder="e.g., 5"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
-                    >
-                      <option value="">Select Capacity</option>
-                      {vehicleCapacities.map((capacity) => (
-                         <option key={capacity} value={capacity}>{capacity} seats</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
                 
@@ -502,6 +433,7 @@ export default function VehiclesDashboard() {
                     <input 
                       type="number" 
                       {...register('odometer')} 
+                      placeholder="e.g., 0"
                       className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                     />
                   </div>
@@ -597,16 +529,11 @@ export default function VehiclesDashboard() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700">Manufacturer</label>
-                    <select
+                    <input
                       {...register('manufacturer', { required: true })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition"
                       required
-                    >
-                      <option value="">Select Manufacturer</option>
-                      {MANUFACTURERS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
