@@ -89,7 +89,7 @@ function issueBadge(type: Issue['issueType']) {
   }
 }
 
-export default function IssueReportTablePage() {
+export default function IssueManagementPage() {
   const [status, setStatus] = useState("");
   const [time, setTime] = useState("");
   const router = useRouter();

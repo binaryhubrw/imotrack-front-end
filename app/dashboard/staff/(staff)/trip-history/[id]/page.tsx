@@ -1,4 +1,3 @@
-
 'use client';
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,7 +24,7 @@ interface Trip {
   date: string;
   purpose: string;
   destination: string;
-  status: 'Completed' | 'Cancelled';
+  status: 'Completed' | 'Cancelled' | 'Active';
   driver: string;
   vehicle: string;
   startTime: string;
@@ -46,7 +45,7 @@ const TRIPS: Trip[] = [
     date: '2024-02-20', 
     purpose: 'Field Trip', 
     destination: 'Huye Campus', 
-    status: 'Completed', 
+    status: 'Active', 
     driver: 'John Doe', 
     vehicle: 'UR-001',
     startTime: '08:00',
@@ -130,6 +129,8 @@ export default function TripDetailsPage() {
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'Cancelled':
         return <XCircle className="w-5 h-5 text-red-500" />;
+      case 'Active':
+        return <Clock className="w-5 h-5 text-yellow-500" />;
       default:
         return <Clock className="w-5 h-5 text-yellow-500" />;
     }
@@ -141,6 +142,8 @@ export default function TripDetailsPage() {
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
       case 'Cancelled':
         return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Cancelled</Badge>;
+      case 'Active':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Active</Badge>;
       default:
         return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{status}</Badge>;
     }
@@ -193,7 +196,7 @@ Generated on: ${new Date().toLocaleString()}
           <div className="flex items-center gap-4">
             <Button 
               variant="outline" 
-              onClick={() => router.push('/dashboard/trip-history')}
+              onClick={() => router.push('/dashboard/staff/trip-history')}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -212,6 +215,18 @@ Generated on: ${new Date().toLocaleString()}
             {getStatusBadge(trip.status)}
           </div>
         </div>
+
+        {/* Report Issue Button for Active Trips */}
+        {trip.status === 'Active' && (
+          <div className="mb-6 flex justify-end">
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => router.push(`/dashboard/staff/issue-management/create?tripId=${trip.id}`)}
+            >
+              Report Issue
+            </Button>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
