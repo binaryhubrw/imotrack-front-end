@@ -130,9 +130,15 @@ export default function DashboardLayout({
           icon: <FontAwesomeIcon icon={faUser} />,
         },
         {
+<<<<<<< HEAD
           href: "/dashboard/staff/issue-management",
           label: "Issue Management",
           icon: <FontAwesomeIcon icon={faQuestion} />,
+=======
+          href: "/dashboard/staff/issue-reports/create",
+          label: "Report Issue",
+          icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
+>>>>>>> 64ca862a5ea53377b178565c153c9f2606a65030
         },
         {
           href: "/dashboard/staff/notifications",
