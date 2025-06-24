@@ -363,11 +363,11 @@ export default function VehicleRequestsPage() {
                       placeholder="Passengers"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
-                      Trip Dates
-                    </label>
-                    <div className="flex gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
+                        Start Date
+                      </label>
                       <input
                         type="date"
                         name="start_date"
@@ -377,6 +377,11 @@ export default function VehicleRequestsPage() {
                         className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                         placeholder="Start Date"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1" style={{ color: "#0872B3" }}>
+                        End Date
+                      </label>
                       <input
                         type="date"
                         name="end_date"

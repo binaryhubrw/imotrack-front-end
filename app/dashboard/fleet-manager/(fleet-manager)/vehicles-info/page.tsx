@@ -407,27 +407,27 @@ export default function VehiclesDashboard() {
 
         {/* Add Modal */}
         {showAddModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div className="relative bg-white rounded-2xl p-8 max-w-2xl w-full shadow-2xl border border-gray-100 my-8 overflow-y-auto max-h-[90vh]">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="relative bg-white rounded-xl p-8 max-w-2xl w-full shadow-2xl border border-gray-100 my-8 overflow-y-auto max-h-[90vh]">
               <button 
                 onClick={() => { setShowAddModal(false); reset(); }} 
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" 
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors" 
                 aria-label="Close" 
                 type="button"
               >
-                <X className="h-6 w-6" />
+                <X className="w-5 h-5 text-gray-500" />
               </button>
-              <h2 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-gray-800 to-[#0872B3] text-transparent bg-clip-text">Add New Vehicle</h2>
+              <h2 className="text-2xl font-bold text-center mb-8 text-[#0872B3]">Add New Vehicle</h2>
               {/* <p className="text-center text-gray-500 mb-8">Fill in the details below to add a new vehicle to the fleet.</p> */}
               
               <form onSubmit={handleSubmit(onAddVehicle)} className="space-y-6">
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Type</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Vehicle Type</label>
                     <select 
                       {...register('vehicle_type', { required: true })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
                     >
                       <option value="">Select Type</option>
@@ -437,10 +437,10 @@ export default function VehiclesDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Vehicle Model</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Vehicle Model</label>
                     <select 
                       {...register('vehicle_model', { required: true })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition disabled:bg-gray-100"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring disabled:bg-gray-100"
                       disabled={!selectedVehicleType}
                       required
                     >
@@ -452,12 +452,12 @@ export default function VehiclesDashboard() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Manufacturer</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Manufacturer</label>
                     <select 
                       {...register('manufacturer', { required: true })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                       required
                     >
                       <option value="">Select Manufacturer</option>
@@ -467,31 +467,31 @@ export default function VehiclesDashboard() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Year of Manufacture</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Year of Manufacture</label>
                     <input 
                       type="number" 
                       {...register('year', { required: true, min: 1990, max: new Date().getFullYear() + 1 })}
                       placeholder={`e.g., ${new Date().getFullYear()}`}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition" 
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                       required 
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Plate Number</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Plate Number</label>
                     <input 
                       {...register('plate_number', { required: true })} 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition" 
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                       required 
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Capacity (Seats)</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Capacity (Seats)</label>
                     <select 
                       {...register('capacity', { required: true })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition disabled:bg-gray-100"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring disabled:bg-gray-100"
                       disabled={!selectedVehicleModel}
                       required
                     >
@@ -503,20 +503,20 @@ export default function VehiclesDashboard() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Initial Odometer (miles)</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Initial Odometer (miles)</label>
                     <input 
                       type="number" 
                       {...register('odometer')} 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition" 
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                     />
                   </div>
                    <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Fuel Type</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Fuel Type</label>
                     <select 
                       {...register('fuel_type')} 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition"
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                     >
                         <option value="">Select Fuel Type</option>
                         <option value="Petrol">Petrol</option>
@@ -527,9 +527,9 @@ export default function VehiclesDashboard() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Status</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Status</label>
                     {isStatusLoading ? (
                       <div className="text-gray-500 text-sm h-11 flex items-center">Loading...</div>
                     ) : isStatusError ? (
@@ -537,7 +537,7 @@ export default function VehiclesDashboard() {
                     ) : (
                       <select 
                         {...register('status', { required: true })} 
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition"
+                        className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring"
                         required
                       >
                         <option value="">Select Status</option>
@@ -548,11 +548,11 @@ export default function VehiclesDashboard() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-700">Last Service Date</label>
+                    <label className="block text-sm font-semibold mb-1 text-[#0872B3]">Last Service Date</label>
                     <input 
                       type="date" 
                       {...register('last_service_date')} 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-[#0872B3] outline-none transition" 
+                      className="w-full rounded border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring" 
                     />
                   </div>
                 </div>
@@ -567,7 +567,7 @@ export default function VehiclesDashboard() {
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-semibold transition-colors disabled:opacity-40"
+                    className="bg-[#0872B3] hover:bg-[#065d8f] text-white px-8 py-2.5 rounded-lg font-bold transition-colors disabled:opacity-50"
                     disabled={createVehicle.isPending}
                   >
                     {createVehicle.isPending ? 'Adding...' : 'SAVE'}
