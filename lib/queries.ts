@@ -20,7 +20,26 @@ import {
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
 
-
+// Define the user profile type based on the API response
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  nid: string;
+  email: string;
+  phone: string;
+  gender: 'MALE' | 'FEMALE';
+  dob: string;
+  role: string;
+  organization: {
+    id: string;
+    name: string;
+  };
+  status: string;
+  street_address: string;
+  created_at: string;
+  last_login: string;
+}
 
 // Login mutation
 export const useLogin = () => {
@@ -79,6 +98,21 @@ export const useLogin = () => {
           throw new Error(axiosError.response?.data?.message || 'Login failed');
         }
         throw error;
+      }
+    },
+  });
+};
+
+export const useMe = () => {
+  return useQuery<UserProfile, Error>({
+    queryKey: ['me'],
+    queryFn: async () => {
+      try {
+        const response = await api.get<UserProfile>('/auth/me');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        throw new Error('Failed to fetch user data');
       }
     },
   });

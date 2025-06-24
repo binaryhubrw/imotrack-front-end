@@ -1,397 +1,316 @@
-'use client'
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  X, 
-  Check, 
-  User, 
-  Car, 
-  MapPin, 
-  Calendar, 
-  Clock, 
-  FileText, 
-  Users,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  LucideIcon
-} from 'lucide-react';
-import Link from 'next/link';
+"use client";
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Calendar, MapPin, Users, Briefcase, Clock, Pencil } from 'lucide-react';
+import { useStaffRequest, useCreateIssue } from '@/lib/queries';
 
-// Define types for request data and timeline
-interface RequestDetailsType {
-  id: string;
-  status: string;
-  requestedBy: string;
-  requestType: string;
-  vehicleType: string;
-  passengers: number;
-  pickupDate: string;
-  pickupTime: string;
-  returnDate: string;
-  returnTime: string;
-  pickupLocation: string;
-  destination: string;
-  purpose: string;
-  requestDate: string;
-  staffId: string;
-}
 
-interface TimelineItem {
-  date: string;
-  title: string;
-  description: string;
-  status: 'completed' | 'pending' | 'rejected';
-  icon: LucideIcon; // Use LucideIcon type for icons
-}
+export default function VehicleRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { id } = React.use(params);
+  const { data: request, isLoading, isError } = useStaffRequest(id);
+  const createIssue = useCreateIssue();
+  const [showIssueModal, setShowIssueModal] = React.useState(false);
+  const [issueDescription, setIssueDescription] = React.useState('');
+  const [issueError, setIssueError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [emergency, setEmergency] = React.useState(false);
 
-export default function RequestDetails() {
-  const [currentUserRole] = useState<'Admin' | 'Manager' | 'Transport' | 'Fleet Manager' | 'Staff'>('Admin'); // Explicitly type currentUserRole
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const goBack = () => router.back();
 
-  // Request data - this would typically come from an API call based on the request ID
-  const requestData: RequestDetailsType = {
-    id: 'REC12345',
-    status: 'Pending Approval',
-    requestedBy: 'John Doe (HR Department)',
-    requestType: 'Official Business',
-    vehicleType: 'SUV',
-    passengers: 4,
-    pickupDate: '15/03/2024',
-    pickupTime: '08:00 AM',
-    returnDate: '15/03/2024',
-    returnTime: '05:00 PM',
-    pickupLocation: 'University of Rwanda, Kigali Campus',
-    destination: 'Kigali Convention Center',
-    purpose: 'Attending the annual HR conference at Kigali Convention Center. Need to transport 4 HR staff members for the event.',
-    requestDate: '10/03/2024 10:30 AM',
-    staffId: 'EMP001'
-  };
-
-  const timeline: TimelineItem[] = [
-    {
-      date: '10/03/2024 10:30 AM',
-      title: 'Request Submitted',
-      description: 'Request created by John Doe',
-      status: 'completed',
-      icon: FileText
-    },
-    {
-      date: '14/03/2024 11:45 AM',
-      title: 'Department Approval',
-      description: 'Approved by HR Department Head',
-      status: 'completed',
-      icon: CheckCircle
-    },
-    {
-      date: '14/03/2024 02:15 PM',
-      title: 'Fleet Manager Review',
-      description: 'Pending fleet manager approval',
-      status: 'pending',
-      icon: Clock
-    }
-  ];
-
-  // Permission check function
-  const hasPermission = (action: string) => {
-    const permissions: { [key: string]: string[] } = {
-      'Admin': ['approve', 'reject'],
-      'Manager': ['approve', 'reject'],
-      'Transport': ['approve', 'reject'],
-      'Fleet Manager': ['approve', 'reject'],
-      'Staff': []
-    };
-    return permissions[currentUserRole]?.includes(action) || false;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: { [key: string]: { bg: string; text: string; icon: LucideIcon } } = {
-      'Pending Approval': { 
-        bg: 'bg-yellow-100', 
-        text: 'text-yellow-800', 
-        icon: AlertCircle 
-      },
-      'Approved': { 
-        bg: 'bg-green-100', 
-        text: 'text-green-800', 
-        icon: CheckCircle 
-      },
-      'Rejected': { 
-        bg: 'bg-red-100', 
-        text: 'text-red-800', 
-        icon: XCircle 
-      }
-    };
-    
-    const config = statusConfig[status] || statusConfig['Pending Approval'];
-    const IconComponent = config.icon;
-    
+  if (isLoading) {
     return (
-      <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
-        <IconComponent className="w-4 h-4" />
-        <span>{status}</span>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
-  };
+  }
+  if (isError || !request) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-8">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8 text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Request Not Found</h1>
+          <p className="text-gray-600 mb-6">The vehicle request with ID {id} could not be found.</p>
+          <button 
+            onClick={goBack}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+          >
+            <ArrowLeft size={16} />
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const getTimelineStatus = (status: 'completed' | 'pending' | 'rejected') => {
-    const statusStyles: { [key: string]: string } = {
-      'completed': 'bg-green-500',
-      'pending': 'bg-yellow-500',
-      'rejected': 'bg-red-500'
-    };
-    return statusStyles[status] || 'bg-gray-300';
-  };
+  // Only allow editing/cancelling if pending
 
-  const handleApprove = () => {
-    console.log('Approve request:', requestData.id);
-    setShowApprovalModal(false);
-    // Handle approval logic here
-  };
-
-  const handleReject = () => {
-    console.log('Reject request:', requestData.id);
-    setShowRejectionModal(false);
-    // Handle rejection logic here
-  };
+  async function handleIssueSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setIssueError(null);
+    try {
+      await createIssue.mutateAsync({ request_id: id, description: issueDescription, emergency });
+      setShowIssueModal(false);
+      setIssueDescription('');
+      setEmergency(false);
+      router.push('/dashboard/staff/issue-management');
+    } catch (err: unknown) {
+      console.error('Error creating issue:', err);
+      if (err instanceof Error) {
+        setIssueError(err.message);
+      } else {
+        setIssueError('Failed to create issue');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <Link href="/dashboard/vehicle-requests" className="p-2 hover:bg-white rounded-lg transition-colors">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-black">Request Details</h1>
-              <p className="text-gray-600">View and manage car request information</p>
+        <button 
+          onClick={goBack}
+          className="mb-6 flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+        >
+          <ArrowLeft size={16} />
+          <span>Back to Requests</span>
+        </button>
+
+        {/* Report Issue Button for Approved Requests */}
+        {request.status === 'APPROVED' && (
+          <div className="mb-4 flex justify-end">
+            <button
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold"
+              onClick={() => setShowIssueModal(true)}
+            >
+              Report Issue
+            </button>
+          </div>
+        )}
+
+        {/* Issue Modal */}
+        {showIssueModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Report Issue</h2>
+              <form onSubmit={handleIssueSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="issueDescription" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    id="issueDescription"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    rows={4}
+                    value={issueDescription}
+                    onChange={e => setIssueDescription(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="emergency"
+                    checked={emergency}
+                    onChange={e => setEmergency(e.target.checked)}
+                  />
+                  <label htmlFor="emergency" className="text-sm text-gray-700">Mark as Emergency</label>
+                </div>
+                {issueError && <div className="text-red-600 text-sm">{issueError}</div>}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    onClick={() => setShowIssueModal(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold disabled:opacity-60"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Issue'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-          
-          <Link href="/dashboard/vehicle-requests" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-gray-600" />
-          </Link>
-        </div>
+        )}
 
-        {/* Vehicle Request Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
-            <div>
-              <div className="flex items-center space-x-3 mb-2">
-                <Car className="w-6 h-6 text-[#0872B3]" />
-                <h2 className="text-xl font-semibold text-black">Vehicle Request</h2>
-              </div>
-              <p className="text-gray-600">Request ID: <span className="font-medium text-[#0872B3]">{requestData.id}</span></p>
-            </div>
-            <div>
-              {getStatusBadge(requestData.status)}
-            </div>
-          </div>
-        </div>
-
-        {/* Request Information & Trip Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Request Information */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-black mb-4 flex items-center space-x-2">
-              <User className="w-5 h-5 text-[#0872B3]" />
-              <span>Request Information</span>
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Requested By</label>
-                  <p className="text-black font-medium">{requestData.requestedBy}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Request Type</label>
-                  <p className="text-black font-medium">{requestData.requestType}</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Vehicle Type</label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Car className="w-4 h-4 text-gray-400" />
-                    <span className="text-black font-medium">{requestData.vehicleType}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Number of Passengers</label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Users className="w-4 h-4 text-gray-400" />
-                    <span className="text-black font-medium">{requestData.passengers}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Trip Details */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-black mb-4 flex items-center space-x-2">
-              <MapPin className="w-5 h-5 text-[#0872B3]" />
-              <span>Trip Details</span>
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Pickup Date & Time</label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-black font-medium">{requestData.pickupDate}, {requestData.pickupTime}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Return Date & Time</label>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-black font-medium">{requestData.returnDate}, {requestData.returnTime}</span>
-                  </div>
-                </div>
-              </div>
-              
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Pickup Location</label>
-                <div className="flex items-center space-x-2 mt-1">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <span className="text-black font-medium">{requestData.pickupLocation}</span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-gray-500">Destination</label>
-                <div className="flex items-center space-x-2 mt-1">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <span className="text-black font-medium">{requestData.destination}</span>
-                </div>
+                <h1 className="text-2xl font-bold text-gray-800">{request.trip_purpose}</h1>
+                <p className="text-gray-500 font-mono mt-1">ID: {id}</p>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Trip Purpose */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-black mb-4 flex items-center space-x-2">
-            <FileText className="w-5 h-5 text-[#0872B3]" />
-            <span>Trip Purpose</span>
-          </h3>
-          <p className="text-gray-700 leading-relaxed">{requestData.purpose}</p>
-        </div>
-
-        {/* Request Timeline */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-black mb-6 flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-[#0872B3]" />
-            <span>Request Timeline</span>
-          </h3>
-          
-          <div className="space-y-6">
-            {timeline.map((item, index) => {
-              const IconComponent = item.icon;
-              return (
-                <div key={index} className="flex items-start space-x-4">
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${getTimelineStatus(item.status)}`}>
-                    <IconComponent className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-black">{item.title}</p>
-                      <p className="text-xs text-gray-500">{item.date}</p>
+          <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Request Details</h2>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Calendar className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Request Date</p>
+                          <p className="font-medium">{new Date(request.requested_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Briefcase className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Purpose</p>
+                          <p className="font-medium">{request.trip_purpose}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Users className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Number of Passengers</p>
+                          <p className="font-medium">{request.passengers_number}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Start Location</p>
+                          <p className="font-medium">{request.start_location}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">End Location</p>
+                          <p className="font-medium">{request.end_location}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Clock className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Trip Duration</p>
+                          <p className="font-medium">
+                            {new Date(request.start_date).toLocaleString()} - {new Date(request.end_date).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {request.comments && (
+                        <div className="flex items-start gap-3">
+                          <Pencil className="w-5 h-5 text-blue-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-gray-500">Comments</p>
+                            <p className="font-medium">{request.comments}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Requester Info</h2>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <Users className="w-5 h-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-gray-500">Full Name</p>
+                          <p className="font-medium">{request.full_name}</p>
+                        </div>
+                      </div>
+                      {request.requester && (
+                        <>
+                          <div className="flex items-start gap-3">
+                            <Users className="w-5 h-5 text-blue-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-gray-500">Requester</p>
+                              <p className="font-medium">{request.requester.first_name} {request.requester.last_name}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <Briefcase className="w-5 h-5 text-blue-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-gray-500">Email</p>
+                              <p className="font-medium">{request.requester.email}</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {request.reviewed_at && (
+                    <div>
+                      <h2 className="text-sm font-medium text-gray-500 mb-1">Review Info</h2>
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Calendar className="w-5 h-5 text-blue-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-gray-500">Reviewed At</p>
+                            <p className="font-medium">{new Date(request.reviewed_at).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        {request.reviewed_by && (
+                          <div className="flex items-start gap-3">
+                            <Users className="w-5 h-5 text-blue-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-gray-500">Reviewed By</p>
+                              <p className="font-medium">{request.reviewed_by}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-sm font-medium text-gray-500 mb-1">Activity Timeline</h2>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="space-y-4">
+                        <div className="relative pl-6 border-l-2 border-blue-200 pb-4">
+                          <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500"></div>
+                          <p className="text-xs text-gray-400">{new Date(request.requested_at).toLocaleDateString()}</p>
+                          <p className="font-medium text-gray-700">Request Created</p>
+                        </div>
+                        {request.status !== "PENDING" && (
+                          <div className="relative pl-6 border-l-2 border-blue-200 pb-4">
+                            <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500"></div>
+                            <p className="text-xs text-gray-400">{request.reviewed_at ? new Date(request.reviewed_at).toLocaleDateString() : ''}</p>
+                            <p className="font-medium text-gray-700">Request {request.status === "REJECTED" ? "Rejected" : "Approved"}</p>
+                          </div>
+                        )}
+                        {request.status === "ACTIVE" && (
+                          <div className="relative pl-6 border-l-2 border-blue-200 pb-4">
+                            <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500"></div>
+                            <p className="text-xs text-gray-400">{new Date(request.start_date).toLocaleDateString()}</p>
+                            <p className="font-medium text-gray-700">Trip Started</p>
+                          </div>
+                        )}
+                        {request.status === "COMPLETED" && (
+                          <>
+                            <div className="relative pl-6 border-l-2 border-blue-200 pb-4">
+                              <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500"></div>
+                              <p className="text-xs text-gray-400">{new Date(request.start_date).toLocaleDateString()}</p>
+                              <p className="font-medium text-gray-700">Trip Started</p>
+                            </div>
+                            <div className="relative pl-6 pb-0">
+                              <div className="absolute left-[-8px] top-0 w-4 h-4 rounded-full bg-blue-500"></div>
+                              <p className="text-xs text-gray-400">{new Date(request.end_date).toLocaleDateString()}</p>
+                              <p className="font-medium text-gray-700">Trip Completed</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        {hasPermission('approve') && requestData.status === 'Pending Approval' && (
-          <div className="flex flex-col sm:flex-row gap-3 justify-end">
-            <button 
-              onClick={() => setShowRejectionModal(true)}
-              className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
-            >
-              <span>Close</span>
-            </button>
-            <button 
-              onClick={() => setShowApprovalModal(true)}
-              className="bg-[#0872B3] hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
-            >
-              <Check className="w-4 h-4" />
-              <span>Approve Request</span>
-            </button>
-            <button 
-              onClick={() => setShowRejectionModal(true)}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center justify-center space-x-2 transition-colors"
-            >
-              <X className="w-4 h-4" />
-              <span>Reject Request</span>
-            </button>
-          </div>
-        )}
-
-        {/* Approval Modal */}
-        {showApprovalModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-black mb-4">Approve Request</h3>
-              <p className="text-gray-600 mb-6">Are you sure you want to approve this car request?</p>
-              <div className="flex space-x-3 justify-end">
-                <button 
-                  onClick={() => setShowApprovalModal(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleApprove}
-                  className="px-4 py-2 bg-[#0872B3] text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Approve
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Rejection Modal */}
-        {showRejectionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-black mb-4">Reject Request</h3>
-              <p className="text-gray-600 mb-4">Please provide a reason for rejecting this request:</p>
-              <textarea 
-                className="w-full border border-gray-300 rounded-lg p-3 mb-6 focus:outline-none focus:border-[#0872B3] focus:ring-1 focus:ring-[#0872B3]"
-                // rows="4"
-                placeholder="Enter rejection reason..."
-              ></textarea>
-              <div className="flex space-x-3 justify-end">
-                <button 
-                  onClick={() => setShowRejectionModal(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleReject}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Reject
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+     
+    </main>
   );
 }
