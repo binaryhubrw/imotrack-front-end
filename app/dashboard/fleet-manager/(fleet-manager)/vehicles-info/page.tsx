@@ -557,17 +557,17 @@ export default function VehiclesDashboard() {
                   </div>
                 </div>
                 
-                <div className="flex justify-end gap-4 pt-4">
+                <div className="grid grid-cols-2 gap-4 pt-4">
                   <button 
                     type="button" 
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-8 py-2.5 rounded-lg font-semibold transition-colors" 
+                    className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-semibold transition-colors" 
                     onClick={() => { setShowAddModal(false); reset(); }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#0872B3] hover:bg-[#065d8f] text-white px-8 py-2.5 rounded-lg font-bold transition-colors disabled:opacity-50"
+                    className="w-full bg-[#0872B3] hover:bg-[#065d8f] text-white py-3 rounded-lg font-bold transition-colors disabled:opacity-50"
                     disabled={createVehicle.isPending}
                   >
                     {createVehicle.isPending ? 'Adding...' : 'SAVE'}
