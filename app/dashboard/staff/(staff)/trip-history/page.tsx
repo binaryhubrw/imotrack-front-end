@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState } from 'react';
 import { Eye, Car, Download } from 'lucide-react';
@@ -9,14 +8,14 @@ interface Trip {
   date: string;
   purpose: string;
   destination: string;
-  status: 'Completed' | 'Cancelled';
+  status: 'Completed' | 'Cancelled'|'Active';
   driver: string;
   vehicle: string;
 }
 
 const TRIPS: Trip[] = [
-  { id: 'TRIP-001', date: '2024-02-20', purpose: 'Field Trip', destination: 'Huye Campus', status: 'Completed', driver: 'John Doe', vehicle: 'UR-001' },
-  { id: 'TRIP-002', date: '2024-02-18', purpose: 'Conference', destination: 'Kigali Convention Center', status: 'Completed', driver: 'Jane Smith', vehicle: 'UR-002' },
+  { id: 'TRIP-001', date: '2024-02-20', purpose: 'Field Trip', destination: 'Huye Campus', status: 'Active', driver: 'John Doe', vehicle: 'UR-001' },
+  { id: 'TRIP-002', date: '2024-02-18', purpose: 'Conference', destination: 'Kigali Convention Center', status: 'Active', driver: 'Jane Smith', vehicle: 'UR-002' },
   { id: 'TRIP-003', date: '2024-02-15', purpose: 'Research Visit', destination: 'Kigali Heights', status: 'Cancelled', driver: 'Mike Johnson', vehicle: 'UR-003' },
   { id: 'TRIP-004', date: '2024-02-10', purpose: 'Workshop', destination: 'Rubavu Beach', status: 'Completed', driver: 'Alice Brown', vehicle: 'UR-004' },
   { id: 'TRIP-005', date: '2024-02-08', purpose: 'Team Building', destination: 'Nyungwe Forest', status: 'Completed', driver: 'Chris Green', vehicle: 'UR-005' },
@@ -64,7 +63,7 @@ export default function TripHistoryPage() {
   );
 
   const handleTripClick = (tripId: string) => {
-    router.push(`/dashboard/trip-history/${tripId}`);
+    router.push(`/dashboard/staff/trip-history/${tripId}`);
   };
 
   return (

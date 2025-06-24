@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Car, FileText, BarChart3, TrendingUp, Calendar, MapPin, Users, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Car, FileText, TrendingUp, Calendar, Users, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { useFMVehicles, useFmRequests } from '@/lib/queries';
 
 const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, trend, onClick }) => (
@@ -156,10 +156,6 @@ export default function FleetManagerDashboard() {
         
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Fleet Management</h1>
-            <p className="text-gray-600 mt-1">Monitor your fleet performance and requests</p>
-          </div>
           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm">
             <Calendar className="w-4 h-4 text-gray-500" />
             <span className="text-sm text-gray-700">{new Date().toLocaleDateString()}</span>

@@ -16,6 +16,7 @@ import {
   faCog,
   faSignOutAlt,
   faCodeCommit,
+  faQuestion,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -112,14 +113,9 @@ export default function DashboardLayout({
           icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
         },
         {
-          href: "/dashboard/fleet-manager/request-management",
-          label: "Requests",
-          icon: <FontAwesomeIcon icon={faCodePullRequest} />,
-        },
-        {
           href: "/dashboard/fleet-manager/request-overview",
-          label: "Request Overview",
-          icon: <FontAwesomeIcon icon={faCodeCommit} />,
+          label: "Request Management",
+          icon: <FontAwesomeIcon icon={faCodePullRequest} />,
         },
       ],
       staff: [
@@ -132,6 +128,11 @@ export default function DashboardLayout({
           href: "/dashboard/staff/trip-history",
           label: "Trip History",
           icon: <FontAwesomeIcon icon={faUser} />,
+        },
+        {
+          href: "/dashboard/staff/issue-management",
+          label: "Issue Management",
+          icon: <FontAwesomeIcon icon={faQuestion} />,
         },
         {
           href: "/dashboard/staff/notifications",
