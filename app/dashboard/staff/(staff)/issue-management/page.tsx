@@ -2,56 +2,48 @@
 import React, { useState } from "react";
 import { Download, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useIssues } from '@/lib/queries';
+import { useMyIssues } from '@/lib/queries';
 
 type StaffIssue = {
-  id: string;
-  request_id: string;
+  vehicle_model: string;
+  plate_number: string;
+  date_reported: string;
+  trip_purpose: string;
   description: string;
-  emergency: boolean;
-  created_at: string;
+  status: string;
 };
 
 export default function IssueManagementPage() {
-  const { data: issues = [], isLoading, isError } = useIssues();
+  const { data: issues = [], isLoading, isError } = useMyIssues();
   const [status, setStatus] = useState("");
   const [time, setTime] = useState("");
   const router = useRouter();
 
-  const handleIssueClick = (issueId: string) => {
-    router.push(`/dashboard/staff/issue-management/${issueId}`);
+  const handleIssueClick = (index: number) => {
+    // Since we don't have an ID, we'll use the index for now
+    // In a real app, you'd want the backend to return an issue ID
+    router.push(`/dashboard/staff/issue-management/${index}`);
   };
 
   const handleExport = () => {
     const headers = [
-      "Request ID",
-      "Date",
-      "Purpose",
-      "Destination",
-      "Passengers",
-      "Issue Type",
-      "Location",
+      "Vehicle Model",
+      "Plate Number", 
+      "Date Reported",
+      "Trip Purpose",
+      "Description",
+      "Status",
     ];
-    interface CsvIssue {
-      id: string;
-      created_at: string;
-      purpose: string;
-      destination: string;
-      passengers: string;
-      issueType: string;
-      location: string;
-    }
 
-    const csvData: string[][] = (issues as CsvIssue[])
-      .filter((i: CsvIssue) => !status || i.issueType === status)
-      .map((issue: CsvIssue) => [
-      issue.id,
-      issue.created_at,
-      issue.purpose,
-      issue.destination,
-      issue.passengers,
-      issue.issueType,
-      issue.location,
+    const csvData: string[][] = (issues as StaffIssue[])
+      .filter((i: StaffIssue) => !status || i.status === status)
+      .map((issue: StaffIssue) => [
+        issue.vehicle_model,
+        issue.plate_number,
+        new Date(issue.date_reported).toLocaleDateString(),
+        issue.trip_purpose,
+        issue.description,
+        issue.status,
       ]);
 
     const csvContent = [
@@ -87,7 +79,7 @@ export default function IssueManagementPage() {
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-8 h-8 text-[#0872B3]" />
             <h1 className="text-2xl md:text-3xl font-extrabold text-[#0872B3]">
-              Issue History
+              My Issue History
             </h1>
           </div>
           <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch md:items-center w-full md:w-auto">
@@ -99,9 +91,9 @@ export default function IssueManagementPage() {
                   onChange={(e) => setStatus(e.target.value)}
                 >
                   <option value="">All Status</option>
-                  <option value="Accident">Accident</option>
-                  <option value="Delay">Delay</option>
-                  <option value="Fuel">Fuel</option>
+                  <option value="REPORTED">Reported</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="RESOLVED">Resolved</option>
                 </select>
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
@@ -153,11 +145,11 @@ export default function IssueManagementPage() {
           <table className="min-w-full text-[15px]">
             <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
               <tr className="text-gray-700">
-                <th className="px-6 py-4 text-left font-semibold">Issue ID</th>
-                <th className="px-6 py-4 text-left font-semibold">Request ID</th>
+                <th className="px-6 py-4 text-left font-semibold">Vehicle</th>
+                <th className="px-6 py-4 text-left font-semibold">Trip Purpose</th>
                 <th className="px-6 py-4 text-left font-semibold">Description</th>
-                <th className="px-6 py-4 text-left font-semibold">Emergency</th>
-                <th className="px-6 py-4 text-left font-semibold">Created At</th>
+                <th className="px-6 py-4 text-left font-semibold">Status</th>
+                <th className="px-6 py-4 text-left font-semibold">Date Reported</th>
               </tr>
             </thead>
             <tbody>
@@ -168,8 +160,8 @@ export default function IssueManagementPage() {
               ) : (
                 issues.map((issue: StaffIssue, idx: number) => (
                   <tr
-                    key={issue.id}
-                    onClick={() => handleIssueClick(issue.id)}
+                    key={idx}
+                    onClick={() => handleIssueClick(idx)}
                     className={`
                       ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
                       hover:bg-blue-50/70
@@ -180,11 +172,25 @@ export default function IssueManagementPage() {
                     `}
                     style={{ height: "64px" }}
                   >
-                    <td className="px-6 py-4 font-mono">{issue.id}</td>
-                    <td className="px-6 py-4">{issue.request_id}</td>
-                    <td className="px-6 py-4">{issue.description}</td>
-                    <td className="px-6 py-4">{issue.emergency ? 'Yes' : 'No'}</td>
-                    <td className="px-6 py-4">{issue.created_at ? new Date(issue.created_at).toLocaleString() : ''}</td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{issue.vehicle_model}</div>
+                        <div className="text-sm text-gray-500">{issue.plate_number}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{issue.trip_purpose}</td>
+                    <td className="px-6 py-4 max-w-xs truncate">{issue.description}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        issue.status === 'REPORTED' ? 'bg-yellow-100 text-yellow-800' :
+                        issue.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                        issue.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {issue.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">{issue.date_reported ? new Date(issue.date_reported).toLocaleString() : ''}</td>
                   </tr>
                 ))
               )}

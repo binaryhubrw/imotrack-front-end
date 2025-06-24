@@ -17,29 +17,10 @@ import {
   StaffRequest,
   StaffRequestResponse,
   IssueCreateDto,
+  UserProfile,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
 
-// Define the user profile type based on the API response
-interface UserProfile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  nid: string;
-  email: string;
-  phone: string;
-  gender: 'MALE' | 'FEMALE';
-  dob: string;
-  role: string;
-  organization: {
-    id: string;
-    name: string;
-  };
-  status: string;
-  street_address: string;
-  created_at: string;
-  last_login: string;
-}
 
 // Login mutation
 export const useLogin = () => {
@@ -117,6 +98,23 @@ export const useMe = () => {
     },
   });
 };
+
+export const useUpdatePassword = () => {
+  return useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
+      try {
+        const response = await api.put('/auth/password', {
+          current_password: currentPassword,
+          new_password: newPassword,
+        });
+        return response.data;
+      } catch (error) {
+        console.error('Error updating password:', error);
+        throw new Error('Failed to update password');
+      }
+    }
+  });
+}
 
 // Organizations Query (All)
 export const useOrganizations = () => {
@@ -536,6 +534,27 @@ export const useIssues = () => {
       const { data } = await api.get('/issues/fleet');
       return data;
     },
+  });
+}
+
+export const useMyIssues = () => {
+  return useQuery({
+    queryKey: ['my-issues'],
+    queryFn: async () => {
+      const { data } = await api.get('/issues/staff/mine');
+      return data;
+    },
+  });
+}
+
+export const useMyIssue = (id: string) => {
+  return useQuery({
+    queryKey: ['my-issue', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/issues/staff/mine/${id}`);
+      return data;
+    },
+    enabled: !!id,
   });
 }
 

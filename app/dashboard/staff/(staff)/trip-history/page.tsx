@@ -2,8 +2,17 @@
 import React, { useState } from 'react';
 import {Car, Download, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useStaffRequests, useIssues } from '@/lib/queries';
-import type { StaffRequestResponse, IssueDto } from '@/types/next-auth';
+import { useStaffRequests, useMyIssues } from '@/lib/queries';
+import type { StaffRequestResponse } from '@/types/next-auth';
+
+type MyIssue = {
+  vehicle_model: string;
+  plate_number: string;
+  date_reported: string;
+  trip_purpose: string;
+  description: string;
+  status: string;
+};
 
 export default function TripHistoryPage() {
   const [search, setSearch] = useState('');
@@ -12,7 +21,7 @@ export default function TripHistoryPage() {
   const router = useRouter();
 
   const { data: requests = [], isLoading, isError } = useStaffRequests();
-  const { data: issues = [] } = useIssues();
+  const { data: issues = [] } = useMyIssues();
 
   // Filter requests by search and status
   const filtered = requests.filter((req: StaffRequestResponse) =>
@@ -23,11 +32,10 @@ export default function TripHistoryPage() {
       req.full_name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Helper to get issues for a request
+  // Helper to get issues for a request - match by trip purpose
   function getRequestIssues(req: StaffRequestResponse) {
-    return issues.filter((issue: IssueDto) =>
-      issue.trip_purpose === req.trip_purpose &&
-      issue.requester_full_name === req.full_name
+    return issues.filter((issue: MyIssue) =>
+      issue.trip_purpose === req.trip_purpose
     );
   }
 
@@ -75,7 +83,7 @@ export default function TripHistoryPage() {
   }
 
   const handleTripClick = (requestId: string) => {
-    router.push(`/dashboard/staff/trip-history/${requestId}`);
+    router.push(`/dashboard/staff/vehicle-request/${requestId}`);
   };
 
   return (
@@ -207,12 +215,12 @@ export default function TripHistoryPage() {
                             )}
                           </td>
                         </tr>
-                        {reqIssues.length > 0 && reqIssues.map((issue: IssueDto, i: number) => (
+                        {reqIssues.length > 0 && reqIssues.map((issue: MyIssue, i: number) => (
                           <tr key={issue.description + i} className="bg-red-50">
                             <td colSpan={10} className="px-12 py-3 text-sm text-red-700">
                               <div className="flex items-center gap-2">
                                 <AlertTriangle className="w-4 h-4" />
-                                <span className="font-semibold">Issue:</span> {issue.description} <span className="ml-4 text-xs text-gray-400">({issue.type})</span>
+                                <span className="font-semibold">Issue:</span> {issue.description} <span className="ml-4 text-xs text-gray-400">({issue.vehicle_model} - {issue.plate_number})</span>
                               </div>
                             </td>
                           </tr>

@@ -38,13 +38,6 @@ interface CreateVehicleDto {
 
 type UpdateVehicleDto = CreateVehicleDto
 
-const VEHICLE_TYPES = [
-  'Sedan', 'SUV', 'Truck', 'Van', 'Bus', 'Pickup', 'Motorcycle', 'Other'
-];
-const VEHICLE_MODELS = [
-  'Corolla', 'Hilux', 'Land Cruiser', 'RAV4', 'Fuso', 'Canter', 'Prado', 'Premio', 'Vitz', 'Other'
-];
-
 // --- MOCK DATA FOR DROPDOWNS ---
 // In a real app, this might come from an API
 const vehicleData: Record<string, Record<string, number[]>> = {

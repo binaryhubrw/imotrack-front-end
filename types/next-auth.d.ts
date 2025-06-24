@@ -156,6 +156,30 @@ export type CreateSessionDto = {
   expires_at: Date;
 };
 
+
+
+// Define the user profile type based on the API response
+export type UserProfile ={
+  id: string;
+  first_name: string;
+  last_name: string;
+  nid: string;
+  email: string;
+  phone: string;
+  gender: 'MALE' | 'FEMALE';
+  dob: string;
+  role: string;
+  organization: {
+    id: string;
+    name: string;
+  };
+  status: string;
+  street_address: string;
+  created_at: string;
+  last_login: string;
+}
+
+
 export type UpdateSessionDto = {
   is_active?: boolean;
   expires_at?: Date;
@@ -337,14 +361,17 @@ export type LoginCredentials = {
   password: string;
 };
 
+// Type for the authenticated user from login response
+export type AuthenticatedUser = {
+  id: string;
+  email: string;
+  role: UserRole;
+  organization_id: string;
+};
+
 export type AuthResponse = {
   token: string;
-  user: {
-    id: string;
-    email: string;
-    role: UserRole;
-    organization_id: string;
-  };
+  user: AuthenticatedUser;
 };
 
 export type ChangePasswordDto = {

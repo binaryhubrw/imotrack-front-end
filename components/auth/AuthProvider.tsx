@@ -3,10 +3,10 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLogin } from '@/lib/queries';
-import { LoginCredentials, UserRole, User } from '@/types/next-auth';
+import { LoginCredentials, AuthenticatedUser } from '@/types/next-auth';
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthenticatedUser | null;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const loginMutation = useLogin();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = localStorage.getItem('user');
     if (token && storedUser) {
       try {
-        const userData = JSON.parse(storedUser);
+        const userData: AuthenticatedUser = JSON.parse(storedUser);
         setUser(userData);
         setIsAuthenticated(true);
       } catch (error) {
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     isAuthenticated,
     login: handleLogin,
