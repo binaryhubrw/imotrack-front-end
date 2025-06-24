@@ -48,6 +48,7 @@ export type UserDetails = {
   status: UserStatus;
   created_at: string;
   role_id: string;
+  role: string;
   dob: string;
   first_name: string;
   last_name: string;
