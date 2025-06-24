@@ -365,7 +365,7 @@ export default function CarRequestManagement() {
           </div>
         )}
 
-        <MakeNewRequestModal 
+        <MakeNewRequestModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmitRequest={handleSubmitRequest}

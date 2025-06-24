@@ -15,7 +15,6 @@ import {
   faCodePullRequest,
   faCog,
   faSignOutAlt,
-  faCodeCommit,
   faQuestion,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

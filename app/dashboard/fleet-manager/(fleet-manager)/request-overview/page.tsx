@@ -4,6 +4,8 @@ import { useState } from "react";
 import { UserPlus, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFmRequests } from '@/lib/queries';
+import type { StaffRequestResponse } from '@/types/next-auth';
+
 
 function statusBadge(status: string) {
   const base = "inline-block px-3 py-1 text-xs font-semibold rounded-full";
@@ -15,6 +17,38 @@ function statusBadge(status: string) {
   return <span className={base + " bg-gray-100 text-gray-700"}>{status}</span>;
 }
 
+// Helper to get department safely
+type RequesterWithDepartment = { department: string };
+
+function getDepartment(requester: unknown): string {
+  if (
+    requester &&
+    typeof requester === 'object' &&
+    'department' in requester &&
+    typeof (requester as RequesterWithDepartment).department === 'string'
+  ) {
+    return (requester as RequesterWithDepartment).department;
+  }
+  return 'Unknown';
+}
+
+// Helper to get requester full name safely
+function getRequesterName(request: StaffRequestResponse): string {
+  if (request.full_name) return request.full_name;
+  const requester = request.requester;
+  if (
+    requester &&
+    typeof requester === 'object' &&
+    'first_name' in requester &&
+    'last_name' in requester &&
+    typeof (requester as { first_name: unknown }).first_name === 'string' &&
+    typeof (requester as { last_name: unknown }).last_name === 'string'
+  ) {
+    return `${(requester as { first_name: string }).first_name} ${(requester as { last_name: string }).last_name}`;
+  }
+  return '';
+}
+
 export default function RecentRequests() {
   const { data: requests = [], isLoading, isError } = useFmRequests();
   const [dept, setDept] = useState("");
@@ -24,13 +58,13 @@ export default function RecentRequests() {
   // Extract unique departments from real data
   const departments = [
     "All Departments",
-    ...Array.from(new Set((requests || []).map(r => ((r.requester as any)?.department) ? (r.requester as any).department : 'Unknown')))
+    ...Array.from(new Set((requests || []).map(r => getDepartment(r.requester))))
   ];
   const statuses = ["All Status", "PENDING", "APPROVED", "REJECTED", "COMPLETED", "ACTIVE"];
 
   // Filtering logic for real data
   const filtered = (requests || []).filter(r => {
-    const department = (r.requester as any)?.department || '';
+    const department = getDepartment(r.requester);
     const status = r.status?.toUpperCase() || '';
     return (dept === '' || department === dept) && (stat === '' || status === stat);
   });
@@ -107,8 +141,8 @@ export default function RecentRequests() {
                       style={{ height: "56px" }}
                     >
                       <td className="py-3 px-6 font-mono">{request.id}</td>
-                      <td className="py-3 px-6">{request.full_name || (request.requester?.first_name + ' ' + request.requester?.last_name)}</td>
-                      <td className="py-3 px-6">{(request.requester as any)?.department || '-'}</td>
+                      <td className="py-3 px-6">{getRequesterName(request)}</td>
+                      <td className="py-3 px-6">{getDepartment(request.requester) || '-'}</td>
                       <td className="py-3 px-6">{request.trip_purpose}</td>
                       <td className="py-3 px-6">{request.requested_at ? new Date(request.requested_at).toLocaleDateString() : '-'}</td>
                       <td className="py-3 px-6">{statusBadge(request.status)}</td>

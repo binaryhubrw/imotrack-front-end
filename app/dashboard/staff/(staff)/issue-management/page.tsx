@@ -1,101 +1,25 @@
-
 "use client";
 import React, { useState } from "react";
 import { Download, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useIssues } from '@/lib/queries';
 
-interface Issue {
+type StaffIssue = {
   id: string;
-  date: string;
-  purpose: string;
-  destination: string;
-  passengers: number;
-  issueType: "Accident" | "Delay" | "Fuel";
-  location: string;
-}
-
-const ISSUES: Issue[] = [
-  {
-    id: "REQ-001",
-    date: "2024-02-22",
-    purpose: "Field Trip",
-    destination: "Huye Campus",
-    passengers: 15,
-    issueType: "Accident",
-    location: "Musanze",
-  },
-  {
-    id: "REQ-002",
-    date: "2024-02-21",
-    purpose: "Conference",
-    destination: "Kigali Convention Center",
-    passengers: 4,
-    issueType: "Delay",
-    location: "Kirehe",
-  },
-  {
-    id: "REQ-003",
-    date: "2024-02-20",
-    purpose: "Research Visit",
-    destination: "Kigali Heights",
-    passengers: 3,
-    issueType: "Fuel",
-    location: "Nyagatare",
-  },
-  {
-    id: "REQ-004",
-    date: "2024-02-19",
-    purpose: "Staff Meeting",
-    destination: "Kigali Business Center",
-    passengers: 8,
-    issueType: "Accident",
-    location: "Gasabo",
-  },
-  {
-    id: "REQ-005",
-    date: "2024-02-18",
-    purpose: "Student Tour",
-    destination: "Kigali Genocide Memorial",
-    passengers: 25,
-    issueType: "Delay",
-    location: "Kicukiro",
-  },
-  {
-    id: "REQ-006",
-    date: "2024-02-17",
-    purpose: "Official Visit",
-    destination: "Ministry of Education",
-    passengers: 5,
-    issueType: "Fuel",
-    location: "Nyarugenge",
-  },
-];
-
-function issueBadge(type: Issue['issueType']) {
-  const base = "px-3 py-1 rounded-full text-xs font-semibold";
-  switch (type) {
-    case "Accident":
-      return (
-        <span className={base + " bg-yellow-300 text-gray-900"}>Accident</span>
-      );
-    case "Delay":
-      return <span className={base + " bg-green-400 text-white"}>Delay</span>;
-    case "Fuel":
-      return <span className={base + " bg-red-400 text-white"}>Fuel</span>;
-    default:
-      return (
-        <span className={base + " bg-gray-200 text-gray-700"}>{type}</span>
-      );
-  }
-}
+  request_id: string;
+  description: string;
+  emergency: boolean;
+  created_at: string;
+};
 
 export default function IssueManagementPage() {
+  const { data: issues = [], isLoading, isError } = useIssues();
   const [status, setStatus] = useState("");
   const [time, setTime] = useState("");
   const router = useRouter();
 
   const handleIssueClick = (issueId: string) => {
-    router.push(`/dashboard/issue-reports/${issueId}`);
+    router.push(`/dashboard/staff/issue-management/${issueId}`);
   };
 
   const handleExport = () => {
@@ -108,16 +32,26 @@ export default function IssueManagementPage() {
       "Issue Type",
       "Location",
     ];
-    const csvData = ISSUES
-      .filter((i) => !status || i.issueType === status)
-      .map((issue) => [
-        issue.id,
-        issue.date,
-        issue.purpose,
-        issue.destination,
-        issue.passengers,
-        issue.issueType,
-        issue.location,
+    interface CsvIssue {
+      id: string;
+      created_at: string;
+      purpose: string;
+      destination: string;
+      passengers: string;
+      issueType: string;
+      location: string;
+    }
+
+    const csvData: string[][] = (issues as CsvIssue[])
+      .filter((i: CsvIssue) => !status || i.issueType === status)
+      .map((issue: CsvIssue) => [
+      issue.id,
+      issue.created_at,
+      issue.purpose,
+      issue.destination,
+      issue.passengers,
+      issue.issueType,
+      issue.location,
       ]);
 
     const csvContent = [
@@ -138,6 +72,13 @@ export default function IssueManagementPage() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>;
+  }
+  if (isError) {
+    return <div className="min-h-screen flex items-center justify-center text-red-600">Failed to load issues.</div>;
+  }
 
   return (
     <main className="min-h-screen bg-[#e6f2fa] px-4 py-8">
@@ -212,54 +153,40 @@ export default function IssueManagementPage() {
           <table className="min-w-full text-[15px]">
             <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
               <tr className="text-gray-700">
-                <th className="px-6 py-4 text-left font-semibold">
-                  Request ID
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">Date</th>
-                <th className="px-6 py-4 text-left font-semibold">Purpose</th>
-                <th className="px-6 py-4 text-left font-semibold">Destination</th>
-                <th className="px-6 py-4 text-left font-semibold">Passengers</th>
-                <th className="px-6 py-4 text-left font-semibold">Issue Type</th>
-                <th className="px-6 py-4 text-left font-semibold">Location</th>
+                <th className="px-6 py-4 text-left font-semibold">Issue ID</th>
+                <th className="px-6 py-4 text-left font-semibold">Request ID</th>
+                <th className="px-6 py-4 text-left font-semibold">Description</th>
+                <th className="px-6 py-4 text-left font-semibold">Emergency</th>
+                <th className="px-6 py-4 text-left font-semibold">Created At</th>
               </tr>
             </thead>
             <tbody>
-              {ISSUES.filter((i) => !status || i.issueType === status)
-                .length === 0 ? (
+              {(!issues || issues.length === 0) ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center py-12 text-gray-400 text-lg"
-                  >
-                    No issues found.
-                  </td>
+                  <td colSpan={5} className="text-center py-12 text-gray-400 text-lg">No issues found.</td>
                 </tr>
               ) : (
-                ISSUES
-                  .filter((i) => !status || i.issueType === status)
-                  .map((issue, idx) => (
-                    <tr
-                      key={issue.id}
-                      onClick={() => handleIssueClick(issue.id)}
-                      className={`
-                ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                hover:bg-blue-50/70
-                cursor-pointer
-                transition-colors
-                duration-150
-                rounded-lg
-              `}
-                      style={{ height: "64px" }}
-                    >
-                      <td className="px-6 py-4 font-mono">{issue.id}</td>
-                      <td className="px-6 py-4">{issue.date}</td>
-                      <td className="px-6 py-4">{issue.purpose}</td>
-                      <td className="px-6 py-4">{issue.destination}</td>
-                      <td className="px-6 py-4 text-center">{issue.passengers}</td>
-                      <td className="px-6 py-4">{issueBadge(issue.issueType)}</td>
-                      <td className="px-6 py-4">{issue.location}</td>
-                    </tr>
-                  ))
+                issues.map((issue: StaffIssue, idx: number) => (
+                  <tr
+                    key={issue.id}
+                    onClick={() => handleIssueClick(issue.id)}
+                    className={`
+                      ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      hover:bg-blue-50/70
+                      cursor-pointer
+                      transition-colors
+                      duration-150
+                      rounded-lg
+                    `}
+                    style={{ height: "64px" }}
+                  >
+                    <td className="px-6 py-4 font-mono">{issue.id}</td>
+                    <td className="px-6 py-4">{issue.request_id}</td>
+                    <td className="px-6 py-4">{issue.description}</td>
+                    <td className="px-6 py-4">{issue.emergency ? 'Yes' : 'No'}</td>
+                    <td className="px-6 py-4">{issue.created_at ? new Date(issue.created_at).toLocaleString() : ''}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

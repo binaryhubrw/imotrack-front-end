@@ -2,13 +2,19 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calendar, MapPin, Users, Briefcase, Clock, Pencil } from 'lucide-react';
-import { useStaffRequest} from '@/lib/queries';
+import { useStaffRequest, useCreateIssue } from '@/lib/queries';
 
 
 export default function VehicleRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
   const { data: request, isLoading, isError } = useStaffRequest(id);
+  const createIssue = useCreateIssue();
+  const [showIssueModal, setShowIssueModal] = React.useState(false);
+  const [issueDescription, setIssueDescription] = React.useState('');
+  const [issueError, setIssueError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [emergency, setEmergency] = React.useState(false);
 
   const goBack = () => router.back();
 
@@ -39,6 +45,28 @@ export default function VehicleRequestDetailPage({ params }: { params: Promise<{
 
   // Only allow editing/cancelling if pending
 
+  async function handleIssueSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setIssueError(null);
+    try {
+      await createIssue.mutateAsync({ request_id: id, description: issueDescription, emergency });
+      setShowIssueModal(false);
+      setIssueDescription('');
+      setEmergency(false);
+      router.push('/dashboard/staff/issue-management');
+    } catch (err: unknown) {
+      console.error('Error creating issue:', err);
+      if (err instanceof Error) {
+        setIssueError(err.message);
+      } else {
+        setIssueError('Failed to create issue');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -49,6 +77,67 @@ export default function VehicleRequestDetailPage({ params }: { params: Promise<{
           <ArrowLeft size={16} />
           <span>Back to Requests</span>
         </button>
+
+        {/* Report Issue Button for Approved Requests */}
+        {request.status === 'APPROVED' && (
+          <div className="mb-4 flex justify-end">
+            <button
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-semibold"
+              onClick={() => setShowIssueModal(true)}
+            >
+              Report Issue
+            </button>
+          </div>
+        )}
+
+        {/* Issue Modal */}
+        {showIssueModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Report Issue</h2>
+              <form onSubmit={handleIssueSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="issueDescription" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    id="issueDescription"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    rows={4}
+                    value={issueDescription}
+                    onChange={e => setIssueDescription(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="emergency"
+                    checked={emergency}
+                    onChange={e => setEmergency(e.target.checked)}
+                  />
+                  <label htmlFor="emergency" className="text-sm text-gray-700">Mark as Emergency</label>
+                </div>
+                {issueError && <div className="text-red-600 text-sm">{issueError}</div>}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    onClick={() => setShowIssueModal(false)}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold disabled:opacity-60"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit Issue'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="p-6 border-b border-gray-100">

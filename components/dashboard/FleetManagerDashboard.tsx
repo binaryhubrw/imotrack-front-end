@@ -2,8 +2,20 @@ import React, { useMemo } from 'react';
 import { XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Car, FileText, TrendingUp, Calendar, Users, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
 import { useFMVehicles, useFmRequests } from '@/lib/queries';
+import type { Vehicle, StaffRequestResponse } from '@/types/next-auth';
 
-const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, trend, onClick }) => (
+type StatCardProps = {
+  icon: React.ElementType;
+  title: string;
+  value: string;
+  subtitle?: string;
+  bgColor: string;
+  textColor: string;
+  trend?: string;
+  onClick?: () => void;
+};
+
+const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, trend, onClick }: StatCardProps) => (
   <div 
     className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1"
     onClick={onClick}
@@ -30,21 +42,33 @@ const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, tren
   </div>
 );
 
-const StatusBadge = ({ status }) => {
-  const statusConfig = {
-    'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-    'APPROVED': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-    'REJECTED': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
-    'CANCELLED': { bg: 'bg-gray-100', text: 'text-gray-800', icon: XCircle },
-    'AVAILABLE': { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-    'OCCUPIED': { bg: 'bg-blue-100', text: 'text-blue-800', icon: AlertCircle },
-    'MAINTENANCE': { bg: 'bg-orange-100', text: 'text-orange-800', icon: AlertCircle },
-    'OUT_OF_SERVICE': { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
+type StatusBadgeProps = { status: string };
+type StatusKey =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'AVAILABLE'
+  | 'OCCUPIED'
+  | 'MAINTENANCE'
+  | 'OUT_OF_SERVICE';
+
+const StatusBadge = ({ status }: StatusBadgeProps) => {
+  const statusConfig: Record<StatusKey, { bg: string; text: string; icon: React.ElementType }> = {
+    PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
+    APPROVED: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+    REJECTED: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
+    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-800', icon: XCircle },
+    AVAILABLE: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
+    OCCUPIED: { bg: 'bg-blue-100', text: 'text-blue-800', icon: AlertCircle },
+    MAINTENANCE: { bg: 'bg-orange-100', text: 'text-orange-800', icon: AlertCircle },
+    OUT_OF_SERVICE: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
   };
-  
-  const config = statusConfig[status?.toUpperCase()] || statusConfig.PENDING;
+
+  const key = String(status).toUpperCase() as StatusKey;
+  const config = statusConfig[key] ?? statusConfig.PENDING;
   const Icon = config.icon;
-  
+
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
       <Icon className="w-3 h-3" />
@@ -54,24 +78,26 @@ const StatusBadge = ({ status }) => {
 };
 
 export default function FleetManagerDashboard() {
-  const { data: vehicles = [], isLoading: isLoadingVehicles } = useFMVehicles();
-  const { data: requests = [], isLoading: isLoadingRequests } = useFmRequests();
+  const { data: vehicles = [] } = useFMVehicles();
+  const { data: requests = [] } = useFmRequests();
+  const isLoadingVehicles = !vehicles;
+  const isLoadingRequests = !requests;
 
   // Process data for visualizations
   const dashboardData = useMemo(() => {
     // Vehicle stats
-    const totalVehicles = vehicles.length;
-    const availableVehicles = vehicles.filter(v => v.status?.toUpperCase() === 'AVAILABLE').length;
-    const occupiedVehicles = vehicles.filter(v => v.status?.toUpperCase() === 'OCCUPIED').length;
-    const maintenanceVehicles = vehicles.filter(v => v.status?.toUpperCase() === 'MAINTENANCE').length;
-    const outOfServiceVehicles = vehicles.filter(v => v.status?.toUpperCase() === 'OUT_OF_SERVICE').length;
+    const totalVehicles = (vehicles as Vehicle[]).length;
+    const availableVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'AVAILABLE').length;
+    const occupiedVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'OCCUPIED').length;
+    const maintenanceVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'MAINTENANCE').length;
+    const outOfServiceVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'OUT_OF_SERVICE').length;
 
     // Request stats
-    const totalRequests = requests.length;
-    const pendingRequests = requests.filter(r => r.status?.toUpperCase() === 'PENDING').length;
-    const approvedRequests = requests.filter(r => r.status?.toUpperCase() === 'APPROVED').length;
-    const rejectedRequests = requests.filter(r => r.status?.toUpperCase() === 'REJECTED').length;
-    const cancelledRequests = requests.filter(r => r.status?.toUpperCase() === 'CANCELLED').length;
+    const totalRequests = (requests as StaffRequestResponse[]).length;
+    const pendingRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'PENDING').length;
+    const approvedRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'APPROVED').length;
+    const rejectedRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'REJECTED').length;
+    const cancelledRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'CANCELLED').length;
 
     // Vehicle status chart data
     const vehicleStatusData = [
@@ -96,7 +122,7 @@ export default function FleetManagerDashboard() {
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const dayRequests = requests.filter(r => 
+      const dayRequests = (requests as StaffRequestResponse[]).filter(r => 
         r.requested_at?.startsWith(dateStr)
       ).length;
       
@@ -108,8 +134,8 @@ export default function FleetManagerDashboard() {
     }
 
     // Vehicle type distribution
-    const vehicleTypeData = vehicles.reduce((acc, vehicle) => {
-      const type = vehicle.vehicle_type || 'Unknown';
+    const vehicleTypeData = (vehicles as Vehicle[]).reduce((acc: Record<string, number>, vehicle: Vehicle) => {
+      const type = (vehicle as Vehicle).vehicle_type || 'Unknown';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
@@ -121,8 +147,8 @@ export default function FleetManagerDashboard() {
     }));
 
     // Recent requests
-    const recentRequests = [...requests]
-      .sort((a, b) => new Date(b.requested_at) - new Date(a.requested_at))
+    const recentRequests = ([...requests] as StaffRequestResponse[])
+      .sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime())
       .slice(0, 5);
 
     return {

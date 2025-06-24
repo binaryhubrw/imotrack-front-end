@@ -16,8 +16,11 @@ import {
   StaffRequestUpdate,
   StaffRequest,
   StaffRequestResponse,
+  IssueCreateDto,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
+
+
 
 // Login mutation
 export const useLogin = () => {
@@ -491,3 +494,74 @@ export const useFMRejectRequest = () => {
     },
   });
 }
+
+export const useIssues = () => {
+  return useQuery({
+    queryKey: ['issues'],
+    queryFn: async () => {
+      const { data } = await api.get('/issues/fleet');
+      return data;
+    },
+  });
+}
+
+export const useCreateIssue = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (issueData: IssueCreateDto) => {
+      const { data } = await api.post('/issues/staff/report', issueData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+    },
+  });
+}
+
+// NOTIFICATIONS for staff
+
+export const useNotifications = () => {
+  return useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data } = await api.get('/staff/notifications');
+      return data;
+    },
+  });
+}
+export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      await api.patch(`/staff/notifications/${notificationId}/mark`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useMarkAllNotificationsAsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await api.patch('/staff/notifications/mark-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationId: string) => {
+      await api.delete(`/staff/notifications/${notificationId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};

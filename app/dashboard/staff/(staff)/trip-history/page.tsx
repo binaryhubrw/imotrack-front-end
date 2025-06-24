@@ -1,51 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { Eye, Car, Download } from 'lucide-react';
+import {Car, Download, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-
-interface Trip {
-  id: string;
-  date: string;
-  purpose: string;
-  destination: string;
-  status: 'Completed' | 'Cancelled'|'Active';
-  driver: string;
-  vehicle: string;
-}
-
-const TRIPS: Trip[] = [
-  { id: 'TRIP-001', date: '2024-02-20', purpose: 'Field Trip', destination: 'Huye Campus', status: 'Active', driver: 'John Doe', vehicle: 'UR-001' },
-  { id: 'TRIP-002', date: '2024-02-18', purpose: 'Conference', destination: 'Kigali Convention Center', status: 'Active', driver: 'Jane Smith', vehicle: 'UR-002' },
-  { id: 'TRIP-003', date: '2024-02-15', purpose: 'Research Visit', destination: 'Kigali Heights', status: 'Cancelled', driver: 'Mike Johnson', vehicle: 'UR-003' },
-  { id: 'TRIP-004', date: '2024-02-10', purpose: 'Workshop', destination: 'Rubavu Beach', status: 'Completed', driver: 'Alice Brown', vehicle: 'UR-004' },
-  { id: 'TRIP-005', date: '2024-02-08', purpose: 'Team Building', destination: 'Nyungwe Forest', status: 'Completed', driver: 'Chris Green', vehicle: 'UR-005' },
-  { id: 'TRIP-006', date: '2024-02-05', purpose: 'Inspection', destination: 'Bugesera', status: 'Cancelled', driver: 'Sarah Lee', vehicle: 'UR-006' },
-];
-
-function statusBadge(status: Trip['status']) {
-  const base = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border';
-  switch (status) {
-    case 'Completed':
-      return <span className={base + ' bg-green-50 text-green-700 border-green-200'}>Completed</span>;
-    case 'Cancelled':
-      return <span className={base + ' bg-gray-100 text-gray-500 border-gray-300'}>Cancelled</span>;
-    default:
-      return <span className={base + ' bg-gray-100 text-gray-700 border-gray-300'}>{status}</span>;
-  }
-}
-
-function exportCSV(data: Trip[]) {
-  const header = ['Trip ID', 'Date', 'Purpose', 'Destination', 'Status', 'Driver', 'Vehicle'];
-  const rows = data.map(trip => [trip.id, trip.date, trip.purpose, trip.destination, trip.status, trip.driver, trip.vehicle]);
-  const csv = [header, ...rows].map(row => row.map(String).map(cell => '"' + cell.replace(/"/g, '""') + '"').join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'trip-history.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import { useStaffRequests, useIssues } from '@/lib/queries';
+import type { StaffRequestResponse, IssueDto } from '@/types/next-auth';
 
 export default function TripHistoryPage() {
   const [search, setSearch] = useState('');
@@ -53,21 +11,75 @@ export default function TripHistoryPage() {
   const [time, setTime] = useState('');
   const router = useRouter();
 
-  const filtered = TRIPS.filter(trip =>
-    (trip.id.toLowerCase().includes(search.toLowerCase()) ||
-      trip.purpose.toLowerCase().includes(search.toLowerCase()) ||
-      trip.destination.toLowerCase().includes(search.toLowerCase()) ||
-      trip.driver.toLowerCase().includes(search.toLowerCase()) ||
-      trip.vehicle.toLowerCase().includes(search.toLowerCase())) &&
-    (status === '' || trip.status === status)
+  const { data: requests = [], isLoading, isError } = useStaffRequests();
+  const { data: issues = [] } = useIssues();
+
+  // Filter requests by search and status
+  const filtered = requests.filter((req: StaffRequestResponse) =>
+    req.status === 'APPROVED' &&
+    (req.id.toLowerCase().includes(search.toLowerCase()) ||
+      req.trip_purpose.toLowerCase().includes(search.toLowerCase()) ||
+      req.end_location.toLowerCase().includes(search.toLowerCase()) ||
+      req.full_name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleTripClick = (tripId: string) => {
-    router.push(`/dashboard/staff/trip-history/${tripId}`);
+  // Helper to get issues for a request
+  function getRequestIssues(req: StaffRequestResponse) {
+    return issues.filter((issue: IssueDto) =>
+      issue.trip_purpose === req.trip_purpose &&
+      issue.requester_full_name === req.full_name
+    );
+  }
+
+  function statusBadge(status: string) {
+    const base = 'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border';
+    switch (status) {
+      case 'COMPLETED':
+        return <span className={base + ' bg-green-50 text-green-700 border-green-200'}>Completed</span>;
+      case 'CANCELLED':
+        return <span className={base + ' bg-gray-100 text-gray-500 border-gray-300'}>Cancelled</span>;
+      case 'ACTIVE':
+        return <span className={base + ' bg-blue-50 text-blue-700 border-blue-200'}>Active</span>;
+      case 'APPROVED':
+        return <span className={base + ' bg-yellow-50 text-yellow-700 border-yellow-200'}>Approved</span>;
+      case 'PENDING':
+        return <span className={base + ' bg-orange-50 text-orange-700 border-orange-200'}>Pending</span>;
+      case 'REJECTED':
+        return <span className={base + ' bg-red-50 text-red-700 border-red-200'}>Rejected</span>;
+      default:
+        return <span className={base + ' bg-gray-100 text-gray-700 border-gray-300'}>{status}</span>;
+    }
+  }
+
+  function exportCSV(data: StaffRequestResponse[]) {
+    const header = ['Request ID', 'Purpose', 'Destination', 'Status', 'Start Date', 'End Date', 'Full Name', 'Passengers', 'Issues'];
+    const rows = data.map(req => [
+      req.id,
+      req.trip_purpose,
+      req.end_location,
+      req.status,
+      req.start_date,
+      req.end_date,
+      req.full_name,
+      req.passengers_number,
+      getRequestIssues(req).length
+    ]);
+    const csv = [header, ...rows].map(row => row.map(String).map(cell => '"' + cell.replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'trip-history.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const handleTripClick = (requestId: string) => {
+    router.push(`/dashboard/staff/trip-history/${requestId}`);
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] px-4 py-10">
+    <main className="min-h-screen bg-gradient-to-br from-[#e6f2fa] to-[#f9fafb] px-1 py-5">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -92,8 +104,12 @@ export default function TripHistoryPage() {
                 onChange={e => setStatus(e.target.value)}
               >
                 <option value="">All Status</option>
-                <option value="Completed">Completed</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+                <option value="ACTIVE">Active</option>
+                <option value="APPROVED">Approved</option>
+                <option value="PENDING">Pending</option>
+                <option value="REJECTED">Rejected</option>
               </select>
               <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -127,65 +143,87 @@ export default function TripHistoryPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-x-auto">
-          <table className="min-w-full text-[15px]">
-            <thead className="sticky top-0 z-10 shadow-sm">
-              <tr className="bg-[#0872B3] text-white">
-                <th className="px-6 py-4 text-left font-semibold">Trip ID</th>
-                <th className="px-6 py-4 text-left font-semibold">Date</th>
-                <th className="px-6 py-4 text-left font-semibold">Purpose</th>
-                <th className="px-6 py-4 text-left font-semibold">Destination</th>
-                <th className="px-6 py-4 text-left font-semibold">Status</th>
-                <th className="px-6 py-4 text-left font-semibold">Driver</th>
-                <th className="px-6 py-4 text-left font-semibold">Vehicle</th>
-                <th className="px-6 py-4 text-left font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400 text-lg">No trips found.</td>
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+  <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+    <table className="w-full text-[13px] min-w-[900px]">
+      <thead className="sticky top-0 z-10 bg-[#0872B3] text-white">
+                <tr className="bg-[#0872B3] text-white">
+                  <th className="px-6 py-4 text-left font-semibold">Request ID</th>
+                  <th className="px-6 py-4 text-left font-semibold">Purpose</th>
+                  <th className="px-6 py-4 text-left font-semibold">Destination</th>
+                  <th className="px-6 py-4 text-left font-semibold">Status</th>
+                  <th className="px-6 py-4 text-left font-semibold">Start Date</th>
+                  <th className="px-6 py-4 text-left font-semibold">End Date</th>
+                  <th className="px-6 py-4 text-left font-semibold">Full Name</th>
+                  <th className="px-6 py-4 text-left font-semibold">Passengers</th>
+                  <th className="px-6 py-4 text-left font-semibold">Issues</th>
                 </tr>
-              ) : (
-                filtered.map((trip, idx) => (
-                  <tr
-                    key={trip.id}
-                    className={`
-                      ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                      hover:bg-blue-50/70
-                      transition-colors
-                      duration-150
-                      rounded-lg
-                      cursor-pointer
-                    `}
-                    style={{ height: "64px" }}
-                    onClick={() => handleTripClick(trip.id)}
-                  >
-                    <td className="px-6 py-4 font-mono">{trip.id}</td>
-                    <td className="px-6 py-4">{trip.date}</td>
-                    <td className="px-6 py-4">{trip.purpose}</td>
-                    <td className="px-6 py-4">{trip.destination}</td>
-                    <td className="px-6 py-4">{statusBadge(trip.status)}</td>
-                    <td className="px-6 py-4">{trip.driver}</td>
-                    <td className="px-6 py-4">{trip.vehicle}</td>
-                    <td className="px-6 py-4">
-                      <button
-                        className="p-2 rounded hover:bg-blue-100 transition"
-                        title="View Details"
-                        aria-label="View Details"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleTripClick(trip.id);
-                        }}
-                      >
-                        <Eye className="w-5 h-5 text-[#0872B3]" />
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">Loading...</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : isError ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-12 text-red-500 text-lg">Failed to load trip history.</td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="text-center py-12 text-gray-400 text-lg">No trips found.</td>
+                  </tr>
+                ) : (
+                  filtered.map((req, idx) => {
+                    const reqIssues = getRequestIssues(req);
+                    return (
+                      <React.Fragment key={req.id}>
+                        <tr
+                          className={`
+                            ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                            hover:bg-blue-50/70
+                            transition-colors
+                            duration-150
+                            rounded-lg
+                            cursor-pointer
+                          `}
+                          style={{ height: "64px" }}
+                          onClick={() => handleTripClick(req.id)}
+                        >
+                          <td className="px-6 py-4 font-mono">{req.id}</td>
+                          <td className="px-6 py-4">{req.trip_purpose}</td>
+                          <td className="px-6 py-4">{req.end_location}</td>
+                          <td className="px-6 py-4">{statusBadge(req.status)}</td>
+                          <td className="px-6 py-4">{new Date(req.start_date).toLocaleDateString()}</td>
+                          <td className="px-6 py-4">{new Date(req.end_date).toLocaleDateString()}</td>
+                          <td className="px-6 py-4">{req.full_name}</td>
+                          <td className="px-6 py-4 text-center">{req.passengers_number}</td>
+                          <td className="px-6 py-4">
+                            {reqIssues.length > 0 ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                                <AlertTriangle className="w-4 h-4" /> {reqIssues.length} Issue{reqIssues.length > 1 ? 's' : ''}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">No Issues</span>
+                            )}
+                          </td>
+                        </tr>
+                        {reqIssues.length > 0 && reqIssues.map((issue: IssueDto, i: number) => (
+                          <tr key={issue.description + i} className="bg-red-50">
+                            <td colSpan={10} className="px-12 py-3 text-sm text-red-700">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span className="font-semibold">Issue:</span> {issue.description} <span className="ml-4 text-xs text-gray-400">({issue.type})</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </main>

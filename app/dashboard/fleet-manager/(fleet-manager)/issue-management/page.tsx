@@ -1,61 +1,29 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Filter, Search} from 'lucide-react';
+import { useIssues } from '@/lib/queries';
 
-// Define types for TypeScript
-interface Issue {
-  id: number;
+// Type for mapped issues
+interface IssueListItem {
+  id: string | number;
   title: string;
   description: string;
-  status: 'pending' | 'in-progress' | 'resolved';
-  priority: 'high' | 'medium' | 'low';
+  status: string;
+  priority: string;
   reportedBy: string;
   date: string;
   vehicleId: string;
+  raw: unknown;
 }
-
-// Sample data for issues
-const issues: Issue[] = [
-  {
-    id: 1,
-    title: 'Vehicle Maintenance Required',
-    description: 'Regular maintenance check due for Vehicle #123',
-    status: 'pending',
-    priority: 'high',
-    reportedBy: 'John Doe',
-    date: '2024-03-15',
-    vehicleId: 'VH123',
-  },
-  {
-    id: 2,
-    title: 'Fuel System Issue',
-    description: 'Abnormal fuel consumption reported',
-    status: 'in-progress',
-    priority: 'medium',
-    reportedBy: 'Jane Smith',
-    date: '2024-03-14',
-    vehicleId: 'VH456',
-  },
-  {
-    id: 3,
-    title: 'Tire Replacement Needed',
-    description: 'Front tires showing significant wear',
-    status: 'resolved',
-    priority: 'low',
-    reportedBy: 'Mike Johnson',
-    date: '2024-03-13',
-    vehicleId: 'VH789',
-  },
-];
 
 export default function IssueManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-  const [newStatus, setNewStatus] = useState<Issue['status']>('pending');
-  const [localIssues, setLocalIssues] = useState(issues);
+  const [selectedIssue, setSelectedIssue] = useState<IssueListItem | null>(null);
+  const [newStatus, setNewStatus] = useState('pending');
   const [showStatusEdit, setShowStatusEdit] = useState(false);
+  const { data: issues, isLoading, isError } = useIssues();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,7 +51,35 @@ export default function IssueManagementPage() {
     }
   };
 
-  const filteredIssues = localIssues.filter(issue => {
+  // Map API data to the expected structure for display
+  const mappedIssues: IssueListItem[] = (issues || []).map((issue: unknown): IssueListItem => {
+    const i = issue as {
+      id?: string | number;
+      _id?: string | number;
+      request_id?: string | number;
+      vehicle_model?: string;
+      plate_number?: string;
+      description?: string;
+      status?: string;
+      type?: string;
+      emergency?: boolean;
+      requester_full_name?: string;
+      date?: string;
+    };
+    return {
+      id: i.id || i._id || i.request_id || Math.random(),
+      title: i.vehicle_model ? `${i.vehicle_model} (${i.plate_number})` : 'Vehicle Issue',
+      description: i.description || '',
+      status: (i.status || i.type || 'pending').toLowerCase(),
+      priority: i.emergency ? 'high' : 'medium',
+      reportedBy: i.requester_full_name || '-',
+      date: i.date ? new Date(i.date).toLocaleDateString() : '-',
+      vehicleId: i.plate_number || '-',
+      raw: issue,
+    };
+  });
+
+  const filteredIssues = mappedIssues.filter((issue: IssueListItem) => {
     const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          issue.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
@@ -91,40 +87,11 @@ export default function IssueManagementPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-
-
+  // This is a placeholder for local status update; in real app, call API mutation
   const handleStatusUpdate = () => {
     if (!selectedIssue) return;
-    setLocalIssues((prev) =>
-      prev.map((issue) =>
-        issue.id === selectedIssue.id ? { ...issue, status: newStatus as Issue['status'] } : issue
-      )
-    );
-    setSelectedIssue((prev) => prev ? { ...prev, status: newStatus as Issue['status'] } : prev);
     setShowStatusEdit(false);
   };
-
-  useEffect(() => {
-    setLocalIssues((prev) =>
-      prev.map((r) => {
-        if (r.id === 2) {
-          let status = r.status;
-          if (typeof window !== "undefined") {
-            const storedStatus = localStorage.getItem("VR-002-status");
-            if (
-              storedStatus === "pending" ||
-              storedStatus === "in-progress" ||
-              storedStatus === "resolved"
-            ) {
-              status = storedStatus as Issue['status'];
-            }
-          }
-          return { ...r, status };
-        }
-        return r;
-      })
-    );
-  }, []);
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
@@ -184,40 +151,48 @@ export default function IssueManagementPage() {
                 <h2 className="text-lg font-semibold text-gray-800">Issues List</h2>
               </div>
               <div className="divide-y">
-                {filteredIssues.map((issue) => (
-                  <div
-                    key={issue.id}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedIssue(issue)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{issue.title}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
-                            issue.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : issue.status === "in-progress"
-                              ? "bg-blue-100 text-blue-800"
-                              : issue.status === "resolved"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}>
-                            {issue.status}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(issue.priority)}`}>
-                            {issue.priority}
-                          </span>
+                {isLoading ? (
+                  <div className="p-8 text-center text-gray-400">Loading issues...</div>
+                ) : isError ? (
+                  <div className="p-8 text-center text-red-500">Failed to load issues.</div>
+                ) : filteredIssues.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400">No issues found.</div>
+                ) : (
+                  filteredIssues.map((issue: IssueListItem) => (
+                    <div
+                      key={issue.id}
+                      className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedIssue(issue)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{issue.title}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{issue.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
+                              issue.status === "pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : issue.status === "in-progress"
+                                ? "bg-blue-100 text-blue-800"
+                                : issue.status === "resolved"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}>
+                              {issue.status}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(issue.priority)}`}>
+                              {issue.priority}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">{issue.date}</p>
+                          <p className="text-sm text-gray-600 mt-1">Vehicle: {issue.vehicleId}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{issue.date}</p>
-                        <p className="text-sm text-gray-600 mt-1">Vehicle: {issue.vehicleId}</p>
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -254,7 +229,7 @@ export default function IssueManagementPage() {
                     {!showStatusEdit ? (
                       <button
                         onClick={() => setShowStatusEdit(true)}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition"
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-[#0872B3] text-white font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition"
                       >
                         Update Status
                       </button>
@@ -263,7 +238,7 @@ export default function IssueManagementPage() {
                         <select
                           className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
                           value={newStatus}
-                          onChange={e => setNewStatus(e.target.value as Issue['status'])}
+                          onChange={e => setNewStatus(e.target.value as string)}
                         >
                           <option value="pending">Pending</option>
                           <option value="in-progress">In Progress</option>

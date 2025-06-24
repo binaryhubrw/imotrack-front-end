@@ -37,8 +37,13 @@ export default function VehicleRequestPage() {
       toast.success('Request approved!');
       setActioned(true);
       setTimeout(() => router.push('/dashboard/fleet-manager/request-overview'), 1000);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to approve request');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response && err.response.data && typeof err.response.data === 'object' && 'message' in err.response.data) {
+        // @ts-expect-error: dynamic error shape from backend
+        toast.error(err.response.data.message || 'Failed to approve request');
+      } else {
+        toast.error('Failed to approve request');
+      }
     } finally {
       setLoadingAction(null);
     }

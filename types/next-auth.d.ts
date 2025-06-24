@@ -164,6 +164,8 @@ export type UpdateSessionDto = {
 export type VehicleStatus = 'available' | 'in_use' | 'maintenance' | 'retired';
 
 export type Vehicle = {
+  [x: string]: string;
+  type: string;
   id: string;
   plate_number: string;
   model: string;
@@ -524,4 +526,19 @@ export interface RequestApprove{
 export interface RequestReject {
   requestId: string;
   comment?: string;
+}
+
+export interface IssueDto {
+  vehicle_model: string;
+  plate_number: string;
+  date: string; // ISO date string
+  requester_full_name: string;
+  trip_purpose: string;
+  description: string;
+  type: 'Emergency' | 'Maintenance'; // or any other types you have
+}
+export interface IssueCreateDto {
+  request_id: string;
+  description: string;
+  emergency?: boolean;
 }
