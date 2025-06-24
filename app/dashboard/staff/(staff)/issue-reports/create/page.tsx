@@ -23,7 +23,7 @@ export default function IssueReport() {
   return (
     <main className="min-h-screen bg-[#fafbfc] p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8">Report movement issue</h2>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8">Report movement issue</h1>
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-6 md:p-10 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
