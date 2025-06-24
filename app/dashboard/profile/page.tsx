@@ -1,775 +1,288 @@
-<<<<<<< HEAD
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Bell 
-} from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
+import { User, Lock, Mail, Shield, Edit3, X, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import * as Yup from 'yup';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { Label } from '@/components/ui/label';
 import api from '@/lib/api';
-
-const ProfileSchema = Yup.object().shape({
-  email: Yup.string()
-    .email('Invalid email address')
-    .required('Email is required'),
-});
-
-const PasswordSchema = Yup.object().shape({
-  currentPassword: Yup.string().required('Current password is required'),
-  newPassword: Yup.string().min(8, 'Password must be at least 8 characters').required('New password is required'),
-  confirmPassword: Yup.string().oneOf([Yup.ref('newPassword')], 'Passwords must match').required('Confirm password is required'),
-});
 
 export default function UserProfilePage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    marketing: false,
-    activityDigest: true,
+  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isChangingPassword, setIsChangingPassword] = useState<boolean>(false);
+  const [passwordForm, setPasswordForm] = useState<{
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
+    if (!isAuthenticated) router.push('/login');
   }, [isAuthenticated, router]);
 
-  // Only allow editing email (readonly)
-  const handleProfileUpdate = async (
-    values: { email: string },
-    formikHelpers: { setSubmitting: (isSubmitting: boolean) => void }
-  ) => {
-    // Only allow updating email if needed (but usually email is readonly)
-    toast.success('Profile is up to date.');
-    formikHelpers.setSubmitting(false);
+  const getInitials = (email: string | undefined): string => {
+    return email ? email.slice(0, 2).toUpperCase() : 'U';
   };
 
-  // Password change mutation (calls /auth/change-password)
-  const handlePasswordChange = async (
-    values: { currentPassword: string; newPassword: string; confirmPassword: string },
-    formikHelpers: { setSubmitting: (isSubmitting: boolean) => void; resetForm: () => void }
-  ) => {
+  const getRoleColor = (role: string | undefined): string => {
+    const colors: Record<string, string> = {
+      admin: 'bg-red-100 text-red-800 border-red-200',
+      manager: 'bg-blue-100 text-blue-800 border-blue-200',
+      user: 'bg-green-100 text-green-800 border-green-200',
+      fleetmanager: 'bg-purple-100 text-purple-800 border-purple-200'
+    };
+    return colors[role?.toLowerCase() || ''] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  const handlePasswordChange = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+
     setIsChangingPassword(true);
     try {
       await api.post('/auth/change-password', {
-        current_password: values.currentPassword,
-        new_password: values.newPassword,
+        current_password: passwordForm.currentPassword,
+        new_password: passwordForm.newPassword,
       });
       toast.success('Password changed successfully');
-      formikHelpers.resetForm();
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
-        // @ts-expect-error: dynamic error shape from axios
-        toast.error(error.response.data.message || 'Failed to change password');
+        // @ts-expect-error: dynamic error object from axios
+        toast.error(error.response.data.message);
       } else {
         toast.error('Failed to change password');
       }
     } finally {
       setIsChangingPassword(false);
-      formikHelpers.setSubmitting(false);
     }
   };
 
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }));
-    toast.success(`${key} notifications ${value ? 'enabled' : 'disabled'}`);
+  const handlePasswordInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [id]: value }));
   };
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading profile...</p>
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <h1 className="text-3xl font-bold mb-6">Account Settings</h1>
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Sidebar */}
-        <div className="md:col-span-3">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center space-y-4">
-                <div className="relative">
-                  <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center text-4xl font-bold text-blue-700">
-                    {user.email.charAt(0).toUpperCase()}
-                  </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white">
+                  {getInitials(user.email)}
                 </div>
-                <div className="text-center">
-                  <h2 className="text-xl font-semibold">{user.email}</h2>
-                  <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                  </div>
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
+              <div className="text-center md:text-left flex-1">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back!</h1>
+                <p className="text-gray-600 mb-3">Manage your account settings and security preferences</p>
+                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(user.role)}`}>
+                    {user.role || 'User'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                    ID: {user.id?.slice(-8) || 'N/A'}
+                  </span>
                 </div>
               </div>
-              <div className="mt-6 space-y-2">
-                <Button variant={activeTab === 'profile' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('profile')}>
-                  <User className="h-4 w-4 mr-2" /> Profile Information
-                </Button>
-                <Button variant={activeTab === 'security' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('security')}>
-                  <Lock className="h-4 w-4 mr-2" /> Security
-                </Button>
-                <Button variant={activeTab === 'notifications' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('notifications')}>
-                  <Bell className="h-4 w-4 mr-2" /> Notifications
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-        {/* Main Content */}
-        <div className="md:col-span-9">
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: 'profile', icon: User, label: 'Profile' },
+            { id: 'security', icon: Lock, label: 'Security' }
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id as 'profile' | 'security')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                activeTab === id
+                  ? 'bg-white shadow-md text-blue-600 border border-blue-100'
+                  : 'bg-white/50 hover:bg-white/80 text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {activeTab === 'profile' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>View your account information</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Formik
-                  initialValues={{ email: user.email }}
-                  validationSchema={ProfileSchema}
-                  onSubmit={handleProfileUpdate}
-                  enableReinitialize
-                >
-                  {() => (
-                    <Form className="space-y-4">
+            <>
+              {/* Profile Info */}
+              <div className="lg:col-span-2">
+                <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                      Profile Information
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditing(!isEditing)}
+                      className="hover:bg-blue-50"
+                    >
+                      {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <div className="relative">
-                          <Field
-                            as={Input}
-                            id="email"
-                            name="email"
-                            type="email"
-                            readOnly
-                            className="pl-10 bg-gray-100 cursor-not-allowed"
-                            placeholder="Your email address"
-                          />
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Label className="text-sm font-medium text-gray-700">Email Address</Label>
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                          <Mail className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-900">{user.email}</span>
                         </div>
-                        <ErrorMessage name="email" component="div" className="text-sm text-red-500" />
                       </div>
-                    </Form>
-                  )}
-                </Formik>
-              </CardContent>
-            </Card>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">Role</Label>
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                          <Shield className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-900">{user.role || 'User'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">User ID</Label>
+                      <div className="p-3 bg-gray-50 rounded-lg font-mono text-sm text-gray-600">
+                        {user.id}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="space-y-4">
+                <Card className="bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-2">Account Status</h3>
+                    <p className="text-blue-100 text-sm mb-4">Your account is active and secure</p>
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      Online
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/80 backdrop-blur-sm border-white/20">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-2 text-gray-900">Security Tips</h3>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Use a strong password</li>
+                      <li>• Enable two-factor authentication</li>
+                      <li>• Review login activity regularly</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
           )}
+
           {activeTab === 'security' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Change your password</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Formik
-                  initialValues={{ currentPassword: '', newPassword: '', confirmPassword: '' }}
-                  validationSchema={PasswordSchema}
-                  onSubmit={handlePasswordChange}
-                >
-                  {({ isSubmitting, errors, touched }) => (
-                    <Form className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="currentPassword">Current Password</Label>
-                        <Field
-                          as={Input}
+            <div className="lg:col-span-3">
+              <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-blue-600" />
+                    Change Password
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <div className="relative">
+                        <Input
                           id="currentPassword"
-                          name="currentPassword"
-                          type="password"
-                          className={errors.currentPassword && touched.currentPassword ? 'border-red-500' : ''}
-                          placeholder="Enter your current password"
+                          type={showPassword ? 'text' : 'password'}
+                          value={passwordForm.currentPassword}
+                          onChange={handlePasswordInputChange}
+                          className="pr-10"
+                          required
                         />
-                        <ErrorMessage name="currentPassword" component="div" className="text-sm text-red-500" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="newPassword">New Password</Label>
-                        <Field
-                          as={Input}
-                          id="newPassword"
-                          name="newPassword"
-                          type="password"
-                          className={errors.newPassword && touched.newPassword ? 'border-red-500' : ''}
-                          placeholder="Enter your new password"
-                        />
-                        <ErrorMessage name="newPassword" component="div" className="text-sm text-red-500" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                        <Field
-                          as={Input}
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          type="password"
-                          className={errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : ''}
-                          placeholder="Confirm your new password"
-                        />
-                        <ErrorMessage name="confirmPassword" component="div" className="text-sm text-red-500" />
-                      </div>
-                      <Button type="submit" className="mt-4" disabled={isSubmitting || isChangingPassword}>
-                        {isChangingPassword ? 'Changing Password...' : 'Change Password'}
-                      </Button>
-                    </Form>
-                  )}
-                </Formik>
-              </CardContent>
-            </Card>
-          )}
-          {activeTab === 'notifications' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>Manage how you receive notifications</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div>
-                      <p className="font-medium">Email Notifications</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive notifications via email</p>
                     </div>
-                    <Switch checked={notifications.email} onCheckedChange={(checked) => handleNotificationChange('email', checked)} className={cn('data-[state=checked]:bg-cyan-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700', 'h-6 w-11')} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div>
-                      <p className="font-medium">Push Notifications</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive notifications on your device</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordInputChange}
+                        minLength={8}
+                        required
+                      />
                     </div>
-                    <Switch checked={notifications.push} onCheckedChange={(checked) => handleNotificationChange('push', checked)} className={cn('data-[state=checked]:bg-cyan-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700', 'h-6 w-11')} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div>
-                      <p className="font-medium">Marketing Emails</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive marketing and promotional emails</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordInputChange}
+                        required
+                      />
                     </div>
-                    <Switch checked={notifications.marketing} onCheckedChange={(checked) => handleNotificationChange('marketing', checked)} className={cn('data-[state=checked]:bg-cyan-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700', 'h-6 w-11')} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <div>
-                      <p className="font-medium">Activity Digest</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Receive weekly digest of account activity</p>
-                    </div>
-                    <Switch checked={notifications.activityDigest} onCheckedChange={(checked) => handleNotificationChange('activityDigest', checked)} className={cn('data-[state=checked]:bg-cyan-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-700', 'h-6 w-11')} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    <Button 
+                      type="submit" 
+                      disabled={isChangingPassword}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isChangingPassword ? 'Changing...' : 'Change Password'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>
     </div>
-=======
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-import { 
-  User, 
-  Mail, 
-  Lock, 
-  Bell, 
-  Pencil 
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import * as Yup from 'yup';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { Label } from '@/components/ui/label';
-import api from '@/lib/api';
-import { useUserDetails } from '@/lib/queries';
-import type { UserDetails } from '@/types/next-auth';
-
-const ProfileSchema = Yup.object().shape({
-  email: Yup.string()
-    .email('Invalid email address')
-    .required('Email is required'),
-});
-
-const PasswordSchema = Yup.object().shape({
-  currentPassword: Yup.string().required('Current password is required'),
-  newPassword: Yup.string().min(8, 'Password must be at least 8 characters').required('New password is required'),
-  confirmPassword: Yup.string().oneOf([Yup.ref('newPassword')], 'Passwords must match').required('Confirm password is required'),
-});
-
-const staticUserDetails = {
-  id: 'c7b5a3d4-7a5b-4b1e-9d2c-2a8b9e6f3e7a',
-  organization_id: 'org_123',
-  email: 'nzelabeatblack37@gmail.com',
-  phone: '+250788123456',
-  status: 'active' as 'active',
-  created_at: new Date().toISOString(),
-  role_id: 'role_fleet',
-  role: 'Fleetmanager',
-  dob: '1990-01-01',
-  first_name: 'Emmy',
-  last_name: 'Mugisha',
-  nid: '1199080012345012',
-  gender: 'MALE' as 'MALE',
-  street_address: 'KN 7 Ave, Kigali',
-};
-
-// Windows-style toggle switch CSS
-// Place this at the top of the file for global effect
-export const ToggleSwitchStyle = () => (
-  <style jsx global>{`
-    .win-toggle {
-      position: relative;
-      width: 44px;
-      height: 24px;
-      display: inline-block;
-      border-radius: 9999px;
-      background: transparent;
-      vertical-align: middle;
-    }
-    .win-toggle input {
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      left: 0;
-      top: 0;
-      margin: 0;
-      cursor: pointer;
-      z-index: 2;
-    }
-    .win-toggle .track {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border-radius: 9999px;
-      background: #e0e0e0;
-      transition: background 0.2s;
-      z-index: 0;
-    }
-    .win-toggle input:checked ~ .track {
-      background: #0b72d9;
-    }
-    .win-toggle .slider {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #222;
-      transition: left 0.2s, background 0.2s;
-      z-index: 1;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-    }
-    .win-toggle input:checked ~ .slider {
-      left: 24px;
-      background: #fff;
-    }
-  `}</style>
-);
-
-export default function UserProfilePage() {
-  const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('profile');
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: true,
-    marketing: false,
-    activityDigest: true,
-  });
-  const [editMode, setEditMode] = useState(false);
-  const [formData, setFormData] = useState<UserDetails>({ ...staticUserDetails });
-
-  // Dynamic fetching logic (uncomment when API is ready)
-  const { data: apiUserDetails, isLoading: isUserLoading, isError, error } = useUserDetails(user?.id ?? '');
-  // Use static data as fallback for now
-  const userDetails = apiUserDetails || staticUserDetails;
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, router]);
-
-  useEffect(() => {
-    setFormData({
-      ...userDetails,
-      phone: userDetails.phone || '',
-    });
-  }, [userDetails]);
-
-  // Only allow editing email (readonly)
-  const handleProfileUpdate = async (
-    values: { email: string },
-    formikHelpers: { setSubmitting: (isSubmitting: boolean) => void }
-  ) => {
-    // Only allow updating email if needed (but usually email is readonly)
-    toast.success('Profile is up to date.');
-    formikHelpers.setSubmitting(false);
-  };
-
-  // Password change mutation (calls /auth/change-password)
-  const handlePasswordChange = async (
-    values: { currentPassword: string; newPassword: string; confirmPassword: string },
-    formikHelpers: { setSubmitting: (isSubmitting: boolean) => void; resetForm: () => void }
-  ) => {
-    setIsChangingPassword(true);
-    try {
-      await api.post('/auth/change-password', {
-        current_password: values.currentPassword,
-        new_password: values.newPassword,
-      });
-      toast.success('Password changed successfully');
-      formikHelpers.resetForm();
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
-        // @ts-expect-error: dynamic error shape from axios
-        toast.error(error.response.data.message || 'Failed to change password');
-      } else {
-        toast.error('Failed to change password');
-      }
-    } finally {
-      setIsChangingPassword(false);
-      formikHelpers.setSubmitting(false);
-    }
-  };
-
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }));
-    toast.success(`${key} notifications ${value ? 'enabled' : 'disabled'}`);
-  };
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <ToggleSwitchStyle />
-      <div className="container mx-auto py-8 px-4 md:px-6">
-        <h1 className="text-3xl font-bold mb-6">Account Settings</h1>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <div className="md:col-span-3">
-            <Card className="shadow-none bg-white/90 border-0 md:shadow-sm md:rounded-2xl">
-              <CardContent className="p-6">
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="relative">
-                    <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-200 via-blue-100 to-white shadow-lg flex items-center justify-center text-4xl font-bold text-blue-700 ring-2 ring-blue-100 transition-all duration-300">
-                      {userDetails.first_name.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h2 className="text-xl font-semibold">{`${userDetails.first_name} ${userDetails.last_name}`}</h2>
-                    <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                      {userDetails.role.charAt(0).toUpperCase() + userDetails.role.slice(1)}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 space-y-2">
-                  <Button variant={activeTab === 'profile' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('profile')}>
-                    <User className="h-4 w-4 mr-2" /> Personal  Information
-                  </Button>
-                  <Button variant={activeTab === 'security' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('security')}>
-                    <Lock className="h-4 w-4 mr-2" /> Security
-                  </Button>
-                  <Button variant={activeTab === 'notifications' ? 'default' : 'ghost'} className="w-full justify-start text-cyan-900" onClick={() => setActiveTab('notifications')}>
-                    <Bell className="h-4 w-4 mr-2" /> Notifications
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          {/* Main Content */}
-          <div className="md:col-span-9">
-            {activeTab === 'profile' && (
-              <Card className="bg-white/90 border-0 shadow-none md:shadow-sm md:rounded-2xl">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>View your personal information</CardDescription>
-                  </div>
-                  {!editMode && (
-                    <Button size="icon" variant="ghost" onClick={() => setEditMode(true)} title="Edit Personal Information" className="hover:bg-blue-50 transition-colors">
-                      <Pencil className="w-5 h-5" />
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <Formik
-                    initialValues={{
-                      firstName: formData.first_name,
-                      lastName: formData.last_name,
-                      email: formData.email,
-                      phone: formData.phone,
-                      nid: formData.nid,
-                      gender: formData.gender,
-                      dob: formData.dob,
-                      role: formData.role,
-                      streetAddress: formData.street_address,
-                    }}
-                    enableReinitialize
-                    onSubmit={(values) => {
-                      setFormData({ ...formData, ...values });
-                      setEditMode(false);
-                      toast.success('Profile updated successfully!');
-                    }}
-                  >
-                    {({ handleSubmit, resetForm }) => (
-                      <Form className={`space-y-6 transition-all duration-300 ${editMode ? 'bg-blue-50/40 rounded-xl p-2' : ''}`} onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="firstName">First Name</Label>
-                            <Field as={Input} name="firstName" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="lastName">Last Name</Label>
-                            <Field as={Input} name="lastName" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Field as={Input} name="email" type="email" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="phone">Phone</Label>
-                            <Field as={Input} name="phone" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-2">
-                              <Label htmlFor="nid">National ID</Label>
-                              <Field as={Input} name="nid" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                            </div>
-                             <div className="space-y-2">
-                              <Label htmlFor="gender">Gender</Label>
-                              <Field as={Input} name="gender" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="dob">Date of Birth</Label>
-                            <Field as={Input} name="dob" type="date" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Field as={Input} name="role" readOnly className="bg-gray-50 border-0" />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="streetAddress">Street Address</Label>
-                          <Field as={Input} name="streetAddress" readOnly={!editMode} className={editMode ? 'focus:ring-2 focus:ring-blue-300 shadow-sm border border-gray-200 transition-all' : 'bg-gray-50 border-0'} />
-                        </div>
-                        {editMode && (
-                          <div className="flex gap-4 justify-end pt-2">
-                            <Button type="button" variant="outline" onClick={() => { resetForm(); setEditMode(false); }} className="transition-all">Cancel</Button>
-                            <Button type="submit" variant="default" className="transition-all">Save</Button>
-                          </div>
-                        )}
-                      </Form>
-                    )}
-                  </Formik>
-                </CardContent>
-              </Card>
-            )}
-            {activeTab === 'security' && (
-              <Card className="bg-white/90 border-0 shadow-none md:shadow-sm md:rounded-2xl">
-                <CardHeader className="pb-2">
-                  <CardTitle>Security Settings</CardTitle>
-                  <CardDescription>Change your password</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Formik
-                    initialValues={{ currentPassword: '', newPassword: '', confirmPassword: '' }}
-                    validationSchema={PasswordSchema}
-                    onSubmit={handlePasswordChange}
-                  >
-                    {({ isSubmitting, errors, touched }) => (
-                      <Form className="space-y-6 transition-all duration-300 bg-blue-50/0 rounded-xl p-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="currentPassword">Current Password</Label>
-                          <Field
-                            as={Input}
-                            id="currentPassword"
-                            name="currentPassword"
-                            type="password"
-                            className={`transition-all ${errors.currentPassword && touched.currentPassword ? 'border-red-500' : 'border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-300 shadow-sm'}`}
-                            placeholder="Enter your current password"
-                          />
-                          <ErrorMessage name="currentPassword" component="div" className="text-sm text-red-500" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="newPassword">New Password</Label>
-                          <Field
-                            as={Input}
-                            id="newPassword"
-                            name="newPassword"
-                            type="password"
-                            className={`transition-all ${errors.newPassword && touched.newPassword ? 'border-red-500' : 'border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-300 shadow-sm'}`}
-                            placeholder="Enter your new password"
-                          />
-                          <ErrorMessage name="newPassword" component="div" className="text-sm text-red-500" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                          <Field
-                            as={Input}
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            className={`transition-all ${errors.confirmPassword && touched.confirmPassword ? 'border-red-500' : 'border border-gray-200 bg-gray-50 focus:ring-2 focus:ring-blue-300 shadow-sm'}`}
-                            placeholder="Confirm your new password"
-                          />
-                          <ErrorMessage name="confirmPassword" component="div" className="text-sm text-red-500" />
-                        </div>
-                        <Button type="submit" className="mt-4 transition-all" disabled={isSubmitting || isChangingPassword}>
-                          {isChangingPassword ? 'Changing Password...' : 'Change Password'}
-                        </Button>
-                      </Form>
-                    )}
-                  </Formik>
-                </CardContent>
-              </Card>
-            )}
-            {activeTab === 'notifications' && (
-              <Card className="bg-white/90 border-0 shadow-none md:shadow-sm md:rounded-2xl">
-                <CardHeader className="pb-2">
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Manage your notification preferences</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="flex flex-col space-y-4 py-2">
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        <Label htmlFor="email-notifications" className="font-semibold">Email Notifications</Label>
-                        <p className="text-sm text-gray-500">Receive important updates via email.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-base font-medium w-8 text-right ${notifications.email ? 'text-gray-800' : 'text-gray-400'}`}>{notifications.email ? 'On' : 'Off'}</span>
-                        <label className="win-toggle">
-                          <input
-                            type="checkbox"
-                            id="email-notifications"
-                            checked={notifications.email}
-                            onChange={e => handleNotificationChange('email', e.target.checked)}
-                          />
-                          <span className="slider" />
-                          <span className="track" />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        <Label htmlFor="push-notifications" className="font-semibold">Push Notifications</Label>
-                        <p className="text-sm text-gray-500">Get real-time alerts on your device.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-base font-medium w-8 text-right ${notifications.push ? 'text-gray-800' : 'text-gray-400'}`}>{notifications.push ? 'On' : 'Off'}</span>
-                        <label className="win-toggle">
-                          <input
-                            type="checkbox"
-                            id="push-notifications"
-                            checked={notifications.push}
-                            onChange={e => handleNotificationChange('push', e.target.checked)}
-                          />
-                          <span className="slider" />
-                          <span className="track" />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        <Label htmlFor="marketing-notifications" className="font-semibold">Marketing Communications</Label>
-                        <p className="text-sm text-gray-500">Receive promotional offers and newsletters.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-base font-medium w-8 text-right ${notifications.marketing ? 'text-gray-800' : 'text-gray-400'}`}>{notifications.marketing ? 'On' : 'Off'}</span>
-                        <label className="win-toggle">
-                          <input
-                            type="checkbox"
-                            id="marketing-notifications"
-                            checked={notifications.marketing}
-                            onChange={e => handleNotificationChange('marketing', e.target.checked)}
-                          />
-                          <span className="slider" />
-                          <span className="track" />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between px-4 py-2">
-                      <div>
-                        <Label htmlFor="activity-digest" className="font-semibold">Activity Digest</Label>
-                        <p className="text-sm text-gray-500">Get a weekly summary of your account activity.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-base font-medium w-8 text-right ${notifications.activityDigest ? 'text-gray-800' : 'text-gray-400'}`}>{notifications.activityDigest ? 'On' : 'Off'}</span>
-                        <label className="win-toggle">
-                          <input
-                            type="checkbox"
-                            id="activity-digest"
-                            checked={notifications.activityDigest}
-                            onChange={e => handleNotificationChange('activityDigest', e.target.checked)}
-                          />
-                          <span className="slider" />
-                          <span className="track" />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
->>>>>>> aa56a73bec8c58d2f3a04b2fb866739a1bcedd52
   );
-} 
+}

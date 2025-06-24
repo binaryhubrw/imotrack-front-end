@@ -16,6 +16,7 @@ import {
   faCog,
   faSignOutAlt,
   faQuestion,
+  faPersonArrowUpFromLine,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -142,7 +143,11 @@ export default function DashboardLayout({
     };
 
     const userRole = user?.role as keyof typeof roleSpecificItems;
-    return [...baseItems, ...(roleSpecificItems[userRole] || [])];
+    return [...baseItems, ...(roleSpecificItems[userRole] || []), {
+      href: `/dashboard/profile`,
+      label: "Profile",
+      icon: <FontAwesomeIcon icon={faPersonArrowUpFromLine} />,
+    }];
   };
 
   if (isLoading) {
