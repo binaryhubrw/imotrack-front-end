@@ -1,11 +1,80 @@
-import React from 'react'
+"use client";
+import React, { useState } from 'react';
 
 export default function IssueReport() {
+  const [form, setForm] = useState({
+    issueType: '',
+    location: '',
+    notes: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    // Simulate submit
+    setTimeout(() => setSubmitting(false), 1000);
+  };
+
   return (
-    <div>
-      Issue Report
-    </div>
-  )
+    <main className="min-h-screen bg-[#fafbfc] p-4 md:p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-8">Reprt movement issue</h1>
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow p-6 md:p-10 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Issue Type</label>
+              <input
+                type="text"
+                name="issueType"
+                value={form.issueType}
+                onChange={handleChange}
+                placeholder="Enter issue type"
+                className="w-full rounded-md border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Location When Issue Occurred</label>
+              <input
+                type="text"
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                placeholder="Where the vehicle was when the issue occurred (District, sector, village and street code)"
+                className="w-full rounded-md border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+            <textarea
+              name="notes"
+              value={form.notes}
+              onChange={handleChange}
+              rows={6}
+              placeholder="Enter any additional information about the trip or vehicle condition"
+              className="w-full rounded-md border border-gray-200 px-4 py-3 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="bg-[#0872B3] text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition disabled:opacity-60"
+              disabled={submitting}
+            >
+              {submitting ? 'Submitting...' : 'Submit Issue'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  );
 }
 
 // 'use client';
