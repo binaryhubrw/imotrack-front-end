@@ -100,6 +100,7 @@ export default function UserDetailPage() {
       label: 'Address',
       value: user.street_address,
     },
+    
   ];
 
   return (
