@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Filter, Search} from 'lucide-react';
-import { useIssues } from '@/lib/queries';
+import { useIssues, useUpdateIssue } from '@/lib/queries';
 
 // Type for mapped issues
 interface IssueListItem {
@@ -24,6 +24,7 @@ export default function IssueManagementPage() {
   const [newStatus, setNewStatus] = useState('pending');
   const [showStatusEdit, setShowStatusEdit] = useState(false);
   const { data: issues, isLoading, isError } = useIssues();
+  const updateIssue = useUpdateIssue();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,9 +89,15 @@ export default function IssueManagementPage() {
   });
 
   // This is a placeholder for local status update; in real app, call API mutation
-  const handleStatusUpdate = () => {
+  const handleStatusUpdate = async () => {
     if (!selectedIssue) return;
-    setShowStatusEdit(false);
+    try {
+      await updateIssue.mutateAsync({ id: String(selectedIssue.id), updates: { status: newStatus } });
+      setShowStatusEdit(false);
+    } catch (error) {
+      // Optionally show an error message/modal here
+      console.error('Failed to update status:', error);
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import React, { useState } from 'react';
-import { Search, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, X, Loader2, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useOrganizations, useCreateOrganization, useUpdateOrganization, useDeleteOrganization } from '@/lib/queries';
@@ -20,6 +20,9 @@ export default function OrganizationsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+  const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
 
   const router = useRouter();
 
@@ -32,9 +35,10 @@ export default function OrganizationsPage() {
     if (!selectedOrgId) return;
     try {
       await deleteOrganizationMutation.mutateAsync(selectedOrgId);
-      toast.success('Organization deleted successfully!');
       setShowDeleteConfirm(false);
       setSelectedOrgId(null);
+      setShowDeleteSuccessModal(true);
+      setTimeout(() => setShowDeleteSuccessModal(false), 2500);
     } catch (error: any) {
       console.error('Failed to delete organization:', error);
       toast.error(error.message || 'Failed to delete organization.');
@@ -59,15 +63,22 @@ export default function OrganizationsPage() {
         await updateOrganizationMutation.mutateAsync({ id, updates });
         toast.success('Organization updated successfully!');
         setShowEditModal(false);
+        setShowEditSuccessModal(true);
+        setTimeout(() => setShowEditSuccessModal(false), 2500);
       } else {
         // Create new organization
         await createOrganizationMutation.mutateAsync(orgData as CreateOrganizationDto);
-        toast.success('Organization created successfully!');
         setShowAddModal(false);
+        setShowSuccessModal(true);
+        setTimeout(() => setShowSuccessModal(false), 2500);
       }
     } catch (error: any) {
       console.error('Failed to save organization:', error);
-      toast.error(error.message || 'Failed to save organization.');
+      if (error.message?.toLowerCase().includes('already exist')) {
+        toast.error('Organization already exists!');
+      } else {
+        toast.error(error.message || 'Failed to register new organization.');
+      }
     }
   };
 
@@ -198,6 +209,72 @@ export default function OrganizationsPage() {
             onSave={handleSaveOrganization}
             isLoading={createOrganizationMutation.isPending}
           />
+        )}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
+            >
+              <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2 text-center">Organization added successfully!</h2>
+              <p className="text-gray-600 text-center">Your request is submitted.<br/>Thank you for adding a new organization.</p>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Edit Success Modal */}
+        {showEditSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
+            >
+              <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2 text-center">Organization updated successfully!</h2>
+              <p className="text-gray-600 text-center">The organization information has been updated.<br/>Thank you for keeping your records up to date.</p>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Delete Success Modal */}
+        {showDeleteSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
+            >
+              <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2 text-center">Organization deleted successfully!</h2>
+              <p className="text-gray-600 text-center">The organization has been removed.<br/>Thank you for keeping your records up to date.</p>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Edit Organization Modal */}

@@ -573,6 +573,21 @@ export const useCreateIssue = () => {
   });
 }
 
+export const useUpdateIssue = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
+      const { data } = await api.put(`/issues/fleet/${id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+    },
+  });
+};
+
 // NOTIFICATIONS for staff
 
 export const useNotifications = () => {
