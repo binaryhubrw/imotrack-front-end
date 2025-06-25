@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useUserDetails, useUpdateUser, useRoles } from '@/lib/queries';
 import { UpdateUserDto, Role } from '@/types/next-auth';
-import { toast } from 'sonner';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { motion } from 'framer-motion';
@@ -11,9 +10,10 @@ import { motion } from 'framer-motion';
 interface EditUserFormProps {
   userId: string;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export default function EditUserForm({ userId, onClose }: EditUserFormProps) {
+export default function EditUserForm({ userId, onClose, onSuccess }: EditUserFormProps) {
   const { data: user, isLoading: isLoadingUser } = useUserDetails(userId);
   const { data: roles } = useRoles();
   const updateUser = useUpdateUser();
@@ -51,8 +51,8 @@ export default function EditUserForm({ userId, onClose }: EditUserFormProps) {
         id: userId,
         updates: formData,
       });
-      toast.success('User updated successfully');
-      onClose();
+      if (onSuccess) onSuccess();
+      else onClose();
     } catch (err) {
       setError('Failed to update user. Please try again.');
       console.error('Update error:', err);

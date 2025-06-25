@@ -56,7 +56,7 @@ const VehicleDetails: React.FC = () => {
   const [driversPerPage] = useState(6);
 
   // Replace mock vehicleInfo with real data
-  const vehicleInfo = vehicle
+  const vehicleInfo = useMemo(() => vehicle
     ? {
         id: vehicle.id,
         type: vehicle.model, // No explicit type field, use model/manufacturer
@@ -74,9 +74,9 @@ const VehicleDetails: React.FC = () => {
         insurance: '-', // TODO: from insurance API/field
         nextMaintenance: '-', // TODO: from maintenance API/field
       }
-    : null;
+    : null, [vehicle]);
 
-  const drivers: Driver[] = [
+  const drivers = useMemo<Driver[]>(() => [
     {
       id: "D-001",
       name: "John Smith",
@@ -129,9 +129,9 @@ const VehicleDetails: React.FC = () => {
       email: "sarah.wilson@company.com",
       rating: 4.7,
     },
-  ];
+  ], []);
 
-  const trips: Trip[] = [
+  const trips = useMemo<Trip[]>(() => [
     {
       id: "T-10023",
       date: "15/05/2025",
@@ -207,7 +207,7 @@ const VehicleDetails: React.FC = () => {
       reason: "Delivery",
       status: "Completed",
     },
-  ];
+  ], []);
 
   const [tripFilters, setTripFilters] = useState({
     date: "",

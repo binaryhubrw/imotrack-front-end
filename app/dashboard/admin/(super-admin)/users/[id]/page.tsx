@@ -17,13 +17,17 @@ import {
   faEdit,
 } from '@fortawesome/free-solid-svg-icons';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import EditUserForm from '../EditUserForm';
+import { CheckCircle } from 'lucide-react';
 
 export default function UserDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { data: user, isLoading, error } = useUserDetails(params.id as string);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -111,13 +115,44 @@ export default function UserDetailPage() {
             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
             Back
           </Button>
-          <Link href={`/dashboard/admin/users/${user.id}/edit`}>
-            <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]">
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit User
-            </Button>
-          </Link>
+          <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={() => setShowEditModal(true)}>
+            <FontAwesomeIcon icon={faEdit} className="mr-2" />
+            Edit User
+          </Button>
         </div>
+        {/* Edit User Modal */}
+        {showEditModal && (
+          <EditUserForm
+            userId={user.id}
+            onClose={() => setShowEditModal(false)}
+            onSuccess={() => {
+              setShowEditModal(false);
+              setShowEditSuccessModal(true);
+              setTimeout(() => setShowEditSuccessModal(false), 2500);
+            }}
+          />
+        )}
+        {/* Edit Success Modal */}
+        {showEditSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', duration: 0.5 }}
+              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
+            >
+              <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
+              <h2 className="text-2xl font-bold mb-2 text-center">User updated successfully!</h2>
+              <p className="text-gray-600 text-center">The user information has been updated.<br/>Thank you for keeping your records up to date.</p>
+            </motion.div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

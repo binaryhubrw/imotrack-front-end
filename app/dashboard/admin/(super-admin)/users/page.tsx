@@ -193,18 +193,18 @@ export default function UsersPage() {
                       <div className="flex justify-end space-x-2">
                         <Link
                           href={`/dashboard/admin/users/${user.id}`}
-                          className="text-[#0872b3] hover:text-[#065d8f]"
+                          className="text-[#0872b3] hover:text-[#065d8f] transition duration-200 hover:scale-110 hover:translate-x-1"
                         >
                           <FontAwesomeIcon icon={faEye} />
                         </Link>
                         <button
                           onClick={() => setSelectedUserId(user.id)}
-                          className="text-[#0872b3] hover:text-[#065d8f]"
+                          className="text-[#0872b3] hover:text-[#065d8f] transition duration-200 hover:scale-110 hover:translate-x-1"
                         >
                           <FontAwesomeIcon icon={faEdit} />
                         </button>
                         <button
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 transition duration-200 hover:scale-110 hover:translate-x-1"
                           onClick={() => handleDelete(user.id)}
                         >
                           <FontAwesomeIcon icon={faTrash} />
