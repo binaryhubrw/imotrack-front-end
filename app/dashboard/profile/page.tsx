@@ -11,7 +11,6 @@ import {
   Phone, MapPin, Calendar, Building, Activity, Clock,
   Check,
   AlertCircle,
-  Info
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMe, useUpdatePassword } from '@/lib/queries';
@@ -626,13 +625,6 @@ export default function UserProfilePage() {
             </Button>
           </div>
 
-          {/* Last Changed Info */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Info className="w-4 h-4" />
-              <span>Password last changed: March 15, 2024</span>
-            </div>
-          </div>
         </form>
       </CardContent>
     </Card>
