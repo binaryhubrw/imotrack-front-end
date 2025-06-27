@@ -100,6 +100,11 @@ export default function DashboardLayout({
           label: "Vehicle Requests",
           icon: <FontAwesomeIcon icon={faCar} />,
         },
+         {
+          href: "/dashboard/hr/issue-management",
+          label: "Issue Management",
+          icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
+        },
       ],
       fleetmanager: [
         {
