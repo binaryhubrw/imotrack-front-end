@@ -7,7 +7,6 @@ import { faCogs, faStar, faEnvelope,
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Button } from '@/components/ui/button' // shadcn/ui button
 import Link from 'next/link'
-
 export default function HomePage() {
 
   return (
