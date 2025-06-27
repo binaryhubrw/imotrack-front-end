@@ -115,7 +115,6 @@ export default function RecentRequests() {
                 <tr className="text-gray-700 bg-gray-50 uppercase text-xs">
                   <th className="py-3 px-6 font-semibold">Request ID</th>
                   <th className="py-3 px-6 font-semibold">Requester</th>
-                  <th className="py-3 px-6 font-semibold">Department</th>
                   <th className="py-3 px-6 font-semibold">Reason</th>
                   <th className="py-3 px-6 font-semibold">Date</th>
                   <th className="py-3 px-6 font-semibold">Status</th>
@@ -142,7 +141,6 @@ export default function RecentRequests() {
                     >
                       <td className="py-3 px-6 font-mono">{request.id}</td>
                       <td className="py-3 px-6">{getRequesterName(request)}</td>
-                      <td className="py-3 px-6">{getDepartment(request.requester) || '-'}</td>
                       <td className="py-3 px-6">{request.trip_purpose}</td>
                       <td className="py-3 px-6">{request.requested_at ? new Date(request.requested_at).toLocaleDateString() : '-'}</td>
                       <td className="py-3 px-6">{statusBadge(request.status)}</td>
