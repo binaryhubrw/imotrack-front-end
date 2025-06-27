@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import React, { useState } from 'react';
-import { Search, Plus, Pencil, Trash2, X, Loader2, CheckCircle } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, X, Loader2, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useOrganizations, useCreateOrganization, useUpdateOrganization, useDeleteOrganization } from '@/lib/queries';
 import { Organization, CreateOrganizationDto, UpdateOrganizationDto } from '@/types/next-auth';
-import { toast } from 'sonner';
 
 export default function OrganizationsPage() {
   const { data: organizations, isLoading: isLoadingOrganizations, isError: isErrorOrganizations, error: organizationsError } = useOrganizations();
@@ -26,6 +25,17 @@ export default function OrganizationsPage() {
 
   const router = useRouter();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(organizations?.length || 0 / itemsPerPage);
+  const paginatedOrganizations = organizations?.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) || [];
+
+  // Reset to first page if search/filter changes and current page is out of range
+  React.useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1);
+  }, [searchTerm, organizations?.length, totalPages,currentPage]);
+
   const handleDeleteClick = (id: string) => {
     setSelectedOrgId(id);
     setShowDeleteConfirm(true);
@@ -41,7 +51,6 @@ export default function OrganizationsPage() {
       setTimeout(() => setShowDeleteSuccessModal(false), 2500);
     } catch (error: any) {
       console.error('Failed to delete organization:', error);
-      toast.error(error.message || 'Failed to delete organization.');
     }
   };
 
@@ -61,7 +70,6 @@ export default function OrganizationsPage() {
         // Update existing organization
         const { id, ...updates } = orgData;
         await updateOrganizationMutation.mutateAsync({ id, updates });
-        toast.success('Organization updated successfully!');
         setShowEditModal(false);
         setShowEditSuccessModal(true);
         setTimeout(() => setShowEditSuccessModal(false), 2500);
@@ -75,19 +83,10 @@ export default function OrganizationsPage() {
     } catch (error: any) {
       console.error('Failed to save organization:', error);
       if (error.message?.toLowerCase().includes('already exist')) {
-        toast.error('Organization already exists!');
       } else {
-        toast.error(error.message || 'Failed to register new organization.');
       }
     }
   };
-
-  const filteredOrganizations = organizations?.filter(org =>
-    org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    org.address.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
 
   if (isLoadingOrganizations) {
     return (
@@ -133,8 +132,8 @@ export default function OrganizationsPage() {
             </motion.button>
           </div>
         </div>
-        <div className="overflow-x-auto rounded-lg shadow-md bg-white">
-          <table className="min-w-[700px] w-full text-sm">
+        <div className="overflow-x-auto rounded-xl shadow-md bg-white max-w-4xl mx-auto px-2 sm:px-4">
+          <table className="min-w-[500px] w-full text-sm">
             <thead className="bg-gray-50/80 backdrop-blur-sm">
               <tr className="text-gray-600">
                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">ID</th>
@@ -147,14 +146,14 @@ export default function OrganizationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredOrganizations.length === 0 ? (
+              {paginatedOrganizations.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     No organizations found.
                   </td>
                 </tr>
               ) : (
-                filteredOrganizations.map((org, idx) => (
+                paginatedOrganizations.map((org, idx) => (
                   <motion.tr 
                     onClick={() => router.push(`/dashboard/admin/organizations/${org.id}`)}
                     key={org.id}
@@ -198,6 +197,30 @@ export default function OrganizationsPage() {
               )}
             </tbody>
           </table>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-8 mt-6 select-none w-full">
+              <button
+                className={`border rounded-lg w-12 h-12 flex items-center justify-center transition-colors ${currentPage === 1 ? 'text-gray-400 border-gray-200 bg-white cursor-not-allowed' : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-100'}`}
+                onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <span className="text-lg text-gray-700">
+                Page <span className="font-bold text-gray-900">{currentPage}</span> of <span className="font-bold text-gray-900">{totalPages}</span>
+              </span>
+              <button
+                className={`border rounded-lg w-12 h-12 flex items-center justify-center transition-colors ${currentPage === totalPages ? 'text-gray-400 border-gray-200 bg-white cursor-not-allowed' : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-100'}`}
+                onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                aria-label="Next page"
+              >
+                <ChevronRight size={22} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   User, Lock, Mail, Shield, Edit3, Save, X, Eye, EyeOff, 
-  Phone, MapPin, Calendar, Building, Activity, Clock,
+  Phone, MapPin, Calendar, Building, Activity,
   Check,
   AlertCircle,
 } from 'lucide-react';
@@ -136,16 +136,7 @@ export default function UserProfilePage() {
     });
   };
 
-  const formatLastLogin = (date: string) => {
-    const now = new Date();
-    const loginDate = new Date(date);
-    const diffHours = Math.floor((now.getTime() - loginDate.getTime()) / (1000 * 60 * 60));
-    
-    if (diffHours < 1) return 'Just now';
-    if (diffHours < 24) return `${diffHours} hours ago`;
-    if (diffHours < 48) return 'Yesterday';
-    return formatDate(date);
-  };
+  
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';
@@ -218,10 +209,7 @@ export default function UserProfilePage() {
                   <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(userProfile.role)}`}>
                     {userProfile.role}
                   </span>
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700 border border-blue-200 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Last login: {formatLastLogin(userProfile.last_login)}
-                  </span>
+                 
                 </div>
               </div>
             </div>

@@ -26,7 +26,6 @@ import {
   HrUser,
   UpdateHrUserDto,
 } from "@/types/next-auth";
-import { toast } from "sonner";
 
 export default function StaffManagement() {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -138,10 +137,8 @@ export default function StaffManagement() {
           id: editingUserId,
           updates: formData as UpdateHrUserDto,
         });
-        toast.success("User updated successfully");
       } else {
         await createUserMutation.mutateAsync(formData);
-        toast.success("User created successfully");
       }
       setIsModalOpen(false);
       setIsEditMode(false);
@@ -159,7 +156,6 @@ export default function StaffManagement() {
       });
       refetch();
     } catch (error) {
-      toast.error("Error saving user");
       console.error("Error saving user:", error);
     }
   };

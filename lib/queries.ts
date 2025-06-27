@@ -20,6 +20,7 @@ import {
   UserProfile,
 } from '@/types/next-auth';
 import { jwtDecode } from 'jwt-decode';
+import { toast } from 'sonner';
 
 
 // Login mutation
@@ -149,6 +150,14 @@ export const useCreateOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast.success('Organization created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create organization.'));
     },
   });
 };
@@ -164,6 +173,14 @@ export const useUpdateOrganization = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
       queryClient.invalidateQueries({ queryKey: ['organization', variables.id] });
+      toast.success('Organization updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update organization.'));
     },
   });
 };
@@ -177,6 +194,14 @@ export const useDeleteOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast.success('Organization deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete organization.'));
     },
   });
 };
@@ -218,6 +243,14 @@ export const useCreateUser = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create user.'));
     },
   });
 };
@@ -233,6 +266,14 @@ export const useUpdateUser = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['user', variables.id] });
+      toast.success('User updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update user.'));
     },
   });
 };
@@ -246,6 +287,14 @@ export const useDeleteUser = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete user.'));
     },
   });
 };
@@ -305,6 +354,14 @@ export const useCreateHrUser = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-users'] });
+      toast.success('HR user created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create HR user.'));
     },
   });
 };
@@ -321,6 +378,14 @@ export const useUpdateHrUser = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['hr-users'] });
       queryClient.invalidateQueries({ queryKey: ['hr-user', variables.id] });
+      toast.success('HR user updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update HR user.'));
     },
   });
 }
@@ -333,6 +398,14 @@ export const useDeleteHrUser = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-users'] });
+      toast.success('HR user deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete HR user.'));
     },
   });
 }
@@ -382,6 +455,14 @@ export const useCreateStaffRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
+      toast.success('Request submitted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to submit request.'));
     },
   });
 }
@@ -398,6 +479,14 @@ export const useUpdateStaffRequest = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
       queryClient.invalidateQueries({ queryKey: ['staff-request', variables.id] });
+      toast.success('Request updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update request.'));
     },
   });
 }
@@ -410,6 +499,14 @@ export const useCancelStaffRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff-requests'] });
+      toast.success('Request cancelled successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to cancel request.'));
     },
   });
 }
@@ -447,6 +544,14 @@ export const useCreateFMVehicles = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
+      toast.success('Vehicle added successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to add vehicle.'));
     },
   });
 }
@@ -474,6 +579,14 @@ export const useUpdateFMVehicle = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['fm-vehicle', variables.id] });
+      toast.success('Vehicle updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update vehicle.'));
     },
   });
 }
@@ -486,6 +599,14 @@ export const useDeleteFMVehicle = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fm-vehicles'] });
+      toast.success('Vehicle deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle.'));
     },
   });
 }
@@ -510,6 +631,14 @@ export const useFMApproveRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fm-requests'] });
+      toast.success('Request approved successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to approve request.'));
     },
   });
 }
@@ -523,6 +652,14 @@ export const useFMRejectRequest = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fm-requests'] });
+      toast.success('Request rejected successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to reject request.'));
     },
   });
 }
@@ -569,24 +706,17 @@ export const useCreateIssue = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
+      toast.success('Issue reported successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to report issue.'));
     },
   });
 }
-
-export const useUpdateIssue = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: Record<string, unknown> }) => {
-      const { data } = await api.put(`/issues/fleet/${id}`, updates, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['issues'] });
-    },
-  });
-};
 
 // NOTIFICATIONS for staff
 
@@ -607,6 +737,14 @@ export const useMarkNotificationAsRead = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('Notification marked as read!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to mark notification as read.'));
     },
   });
 };
@@ -619,6 +757,14 @@ export const useMarkAllNotificationsAsRead = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('All notifications marked as read!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to mark all notifications as read.'));
     },
   });
 }
@@ -630,6 +776,14 @@ export const useDeleteNotification = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('Notification deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete notification.'));
     },
   });
 };

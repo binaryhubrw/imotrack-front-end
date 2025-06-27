@@ -505,7 +505,7 @@ export interface StaffRequest {
 
 export interface StaffRequestUpdate {
   trip_purpose?: string;
-  passengers_number?: string;
+  passengers_number?: number;
   comments?: string;
 }
 

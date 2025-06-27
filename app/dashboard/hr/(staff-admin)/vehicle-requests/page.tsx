@@ -100,7 +100,7 @@ export default function VehicleRequestsPage() {
   const openEditModal = (request: StaffRequestResponse) => {
     setEditForm({
       trip_purpose: request.trip_purpose,
-      passengers_number: String(request.passengers_number),
+      passengers_number: Number(request.passengers_number),
       comments: request.comments || '',
     });
     setEditModal({ open: true, request });

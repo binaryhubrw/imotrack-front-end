@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { LoginCredentials } from "@/types/next-auth";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 // Separate component for the search params logic
 function LoginForm() {
@@ -44,23 +45,44 @@ function LoginForm() {
     try {
       const credentials: LoginCredentials = { email, password };
       await login(credentials);
+      
+      // Show success toast
+      toast.success("Login successful! Redirecting to dashboard...", {
+        description: "Welcome back to Imotrak System",
+        duration: 3000,
+      });
+      
       // Navigation will be handled by the useEffect above
     } catch (err: unknown) {
       console.error("Login error:", err);
+      let errorMessage = "Invalid email or password";
+      
       if (err && typeof err === 'object' && 'response' in err) {
         const error = err as { response?: { status?: number; data?: { message?: string } } };
         if (error.response?.status === 500) {
-          setError("Server error. Please try again later.");
+          errorMessage = "Server error. Please try again later.";
         } else if (error.response?.data?.message) {
-          setError(error.response.data.message);
-        } else {
-          setError("Invalid email or password");
+          errorMessage = error.response.data.message;
         }
-      } else if (err instanceof Error && err.message === "Network Error") {
-        setError("Cannot connect to the server. Please check your internet connection.");
-      } else {
-        setError("Invalid email or password");
+      } else if (err instanceof Error) {
+        if (err.message === "Network Error") {
+          errorMessage = "Cannot connect to the server. Please check your internet connection.";
+        } else if (err.message === "User not found") {
+          errorMessage = "Email address not found. Please check your email.";
+        } else if (err.message === "Invalid credentials") {
+          errorMessage = "Incorrect password. Please try again.";
+        } else if (err.message.includes("User not found") || err.message.includes("Invalid credentials")) {
+          errorMessage = err.message;
+        }
       }
+      
+      // Show error toast
+      toast.error("Login Failed", {
+        description: errorMessage,
+        duration: 4000,
+      });
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

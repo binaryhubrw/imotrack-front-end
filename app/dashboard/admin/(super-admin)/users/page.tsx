@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useUsers, useDeleteUser, useOrganizations } from '@/lib/queries';
 import { UserListItem } from '@/types/next-auth';
-import { toast } from 'sonner';
 import AddUserForm from './AddUserForm';
 import EditUserForm from './EditUserForm';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -65,17 +64,15 @@ export default function UsersPage() {
     
     try {
       await deleteUser.mutateAsync(deleteConfirmModal.userId);
-      toast.success('User deleted successfully');
       setDeleteConfirmModal({ isOpen: false, userId: null });
     } catch (error: unknown) {
       console.error('Delete error:', error);
-      toast.error('Failed to delete user');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <h1 className="text-2xl font-bold text-[#0872b3]">Users Management</h1>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Make sure this matches your backend URL exactly
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://imotrak-backside-lah2.onrender.com/api';
+const baseURL = process.env.NEXT_PUBLIC_API_URL;
 
 export const api = axios.create({
   baseURL,

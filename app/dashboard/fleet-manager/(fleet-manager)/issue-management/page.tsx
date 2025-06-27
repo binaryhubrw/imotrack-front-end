@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Filter, Search} from 'lucide-react';
-import { useIssues, useUpdateIssue } from '@/lib/queries';
+import { useIssues } from '@/lib/queries';
 
 // Type for mapped issues
 interface IssueListItem {
@@ -21,10 +21,7 @@ export default function IssueManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [selectedIssue, setSelectedIssue] = useState<IssueListItem | null>(null);
-  const [newStatus, setNewStatus] = useState('pending');
-  const [showStatusEdit, setShowStatusEdit] = useState(false);
   const { data: issues, isLoading, isError } = useIssues();
-  const updateIssue = useUpdateIssue();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,17 +85,7 @@ export default function IssueManagementPage() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  // This is a placeholder for local status update; in real app, call API mutation
-  const handleStatusUpdate = async () => {
-    if (!selectedIssue) return;
-    try {
-      await updateIssue.mutateAsync({ id: String(selectedIssue.id), updates: { status: newStatus } });
-      setShowStatusEdit(false);
-    } catch (error) {
-      // Optionally show an error message/modal here
-      console.error('Failed to update status:', error);
-    }
-  };
+
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
@@ -231,42 +218,6 @@ export default function IssueManagementPage() {
                       <p className="text-sm text-gray-500">Vehicle ID</p>
                       <p className="text-sm text-gray-900 mt-1">{selectedIssue.vehicleId}</p>
                     </div>
-                  </div>
-                  <div className="pt-4 border-t">
-                    {!showStatusEdit ? (
-                      <button
-                        onClick={() => setShowStatusEdit(true)}
-                        className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-[#0872B3] text-white font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-400 transition"
-                      >
-                        Update Status
-                      </button>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <select
-                          className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          value={newStatus}
-                          onChange={e => setNewStatus(e.target.value as string)}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                        </select>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleStatusUpdate}
-                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setShowStatusEdit(false)}
-                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : (
