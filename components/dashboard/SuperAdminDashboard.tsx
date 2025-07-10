@@ -78,8 +78,16 @@ const CustomBarTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 };
 
 export default function SuperAdminDashboard() {
-  const { data: organizations, isLoading: isLoadingOrg, isError: isErrorOrg } = useOrganizations();
-  const { data: users, isLoading: isLoadingUsers, isError: isErrorUsers } = useUsers();
+  const {
+    data: organizations,
+    isLoading: isLoadingOrg,
+    isError: isErrorOrg,
+  } = useOrganizations();
+  const {
+    data: users,
+    isLoading: isLoadingUsers,
+    isError: isErrorUsers,
+  } = useUsers();
 
   const isLoading = isLoadingOrg || isLoadingUsers;
   const isError = isErrorOrg || isErrorUsers;
@@ -112,25 +120,32 @@ export default function SuperAdminDashboard() {
     return acc;
   }, {} as Record<UserRole, number>);
 
-  const userRoleData = userRoleCounts ? Object.entries(userRoleCounts).map(([role, count]) => ({
-    name: role.charAt(0).toUpperCase() + role.slice(1),
-    value: count,
-    color: getColorForRole(role as UserRole),
-  })) : [];
+  const userRoleData = userRoleCounts
+    ? Object.entries(userRoleCounts).map(([role, count]) => ({
+        name: role.charAt(0).toUpperCase() + role.slice(1),
+        value: count,
+        color: getColorForRole(role as UserRole),
+      }))
+    : [];
 
   // Helper function to assign colors to roles
   function getColorForRole(role: UserRole): string {
     switch (role) {
-      case 'admin': return '#0872B3';
-      case 'fleetmanager': return '#FFC107'; // Yellow
-      case 'hr': return '#28A745'; // Green
-      case 'staff': return '#DC3545'; // Red
-      default: return '#6C757D'; // Gray
+      case "admin":
+        return "#0872B3";
+      case "fleetmanager":
+        return "#FFC107"; // Yellow
+      case "hr":
+        return "#28A745"; // Green
+      case "staff":
+        return "#DC3545"; // Red
+      default:
+        return "#6C757D"; // Gray
     }
   }
 
   // Placeholder for other stats until more APIs are integrated
-  const userGrowth = 15; 
+  const userGrowth = 15;
   const orgGrowth = 5;
   const activeAlerts = 12;
 
@@ -144,7 +159,9 @@ export default function SuperAdminDashboard() {
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 transition hover:shadow-xl hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-xs sm:text-sm">Total Users</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">
+                    Total Users
+                  </p>
                   <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
                     {totalUsers}
                   </h3>
@@ -167,7 +184,9 @@ export default function SuperAdminDashboard() {
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-100 transition hover:shadow-xl hover:-translate-y-1">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500 text-xs sm:text-sm">Total Organizations</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">
+                    Total Organizations
+                  </p>
                   <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mt-1">
                     {totalOrganizations}
                   </h3>
@@ -329,7 +348,8 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
             <div className="space-y-4">
-              {[ // Placeholder alerts
+              {[
+                // Placeholder alerts
                 {
                   type: "Security",
                   message: "Multiple failed login attempts detected",

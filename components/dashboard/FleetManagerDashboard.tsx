@@ -1,8 +1,29 @@
-import React, { useMemo } from 'react';
-import { XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Car, FileText, TrendingUp, Calendar, Users, CheckCircle, XCircle, AlertCircle, Clock } from 'lucide-react';
-import { useFMVehicles, useFmRequests } from '@/lib/queries';
-import type { Vehicle, StaffRequestResponse } from '@/types/next-auth';
+import React, { useMemo } from "react";
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+} from "recharts";
+import {
+  Car,
+  FileText,
+  TrendingUp,
+  Calendar,
+  Users,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
+import { useFMVehicles, useFmRequests } from "@/lib/queries";
+import type { Vehicle, StaffRequestResponse } from "@/types/next-auth";
 
 type StatCardProps = {
   icon: React.ElementType;
@@ -15,8 +36,17 @@ type StatCardProps = {
   onClick?: () => void;
 };
 
-const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, trend, onClick }: StatCardProps) => (
-  <div 
+const StatCard = ({
+  icon: Icon,
+  title,
+  value,
+  subtitle,
+  bgColor,
+  textColor,
+  trend,
+  onClick,
+}: StatCardProps) => (
+  <div
     className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1"
     onClick={onClick}
   >
@@ -35,7 +65,9 @@ const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, tren
           </div>
         )}
       </div>
-      <div className={`p-3 rounded-xl ${bgColor} group-hover:scale-110 transition-transform duration-200`}>
+      <div
+        className={`p-3 rounded-xl ${bgColor} group-hover:scale-110 transition-transform duration-200`}
+      >
         <Icon className="w-6 h-6 text-white" />
       </div>
     </div>
@@ -44,25 +76,36 @@ const StatCard = ({ icon: Icon, title, value, subtitle, bgColor, textColor, tren
 
 type StatusBadgeProps = { status: string };
 type StatusKey =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'CANCELLED'
-  | 'AVAILABLE'
-  | 'OCCUPIED'
-  | 'MAINTENANCE'
-  | 'OUT_OF_SERVICE';
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED"
+  | "AVAILABLE"
+  | "OCCUPIED"
+  | "MAINTENANCE"
+  | "OUT_OF_SERVICE";
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
-  const statusConfig: Record<StatusKey, { bg: string; text: string; icon: React.ElementType }> = {
-    PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
-    APPROVED: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-    REJECTED: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
-    CANCELLED: { bg: 'bg-gray-100', text: 'text-gray-800', icon: XCircle },
-    AVAILABLE: { bg: 'bg-green-100', text: 'text-green-800', icon: CheckCircle },
-    OCCUPIED: { bg: 'bg-blue-100', text: 'text-blue-800', icon: AlertCircle },
-    MAINTENANCE: { bg: 'bg-orange-100', text: 'text-orange-800', icon: AlertCircle },
-    OUT_OF_SERVICE: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
+  const statusConfig: Record<
+    StatusKey,
+    { bg: string; text: string; icon: React.ElementType }
+  > = {
+    PENDING: { bg: "bg-yellow-100", text: "text-yellow-800", icon: Clock },
+    APPROVED: { bg: "bg-green-100", text: "text-green-800", icon: CheckCircle },
+    REJECTED: { bg: "bg-red-100", text: "text-red-800", icon: XCircle },
+    CANCELLED: { bg: "bg-gray-100", text: "text-gray-800", icon: XCircle },
+    AVAILABLE: {
+      bg: "bg-green-100",
+      text: "text-green-800",
+      icon: CheckCircle,
+    },
+    OCCUPIED: { bg: "bg-blue-100", text: "text-blue-800", icon: AlertCircle },
+    MAINTENANCE: {
+      bg: "bg-orange-100",
+      text: "text-orange-800",
+      icon: AlertCircle,
+    },
+    OUT_OF_SERVICE: { bg: "bg-red-100", text: "text-red-800", icon: XCircle },
   };
 
   const key = String(status).toUpperCase() as StatusKey;
@@ -70,7 +113,9 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   const Icon = config.icon;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+    >
       <Icon className="w-3 h-3" />
       {status}
     </span>
@@ -87,68 +132,95 @@ export default function FleetManagerDashboard() {
   const dashboardData = useMemo(() => {
     // Vehicle stats
     const totalVehicles = (vehicles as Vehicle[]).length;
-    const availableVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'AVAILABLE').length;
-    const occupiedVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'OCCUPIED').length;
-    const maintenanceVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'MAINTENANCE').length;
-    const outOfServiceVehicles = (vehicles as Vehicle[]).filter((v: Vehicle) => v.status?.toUpperCase() === 'OUT_OF_SERVICE').length;
+    const availableVehicles = (vehicles as Vehicle[]).filter(
+      (v: Vehicle) => v.status?.toUpperCase() === "AVAILABLE"
+    ).length;
+    const occupiedVehicles = (vehicles as Vehicle[]).filter(
+      (v: Vehicle) => v.status?.toUpperCase() === "OCCUPIED"
+    ).length;
+    const maintenanceVehicles = (vehicles as Vehicle[]).filter(
+      (v: Vehicle) => v.status?.toUpperCase() === "MAINTENANCE"
+    ).length;
+    const outOfServiceVehicles = (vehicles as Vehicle[]).filter(
+      (v: Vehicle) => v.status?.toUpperCase() === "OUT_OF_SERVICE"
+    ).length;
 
     // Request stats
     const totalRequests = (requests as StaffRequestResponse[]).length;
-    const pendingRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'PENDING').length;
-    const approvedRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'APPROVED').length;
-    const rejectedRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'REJECTED').length;
-    const cancelledRequests = (requests as StaffRequestResponse[]).filter((r: StaffRequestResponse) => r.status?.toUpperCase() === 'CANCELLED').length;
+    const pendingRequests = (requests as StaffRequestResponse[]).filter(
+      (r: StaffRequestResponse) => r.status?.toUpperCase() === "PENDING"
+    ).length;
+    const approvedRequests = (requests as StaffRequestResponse[]).filter(
+      (r: StaffRequestResponse) => r.status?.toUpperCase() === "APPROVED"
+    ).length;
+    const rejectedRequests = (requests as StaffRequestResponse[]).filter(
+      (r: StaffRequestResponse) => r.status?.toUpperCase() === "REJECTED"
+    ).length;
+    const cancelledRequests = (requests as StaffRequestResponse[]).filter(
+      (r: StaffRequestResponse) => r.status?.toUpperCase() === "CANCELLED"
+    ).length;
 
     // Vehicle status chart data
     const vehicleStatusData = [
-      { name: 'Available', value: availableVehicles, color: '#10b981' },
-      { name: 'Occupied', value: occupiedVehicles, color: '#3b82f6' },
-      { name: 'Maintenance', value: maintenanceVehicles, color: '#f59e0b' },
-      { name: 'Out of Service', value: outOfServiceVehicles, color: '#ef4444' },
-    ].filter(item => item.value > 0);
+      { name: "Available", value: availableVehicles, color: "#10b981" },
+      { name: "Occupied", value: occupiedVehicles, color: "#3b82f6" },
+      { name: "Maintenance", value: maintenanceVehicles, color: "#f59e0b" },
+      { name: "Out of Service", value: outOfServiceVehicles, color: "#ef4444" },
+    ].filter((item) => item.value > 0);
 
     // Request status chart data
     const requestStatusData = [
-      { name: 'Approved', value: approvedRequests, color: '#10b981' },
-      { name: 'Pending', value: pendingRequests, color: '#f59e0b' },
-      { name: 'Rejected', value: rejectedRequests, color: '#ef4444' },
-      { name: 'Cancelled', value: cancelledRequests, color: '#6b7280' },
-    ].filter(item => item.value > 0);
+      { name: "Approved", value: approvedRequests, color: "#10b981" },
+      { name: "Pending", value: pendingRequests, color: "#f59e0b" },
+      { name: "Rejected", value: rejectedRequests, color: "#ef4444" },
+      { name: "Cancelled", value: cancelledRequests, color: "#6b7280" },
+    ].filter((item) => item.value > 0);
 
     // Weekly trend data (last 7 days)
     const weeklyData = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      
-      const dayRequests = (requests as StaffRequestResponse[]).filter(r => 
+      const dateStr = date.toISOString().split("T")[0];
+
+      const dayRequests = (requests as StaffRequestResponse[]).filter((r) =>
         r.requested_at?.startsWith(dateStr)
       ).length;
-      
+
       weeklyData.push({
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        day: date.toLocaleDateString("en-US", { weekday: "short" }),
         requests: dayRequests,
-        date: dateStr
+        date: dateStr,
       });
     }
 
     // Vehicle type distribution
-    const vehicleTypeData = (vehicles as Vehicle[]).reduce((acc: Record<string, number>, vehicle: Vehicle) => {
-      const type = (vehicle as Vehicle).vehicle_type || 'Unknown';
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
+    const vehicleTypeData = (vehicles as Vehicle[]).reduce(
+      (acc: Record<string, number>, vehicle: Vehicle) => {
+        const type = (vehicle as Vehicle).vehicle_type || "Unknown";
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const vehicleTypeChartData = Object.entries(vehicleTypeData).map(([type, count], index) => ({
-      name: type,
-      value: count,
-      color: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]
-    }));
+    const vehicleTypeChartData = Object.entries(vehicleTypeData).map(
+      ([type, count], index) => ({
+        name: type,
+        value: count,
+        color: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"][
+          index % 5
+        ],
+      })
+    );
 
     // Recent requests
     const recentRequests = ([...requests] as StaffRequestResponse[])
-      .sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.requested_at).getTime() -
+          new Date(a.requested_at).getTime()
+      )
       .slice(0, 5);
 
     return {
@@ -161,7 +233,7 @@ export default function FleetManagerDashboard() {
       requestStatusData,
       vehicleTypeChartData,
       weeklyData,
-      recentRequests
+      recentRequests,
     };
   }, [vehicles, requests]);
 
@@ -179,12 +251,13 @@ export default function FleetManagerDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm">
             <Calendar className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-700">{new Date().toLocaleDateString()}</span>
+            <span className="text-sm text-gray-700">
+              {new Date().toLocaleDateString()}
+            </span>
           </div>
         </div>
 
@@ -228,10 +301,11 @@ export default function FleetManagerDashboard() {
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
           {/* Vehicle Status Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Status</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Vehicle Status
+            </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -255,8 +329,13 @@ export default function FleetManagerDashboard() {
             <div className="flex flex-wrap gap-3 mt-4">
               {dashboardData.vehicleStatusData.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-sm text-gray-600">{item.name} ({item.value})</span>
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-sm text-gray-600">
+                    {item.name} ({item.value})
+                  </span>
                 </div>
               ))}
             </div>
@@ -264,27 +343,29 @@ export default function FleetManagerDashboard() {
 
           {/* Weekly Requests Trend */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Weekly Trend</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Weekly Trend
+            </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dashboardData.weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    dataKey="day" 
+                  <XAxis
+                    dataKey="day"
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: "#666" }}
                   />
-                  <YAxis 
+                  <YAxis
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12, fill: "#666" }}
                   />
                   <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="requests" 
-                    stroke="#3b82f6" 
+                  <Line
+                    type="monotone"
+                    dataKey="requests"
+                    stroke="#3b82f6"
                     strokeWidth={3}
                     dot={{ r: 4, fill: "#3b82f6" }}
                     activeDot={{ r: 6 }}
@@ -296,7 +377,9 @@ export default function FleetManagerDashboard() {
 
           {/* Vehicle Type Distribution */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Vehicle Types</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Vehicle Types
+            </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -320,8 +403,13 @@ export default function FleetManagerDashboard() {
             <div className="flex flex-wrap gap-3 mt-4">
               {dashboardData.vehicleTypeChartData.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-sm text-gray-600">{item.name} ({item.value})</span>
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  ></div>
+                  <span className="text-sm text-gray-600">
+                    {item.name} ({item.value})
+                  </span>
                 </div>
               ))}
             </div>
@@ -331,10 +419,14 @@ export default function FleetManagerDashboard() {
         {/* Recent Requests Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Requests</h3>
-            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">View All</button>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Recent Requests
+            </h3>
+            <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+              View All
+            </button>
           </div>
-          
+
           {dashboardData.recentRequests.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -345,20 +437,35 @@ export default function FleetManagerDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Request ID</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Requester</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Trip Details</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Passengers</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Request ID
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Date
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Requester
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Trip Details
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Passengers
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {dashboardData.recentRequests.map((req) => (
-                    <tr key={req.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                    <tr
+                      key={req.id}
+                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    >
                       <td className="py-4 px-4">
                         <span className="font-mono text-sm text-blue-600">
-                          {req.id.split('-')[0]}...
+                          {req.id.split("-")[0]}...
                         </span>
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">
@@ -366,14 +473,23 @@ export default function FleetManagerDashboard() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{req.full_name}</div>
-                          <div className="text-gray-500">{req.requester?.first_name} {req.requester?.last_name}</div>
+                          <div className="font-medium text-gray-900">
+                            {req.full_name}
+                          </div>
+                          <div className="text-gray-500">
+                            {req.requester?.first_name}{" "}
+                            {req.requester?.last_name}
+                          </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div className="text-sm">
-                          <div className="font-medium text-gray-900">{req.trip_purpose}</div>
-                          <div className="text-gray-500">{req.start_location} → {req.end_location}</div>
+                          <div className="font-medium text-gray-900">
+                            {req.trip_purpose}
+                          </div>
+                          <div className="text-gray-500">
+                            {req.start_location} → {req.end_location}
+                          </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
