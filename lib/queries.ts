@@ -23,7 +23,17 @@ import { jwtDecode } from 'jwt-decode';
 import { toast } from 'sonner';
 
 
-// Login mutation
+// User authentication
+export const useRoles = () => {
+  return useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const response = await api.get('/auth/roles');
+      return response.data;
+    },
+  });
+};
+
 export const useLogin = () => {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
@@ -206,6 +216,7 @@ export const useDeleteOrganization = () => {
   });
 };
 
+
 // Users Query (All)
 export const useUsers = () => {
   return useQuery<User[], Error>({
@@ -299,15 +310,6 @@ export const useDeleteUser = () => {
   });
 };
 
-export const useRoles = () => {
-  return useQuery({
-    queryKey: ['roles'],
-    queryFn: async () => {
-      const response = await api.get('/auth/roles');
-      return response.data;
-    },
-  });
-};
 
 //HR CRUD____________________________________________________________________________ HR: Get roles
 export const useHrRoles = () => {
