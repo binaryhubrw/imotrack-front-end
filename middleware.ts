@@ -13,7 +13,6 @@ export async function middleware(request: NextRequest) {
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
-
   // Get token from cookie
   const token = request.cookies.get("token")?.value;
 
