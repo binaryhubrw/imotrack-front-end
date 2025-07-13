@@ -21,9 +21,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/button"; // shadcn/ui button
+
 import Link from "next/link";
+
+// import Link from "next/link";
 export default function HomePage() {
   return (
+
+
     <main className="text-[#0872b3]">
       {/* Hero Section */}
       <section
@@ -304,6 +309,7 @@ export default function HomePage() {
         </div>
       </section>
     </main>
+
   );
 }
 

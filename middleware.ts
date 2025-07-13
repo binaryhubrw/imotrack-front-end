@@ -1,10 +1,9 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
 
 // Public routes that don't require authentication
-const publicPaths = ["/", "/login", "/api/auth"];
+const publicPaths = ["/", "/login", "/api/auth", "/forgot-password", "/reset-password"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,60 +12,22 @@ export async function middleware(request: NextRequest) {
   if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
-  // Get token from cookie
-  const token = request.cookies.get("token")?.value;
 
-  // Not authenticated: redirect to login
-  if (!token) {
-    const url = new URL("/login", request.url);
-    url.searchParams.set("callbackUrl", encodeURI(request.url));
-    return NextResponse.redirect(url);
-  }
+  // For now, let all authenticated routes pass through
+  // The frontend will handle authentication checks using localStorage
+  // This can be enhanced later with proper session management
+  
+  // Let the frontend handle login page redirects
+  // The frontend will check if user is authenticated and redirect accordingly
 
-  try {
-    // Verify token using the same secret as the backend
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || "Secret_key!809"
-    );
-    const { payload } = await jwtVerify(token, secret);
-
-    // Role-based protection
-    const userRole = payload.role as string;
-
-    // If trying to access login page while authenticated, redirect to dashboard
-    if (pathname === "/login") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // Admin routes
-    if (pathname.startsWith("/admin") && userRole !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // HR routes
-    if (pathname.startsWith("/hr") && userRole !== "hr") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // Staff routes
-    if (pathname.startsWith("/staff") && userRole !== "staff") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // Fleet Manager routes
-    if (pathname.startsWith("/fleet") && userRole !== "fleetmanager") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // All good
+  // For dashboard routes, let the frontend handle permission checks
+  // The frontend will use the user's position access permissions to show/hide navigation
+  if (pathname.startsWith("/dashboard")) {
     return NextResponse.next();
-  } catch (error) {
-    console.error("Token verification error:", error);
-    // Invalid token: redirect to login
-    const url = new URL("/login", request.url);
-    url.searchParams.set("callbackUrl", encodeURI(request.url));
-    return NextResponse.redirect(url);
   }
+
+  // All good for other authenticated routes
+  return NextResponse.next();
 }
 
 export const config = {

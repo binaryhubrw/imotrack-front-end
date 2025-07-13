@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Search, Plus, Pencil, Trash2, X, Loader2, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useOrganizations, useCreateOrganization, useUpdateOrganization, useDeleteOrganization } from '@/lib/queries';
+import { useUpdateOrganization, useDeleteOrganization } from '@/lib/queries';
 import { Organization, CreateOrganizationDto, UpdateOrganizationDto } from '@/types/next-auth';
 
 export default function OrganizationsPage() {
