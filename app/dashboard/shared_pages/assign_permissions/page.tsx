@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Users, Building, MapPin, Search, Filter, Save, RotateCcw, Eye, Edit, Trash2, Plus } from 'lucide-react';
