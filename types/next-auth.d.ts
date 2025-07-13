@@ -161,6 +161,7 @@ export type AuthenticatedUserWithPosition = {
 };
 
 export type AuthResponse = {
+  token: string;
   user: AuthenticatedUser;
 };
 

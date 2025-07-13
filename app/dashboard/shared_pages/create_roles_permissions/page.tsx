@@ -82,7 +82,7 @@ export default function CreateRolePage() {
       });
       reset();
       router.push("/dashboard/shared_pages/roles"); // Or wherever you list roles
-    } catch (error) {
+    } catch {
       toast.error("Failed to create role", {
         description: "An error occurred. Please try again.",
       });
