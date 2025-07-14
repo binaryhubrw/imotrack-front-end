@@ -38,7 +38,7 @@ const MODULE_NAV = [
   {
     key: "positions",
     label: "Position Access",
-    href: "/dashboard/shared_pages/position_access",
+    href: "/dashboard/shared_pages/create_roles_permissions",
     icon: <FontAwesomeIcon icon={faShield} />,
   },
   {
