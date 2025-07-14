@@ -15,9 +15,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUpdatePassword } from '@/lib/queries';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function UserProfilePage() {
+  // Add router for manual navigation control
+  const router = useRouter();
+  
+  // Add a state to track if we should show the page content
+  const [shouldShowContent, setShouldShowContent] = useState(false);
+  
+  // Use auth hook without invalid parameters
   const { user, isLoading } = useAuth();
+  
   const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,11 +49,26 @@ export default function UserProfilePage() {
   // Use the update password mutation
   const updatePasswordMutation = useUpdatePassword();
 
+  // Handle authentication state changes
   useEffect(() => {
-    if (user?.user) {
-      setEditForm(user.user);
+    if (!isLoading) {
+      if (user?.user) {
+        // User is authenticated, show content
+        setShouldShowContent(true);
+        setEditForm(user.user);
+      } else if (!user) {
+        // User is not authenticated, show login prompt instead of redirect
+        setShouldShowContent(false);
+        // Optionally show a toast message
+        toast.error('Please log in to access your profile');
+      }
     }
-  }, [user]);
+  }, [user, isLoading]);
+
+  const handleManualLogin = () => {
+    // Manual navigation to login page
+    router.push('/login');
+  };
 
   const handleSaveProfile = async () => {
     try {
@@ -130,12 +154,52 @@ export default function UserProfilePage() {
   };
 
   // Show loading state while authentication is being checked
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login prompt instead of redirecting
+  if (!shouldShowContent || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="max-w-md w-full mx-4">
+          <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-blue-600" />
+              </div>
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Authentication Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-gray-600">
+                You need to be logged in to access your profile page.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  onClick={handleManualLogin}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Go to Login
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/')}
+                >
+                  Go Home
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -585,7 +649,6 @@ export default function UserProfilePage() {
                         )}
                       </Button>
                     </div>
-
                   </form>
                 </CardContent>
               </Card>

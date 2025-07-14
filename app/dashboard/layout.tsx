@@ -103,7 +103,26 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
-  
+  // const [hasRedirected, setHasRedirected] = useState(false);
+
+  // Reset redirect flag when user changes
+  // useEffect(() => {
+  //   if (user) {
+  //     setHasRedirected(false);
+  //   }
+  // }, [user]);
+
+  // Temporarily disable automatic redirects to break the infinite loop
+  // useEffect(() => {
+  //   if (!isLoading && !user && !hasRedirected) {
+  //     console.log('Dashboard: No user found, redirecting to login');
+  //     setHasRedirected(true);
+  //     router.push("/login");
+  //     return;
+  //   }
+  // }, [user, isLoading, router, hasRedirected]);
+
+  // Build nav items dynamically based on permissions
   const getNavItems = () => {
     if (!user) return [];
     // Type for position_access: Record<string, { view?: boolean }>
@@ -124,7 +143,6 @@ export default function DashboardLayout({
     ];
   };
 
-  // Show loading state while authentication is being checked
   if (isLoading) {
     return (
       <div className="flex h-screen bg-gray-50">
@@ -188,27 +206,8 @@ export default function DashboardLayout({
     );
   }
 
-  // Only redirect to login if we're not loading and definitely don't have a user
-  if (!isLoading && !user) {
-    // Use setTimeout to avoid hydration issues
-    setTimeout(() => {
-      router.push('/login');
-    }, 0);
-    return null;
-  }
-
-  // If we're still loading or don't have user data, show loading
   if (!user) {
-    return (
-      <div className="flex h-screen bg-gray-50">
-        <div className="flex items-center justify-center w-full">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const navItems = getNavItems();
@@ -304,19 +303,9 @@ export default function DashboardLayout({
                 onClick={() => setShowSettings((v) => !v)}
                 className="flex items-center gap-3 hover:bg-gray-100 p-2 rounded-lg"
               >
-                {user.user.avatar ? (
-                  <Image
-                    src={user.user.avatar}
-                    alt={`${user.user.first_name} ${user.user.last_name}`}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
-                    {user.user.first_name ? user.user.first_name.charAt(0).toUpperCase() : "U"}
-                  </div>
-                )}
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
+                  {user.user.first_name ? user.user.first_name.charAt(0).toUpperCase() : "U"}
+                </div>
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-700">
                     {user.user.first_name} {user.user.last_name}
