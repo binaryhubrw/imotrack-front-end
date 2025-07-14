@@ -1,11 +1,434 @@
-import React from 'react'
+'use client';
 
-export default function Orgza() {
+import React, { useState } from 'react';
+import { Plus, X, Loader2, CheckCircle, } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { DataTable, SortableHeader, StatusBadge } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { ColumnDef } from '@tanstack/react-table';
+
+// Types
+interface Organization {
+  id: string;
+  customId: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  status: 'active' | 'inactive' | 'pending';
+  createdAt: string;
+  adminCount: number;
+}
+
+interface CreateOrganizationDto {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+interface UpdateOrganizationDto {
+  name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}
+
+// Fake data
+const generateFakeOrganizations = (): Organization[] => {
+  const statuses: Array<'active' | 'inactive' | 'pending'> = ['active', 'inactive', 'pending'];
+  const organizations: Organization[] = [];
+  
+  const companyNames = [
+    'Tech Solutions Inc', 'Global Dynamics', 'Innovation Labs', 'Digital Ventures',
+    'Smart Systems', 'Future Corp', 'Agile Partners', 'Cloud Nine Technologies',
+    'Data Insights', 'Quantum Computing', 'AI Innovations', 'Blockchain Solutions',
+    'Green Energy Co', 'Healthcare Plus', 'Education First', 'Finance Pro',
+    'Retail Express', 'Manufacturing Hub', 'Transport Solutions', 'Media Group'
+  ];
+
+  for (let i = 0; i < 50; i++) {
+    const companyName = companyNames[i % companyNames.length];
+    organizations.push({
+      id: `org_${i + 1}`,
+      customId: `ORG-${String(i + 1).padStart(4, '0')}`,
+      name: `${companyName} ${Math.floor(i / companyNames.length) + 1}`,
+      email: `contact@${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
+      phone: `+1 (${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+      address: `${Math.floor(Math.random() * 9999) + 1} ${['Main St', 'Oak Ave', 'Park Blvd', 'First St', 'Second Ave'][Math.floor(Math.random() * 5)]}, ${['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][Math.floor(Math.random() * 5)]}, ${['NY', 'CA', 'IL', 'TX', 'AZ'][Math.floor(Math.random() * 5)]}`,
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
+      adminCount: Math.floor(Math.random() * 5) + 1
+    });
+  }
+  
+  return organizations;
+};
+
+export default function OrganizationsPage() {
+  const [organizations, setOrganizations] = useState<Organization[]>(generateFakeOrganizations());
+  const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Define columns for the DataTable
+  const columns: ColumnDef<Organization>[] = [
+    {
+      accessorKey: 'customId',
+      header: ({ column }) => (
+        <SortableHeader column={column}>ID</SortableHeader>
+      ),
+      cell: ({ row }) => (
+        <div className="font-mono text-sm">{row.getValue('customId')}</div>
+      ),
+    },
+    {
+      accessorKey: 'name',
+      header: ({ column }) => (
+        <SortableHeader column={column}>Name</SortableHeader>
+      ),
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue('name')}</div>
+      ),
+    },
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-600">{row.getValue('email')}</div>
+      ),
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => (
+        <div className="text-sm">{row.getValue('phone')}</div>
+      ),
+    },
+    {
+      accessorKey: 'address',
+      header: 'Address',
+      cell: ({ row }) => (
+        <div className="text-sm max-w-[200px] truncate" title={row.getValue('address')}>
+          {row.getValue('address')}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const status = row.getValue('status') as string;
+        const variant = status === 'active' ? 'success' : status === 'inactive' ? 'error' : 'warning';
+        return <StatusBadge status={status} variant={variant} />;
+      },
+    },
+    {
+      accessorKey: 'adminCount',
+      header: 'Admins',
+      cell: ({ row }) => (
+        <Badge variant="outline">{row.getValue('adminCount')}</Badge>
+      ),
+    },
+  ];
+
+  const handleView = (org: Organization) => {
+    console.log('View organization:', org);
+    // Navigate to organization details
+  };
+
+  const handleEdit = (org: Organization) => {
+    setSelectedOrg(org);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (org: Organization) => {
+    setSelectedOrg(org);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedOrg) return;
+    
+    setLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    setOrganizations(prev => prev.filter(org => org.id !== selectedOrg.id));
+    setShowDeleteConfirm(false);
+    setSelectedOrg(null);
+    setLoading(false);
+    
+    setSuccessMessage('Organization deleted successfully!');
+    setShowSuccessModal(true);
+    setTimeout(() => setShowSuccessModal(false), 2500);
+  };
+
+  const handleSave = async (formData: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => {
+    setLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if ('id' in formData) {
+      // Update existing organization
+      setOrganizations(prev => 
+        prev.map(org => 
+          org.id === formData.id 
+            ? { ...org, ...formData }
+            : org
+        )
+      );
+      setShowEditModal(false);
+      setSuccessMessage('Organization updated successfully!');
+    } else {
+      // Create new organization
+      const newOrg: Organization = {
+        id: `org_${Date.now()}`,
+        customId: `ORG-${String(organizations.length + 1).padStart(4, '0')}`,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        adminCount: 1,
+        ...formData
+      };
+      setOrganizations(prev => [...prev, newOrg]);
+      setShowAddModal(false);
+      setSuccessMessage('Organization added successfully!');
+    }
+    
+    setLoading(false);
+    setShowSuccessModal(true);
+    setTimeout(() => setShowSuccessModal(false), 2500);
+  };
+
   return (
-    <div>
-      asd
-    </div>
-  )
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">
+            Organizations
+          </h1>
+          <Button onClick={() => setShowAddModal(true)} className="bg-[#0872B3] hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Organization
+          </Button>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={organizations}
+          searchPlaceholder="Search organizations..."
+          actions={{
+            onView: handleView,
+            onEdit: handleEdit,
+            onDelete: handleDelete,
+            onExport: () => console.log('Export organizations'),
+          }}
+        />
+      </div>
+
+      <AnimatePresence>
+        {/* Add/Edit Modal */}
+        {(showAddModal || showEditModal) && (
+          <OrganizationModal
+            onClose={() => {
+              setShowAddModal(false);
+              setShowEditModal(false);
+              setSelectedOrg(null);
+            }}
+            onSave={handleSave}
+            organization={selectedOrg}
+            isLoading={loading}
+          />
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && selectedOrg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-[#0872B3]">Confirm Delete</h2>
+                <button onClick={() => setShowDeleteConfirm(false)}>
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{selectedOrg.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Delete
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center"
+            >
+              <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
+              <h2 className="text-xl font-bold mb-2 text-center">{successMessage}</h2>
+              <p className="text-gray-600 text-center">Your request has been processed successfully.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
+
+// Organization Modal Component
+function OrganizationModal({
+  onClose,
+  onSave,
+  organization,
+  isLoading
+}: {
+  onClose: () => void;
+  onSave: (org: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => void;
+  organization?: Organization | null;
+  isLoading: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    name: organization?.name || '',
+    email: organization?.email || '',
+    phone: organization?.phone || '',
+    address: organization?.address || ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (organization) {
+      onSave({ ...formData, id: organization.id });
+    } else {
+      onSave(formData);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-900">
+            {organization ? 'Edit Organization' : 'Add Organization'}
+          </h2>
+          <button onClick={onClose}>
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Organization Name
+            </label>
+            <Input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <Input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone
+            </label>
+            <Input
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address
+            </label>
+            <Input
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading} className="bg-[#0872B3] hover:bg-blue-700">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {organization ? 'Update' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
 }
 
 

@@ -1,11 +1,374 @@
-import React from 'react'
+import React, { useState, useMemo } from 'react';
+import { Search, Filter, UserPlus, Eye, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+// Using basic table structure instead of shadcn table
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
-export default function Uzsa() {
-  return (
-    <div>er
+// Fake data
+const fakeUsers = [
+  {
+    id: '1',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john.doe@company.com',
+    phone: '+1234567890',
+    orgName: 'Tech Corp',
+    role: 'admin',
+    status: 'active'
+  },
+  {
+    id: '2',
+    firstName: 'Sarah',
+    lastName: 'Wilson',
+    email: 'sarah.wilson@company.com',
+    phone: '+1234567891',
+    orgName: 'Tech Corp',
+    role: 'hr',
+    status: 'active'
+  },
+  {
+    id: '3',
+    firstName: 'Mike',
+    lastName: 'Johnson',
+    email: 'mike.johnson@logistics.com',
+    phone: '+1234567892',
+    orgName: 'Logistics Ltd',
+    role: 'fleetmanager',
+    status: 'inactive'
+  },
+  {
+    id: '4',
+    firstName: 'Emma',
+    lastName: 'Davis',
+    email: 'emma.davis@company.com',
+    phone: '+1234567893',
+    orgName: 'Tech Corp',
+    role: 'staff',
+    status: 'active'
+  },
+  {
+    id: '5',
+    firstName: 'Alex',
+    lastName: 'Brown',
+    email: 'alex.brown@transport.com',
+    phone: '+1234567894',
+    orgName: 'Transport Inc',
+    role: 'fleetmanager',
+    status: 'pending'
+  },
+  {
+    id: '6',
+    firstName: 'Lisa',
+    lastName: 'Anderson',
+    email: 'lisa.anderson@company.com',
+    phone: '+1234567895',
+    orgName: 'Tech Corp',
+    role: 'hr',
+    status: 'active'
+  }
+];
+
+
+export default function UsersPage() {
+  const [users] = useState(fakeUsers);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{
+    isOpen: boolean;
+    userId: string | null;
+  }>({
+    isOpen: false,
+    userId: null,
+  });
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        user.firstName.toLowerCase().includes(searchTermLower) ||
+        user.lastName.toLowerCase().includes(searchTermLower) ||
+        user.email.toLowerCase().includes(searchTermLower) ||
+        user.orgName.toLowerCase().includes(searchTermLower);
       
+      const matchesRole = selectedRole === 'all' || user.role === selectedRole;
+      
+      return matchesSearch && matchesRole;
+    });
+  }, [users, searchTerm, selectedRole]);
+
+  const handleDelete = (id: string) => {
+    setDeleteConfirmModal({ isOpen: true, userId: id });
+  };
+
+  const confirmDelete = () => {
+    console.log('Deleting user:', deleteConfirmModal.userId);
+    setDeleteConfirmModal({ isOpen: false, userId: null });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-red-100 text-red-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-purple-100 text-purple-800';
+      case 'hr':
+        return 'bg-blue-100 text-blue-800';
+      case 'fleetmanager':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'staff':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+          <h1 className="text-2xl font-bold text-blue-600">Users Management</h1>
+          <Button 
+            className="bg-blue-600 text-white hover:bg-blue-700 w-full sm:w-auto"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add New User
+          </Button>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search users..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="w-full md:w-48">
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="pl-10">
+                    <SelectValue placeholder="All Roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="hr">HR</SelectItem>
+                    <SelectItem value="fleetmanager">Fleet Manager</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-blue-600 text-white">
+                            {user.firstName[0]}{user.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">{user.phone}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.orgName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getRoleColor(user.role)}>
+                        {user.role}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getStatusColor(user.status)}>
+                        {user.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedUserId(user.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Empty State */}
+          {filteredUsers.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-gray-500 text-lg mb-2">No users found</div>
+              <div className="text-gray-400 text-sm">
+                {searchTerm || selectedRole !== 'all' 
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Get started by adding your first user'
+                }
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add User Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with the form below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p className="text-sm text-gray-500">Add user form would go here...</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setIsAddModalOpen(false)}>
+              Add User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={!!selectedUserId} onOpenChange={() => setSelectedUserId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <p className="text-sm text-gray-500">Edit user form would go here...</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedUserId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setSelectedUserId(null)}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteConfirmModal.isOpen} onOpenChange={(open) => 
+        setDeleteConfirmModal({ isOpen: open, userId: null })
+      }>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Delete User
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this user? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteConfirmModal({ isOpen: false, userId: null })}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-  )
+  );
 }
 
 
