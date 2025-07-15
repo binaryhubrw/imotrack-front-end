@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from './api';
 import { 
   LoginCredentials, 
@@ -9,6 +9,11 @@ import {
   ForgotPasswordRequest,
   ResetPasswordRequest,
   UpdatePasswordRequest,
+  PaginatedOrganizations,
+  Organization,
+  CreateOrganizationDto,
+  Unit,
+  CreateUnitDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 
@@ -270,6 +275,141 @@ export const useUpdatePassword = () => {
   });
 };
 
+export const useAuthLogout =()=> {
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No token found');
+        }
+        // Call the backend logout endpoint
+        const response = await api.post('/v2/auth/logout', {}, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        // Clear local storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('position');
+        localStorage.removeItem('organization');
+        localStorage.removeItem('unit');
+        // Show success toast
+        toast.success(response.data?.message || 'Logged out successfully');
+        return { success: true };
+      } catch (error: unknown) {
+        console.error('Logout request failed:', error);
+        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
+          const axiosError = error as { response?: { data?: { message?: string } } };
+          console.error('Error response:', axiosError.response?.data);
+          const errorMessage = axiosError.response?.data?.message || 'Failed to log out';
+          toast.error(errorMessage);
+          throw new Error(errorMessage);
+        }
+        toast.error('Failed to log out');
+        throw error;
+      }
+    }
+  });
+}
+
+export type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+// Fetch paginated organizations
+export const useOrganizations = (page = 1, limit = 10) => {
+  return useQuery<PaginatedOrganizations, Error>({
+    queryKey: ['organizations', page, limit],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<{ organizations: Organization[]; pagination: Pagination }>>('/v2/organizations', {
+        params: { page, limit },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+// Create organization (multipart/form-data)
+export const useCreateOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Organization, Error, CreateOrganizationDto>({
+    mutationFn: async (org) => {
+      const formData = new FormData();
+      formData.append('organization_name', org.organization_name);
+      formData.append('organization_email', org.organization_email);
+      formData.append('organization_phone', org.organization_phone);
+      formData.append('organization_logo', org.organization_logo); // can be file or url
+      formData.append('street_address', org.street_address);
+      const { data } = await api.post<ApiResponse<Organization>>('/v2/organizations', formData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast.success('Organization created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create organization.'));
+    },
+  });
+};
+
+// Fetch all units in the requester's organization
+export const useUnits = () => {
+  return useQuery<Unit[], Error>({
+    queryKey: ['units'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<{ units: Unit[] }>>('/v2/organizations/units');
+      if (!data.data) throw new Error('No data');
+      return data.data.units;
+    },
+  });
+};
+
+// Create unit (multipart/form-data)
+export const useCreateUnit = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Unit, Error, CreateUnitDto>({
+    mutationFn: async (unit) => {
+      const formData = new FormData();
+      formData.append('unit_name', unit.unit_name);
+      formData.append('organization_id', unit.organization_id);
+      const { data } = await api.post<ApiResponse<Unit>>('/v2/organizations/units', formData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      toast.success('Unit created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create unit.'));
+    },
+  });
+};
+
+
+
+
 
 
 
@@ -403,96 +543,6 @@ export const useUpdatePassword = () => {
 //     }
 //   });
 // }
-
-// // Organizations Query (All)
-// export const useOrganizations = () => {
-//   return useQuery<Organization[], Error>({
-//     queryKey: ['organizations'],
-//     queryFn: async () => {
-//       const { data } = await api.get<Organization[]>('/org');
-//       return data;
-//     },
-//   });
-// };
-
-// // Organization Details Query (Single)
-// export const useOrganizationDetails = (id: string) => {
-//   return useQuery<Organization, Error>({
-//     queryKey: ['organization', id],
-//     queryFn: async () => {
-//       const { data } = await api.get<Organization>(`/org/${id}`);
-//       return data;
-//     },
-//     enabled: !!id, // Only run query if id is available
-//   });
-// };
-
-// // Create Organization Mutation
-// export const useCreateOrganization = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation<Organization, Error, CreateOrganizationDto>({
-//     mutationFn: async (newOrg) => {
-//       const { data } = await api.post<Organization>('/org', newOrg);
-//       return data;
-//     },
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-//       toast.success('Organization created successfully!');
-//     },
-//     onError: (error: unknown) => {
-//       let apiMsg: string | undefined;
-//       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
-//         apiMsg = (error.response.data as { message?: string }).message;
-//       }
-//       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create organization.'));
-//     },
-//   });
-// };
-
-// // Update Organization Mutation
-// export const useUpdateOrganization = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation<Organization, Error, { id: string; updates: UpdateOrganizationDto }>({
-//     mutationFn: async ({ id, updates }) => {
-//       const { data } = await api.put<Organization>(`/org/${id}`, updates);
-//       return data;
-//     },
-//     onSuccess: (_, variables) => {
-//       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-//       queryClient.invalidateQueries({ queryKey: ['organization', variables.id] });
-//       toast.success('Organization updated successfully!');
-//     },
-//     onError: (error: unknown) => {
-//       let apiMsg: string | undefined;
-//       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
-//         apiMsg = (error.response.data as { message?: string }).message;
-//       }
-//       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update organization.'));
-//     },
-//   });
-// };
-
-// // Delete Organization Mutation
-// export const useDeleteOrganization = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation<void, Error, string>({
-//     mutationFn: async (id) => {
-//       await api.delete(`/org/${id}`);
-//     },
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-//       toast.success('Organization deleted successfully!');
-//     },
-//     onError: (error: unknown) => {
-//       let apiMsg: string | undefined;
-//       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
-//         apiMsg = (error.response.data as { message?: string }).message;
-//       }
-//       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete organization.'));
-//     },
-//   });
-// };
-
 
 // // Users Query (All)
 // export const useUsers = () => {

@@ -217,16 +217,17 @@ export default function UserProfilePage() {
               <div className="relative">
                 {userProfile.avatar ? (
                   <Image
+                  width={24}
+                  height={24}
                     src={userProfile.avatar}
                     alt={`${userProfile.first_name} ${userProfile.last_name}`}
-                    className="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-white"
+                    className="rounded-full object-cover shadow-lg ring-4 ring-white"
                   />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-white">
                     {getInitials(userProfile.first_name, userProfile.last_name)}
                   </div>
                 )}
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white bg-green-500"></div>
               </div>
               <div className="text-center lg:text-left flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">

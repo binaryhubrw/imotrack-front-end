@@ -1,191 +1,299 @@
-import React from 'react';
-import { MapPin, Plus, Search, Filter } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+"use client";
+import React, { useState } from "react";
+import {
+  ColumnDef,
+  ColumnFiltersState,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+  VisibilityState,
+} from "@tanstack/react-table";
+import {
+  Download,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+} from "lucide-react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
+import { useRouter } from 'next/navigation';
+import { useUnits, useCreateUnit } from '@/lib/queries';
+import { Unit, CreateUnitDto } from '@/types/next-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { SkeletonTable } from '@/components/ui/skeleton';
+
+// Status badge for unit status
+const StatusBadge = ({ status }: { status: string }) => {
+  const statusConfig: Record<string, { className: string; dotColor: string }> = {
+    ACTIVE: { className: "bg-green-100 text-green-700 border-green-200", dotColor: "bg-green-500" },
+    INACTIVE: { className: "bg-gray-100 text-gray-700 border-gray-200", dotColor: "bg-gray-400" },
+    PENDING: { className: "bg-yellow-100 text-yellow-700 border-yellow-200", dotColor: "bg-yellow-500" },
+  };
+  const config = statusConfig[status] || statusConfig.INACTIVE;
+  return (
+    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
+      <span className="capitalize">{status}</span>
+    </div>
+  );
+};
+
+// Create Unit Modal
+function CreateUnitModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (data: CreateUnitDto) => void }) {
+  const [form, setForm] = useState({
+    unit_name: '',
+    organization_id: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await onCreate(form);
+      setForm({ unit_name: '', organization_id: '' });
+      onClose();
+    } catch {
+      // error handled in mutation
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
+        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
+        <h2 className="text-xl font-bold mb-4">Create Unit</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input name="unit_name" placeholder="Unit Name" value={form.unit_name} onChange={handleChange} required />
+          <Input name="organization_id" placeholder="Organization ID" value={form.organization_id} onChange={handleChange} required />
+          <Button type="submit" className="w-full" disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</Button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function UnitsPage() {
-  // Simulate loading state
-  const isLoading = false; // Set to true to test loading state
-  
-  // Sample units data
-  const units = [
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const router = useRouter();
+
+  const { data, isLoading, isError } = useUnits();
+  const createUnit = useCreateUnit();
+
+  const units = data || [];
+
+  const columns: ColumnDef<Unit>[] = [
     {
-      id: '1',
-      name: 'IT Department',
-      description: 'Information Technology Unit',
-      organization: 'Tech Corp',
-      status: 'active',
-      employeeCount: 25,
+      accessorKey: "unit_name",
+      header: "Unit Name",
+      cell: ({ row }) => (
+        <span className="font-medium text-gray-900">{row.original.unit_name}</span>
+      ),
     },
     {
-      id: '2',
-      name: 'HR Department',
-      description: 'Human Resources Unit',
-      organization: 'Tech Corp',
-      status: 'active',
-      employeeCount: 12,
+      accessorKey: "unit_status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.unit_status} />,
     },
     {
-      id: '3',
-      name: 'Finance Department',
-      description: 'Financial Management Unit',
-      organization: 'Tech Corp',
-      status: 'active',
-      employeeCount: 18,
+      accessorKey: "organization_id",
+      header: "Organization ID",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500">{row.original.organization_id}</span>
+      ),
     },
+    // Remove created_at if not present in Unit type, or use fallback
+    // Uncomment below if Unit has created_at
+    // {
+    //   accessorKey: "created_at",
+    //   header: "Created",
+    //   cell: ({ row }) => (
+    //     <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
+    //   ),
+    // },
     {
-      id: '4',
-      name: 'Operations Department',
-      description: 'Operational Management Unit',
-      organization: 'Tech Corp',
-      status: 'inactive',
-      employeeCount: 8,
+      id: "actions",
+      header: "Actions",
+      cell: () => (
+        <div className="flex items-center gap-3">
+          <button
+            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+            onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
+            aria-label="Edit"
+          >
+            <Edit className="w-6 h-6" />
+          </button>
+          <button
+            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            onClick={e => { e.stopPropagation(); toast.info('Delete not implemented'); }}
+            aria-label="Delete"
+          >
+            <Trash2 className="w-6 h-6" />
+          </button>
+        </div>
+      ),
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          {/* Header Skeleton */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-            <div>
-              <Skeleton className="h-8 w-64 mb-2" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-10 w-24" />
-          </div>
+  const table = useReactTable<Unit>({
+    data: units,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
+  });
 
-          {/* Filters Skeleton */}
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-20" />
-            </div>
-          </div>
-
-          {/* Units Grid Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-5 w-16" />
-                </div>
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-8" />
-                  </div>
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Filtered data for search
+  const filteredRows = units.filter(unit =>
+    unit.unit_name.toLowerCase().includes(globalFilter.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <MapPin className="text-blue-600" size={32} />
-              Units Management
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Manage organizational units and departments
-            </p>
-          </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Unit
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <Input
-                  placeholder="Search units..."
-                  className="pl-10"
-                />
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Units</h1>
+                <p className="text-sm text-gray-600">Manage your Units records</p>
               </div>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Filter size={16} />
-                Filter
-              </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Units Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {units.map((unit) => (
-            <Card key={unit.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{unit.name}</CardTitle>
-                  <Badge 
-                    variant={unit.status === 'active' ? 'default' : 'secondary'}
-                    className={unit.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
-                  >
-                    {unit.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-gray-600 text-sm">{unit.description}</p>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Organization:</span>
-                    <span className="font-medium">{unit.organization}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Employees:</span>
-                    <span className="font-medium">{unit.employeeCount}</span>
-                  </div>
-                  <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full">
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            <div className="flex items-center gap-2">
+              <button className="flex items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <Download className="w-5 h-5" />
+                Export
+              </button>
+              <button
+                className="flex items-center cursor-pointer gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setShowCreate(true)}
+              >
+                <Plus className="w-5 h-5" />
+                Add New
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Empty State */}
-        {units.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No units found</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first unit</p>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Unit
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+        {/* Table Content */}
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            {/* Table Controls */}
+            <div className="px-4 py-3 border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={globalFilter}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              {isLoading ? (
+                <div className="p-8">
+                  <SkeletonTable rows={6} columns={4} />
+                </div>
+              ) : isError ? (
+                <div className="p-8 text-center text-red-500">Failed to load units.</div>
+              ) : filteredRows.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">No units found.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRows.map((unit) => (
+                      <TableRow
+                        key={unit.unit_id}
+                        className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                        onClick={() => router.push(`/dashboard/shared_pages/units/${unit.unit_id}`)}
+                        tabIndex={0}
+                        aria-label={`View details for unit ${unit.unit_name}`}
+                      >
+                        {table.getAllColumns().map((col) => (
+                          <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
+                            {col.id === 'actions'
+                              ? flexRender(col.columnDef.cell, { row: { original: unit } })
+                              : flexRender(col.columnDef.cell, { row: { original: unit } })}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
+                        Showing {filteredRows.length} units
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
+      <CreateUnitModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreate={async (data) => {
+          await createUnit.mutateAsync(data);
+        }}
+      />
     </div>
   );
 }

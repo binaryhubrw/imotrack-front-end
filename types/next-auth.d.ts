@@ -1,4 +1,4 @@
-export interface position_access {
+export interface position_accesses {
   organizations: {
     create: boolean;
     view: boolean;
@@ -23,6 +23,21 @@ export interface position_access {
     update: boolean;
     delete: boolean;
   };
+  vehicleModels: {
+    create: boolean;
+    view: boolean;
+    viewSingle: boolean;
+    update: boolean;
+    delete: boolean;
+  };
+  vehicles: {
+    create: boolean;
+    view: boolean;
+    viewSingle: boolean;
+    update: boolean;
+    delete: boolean;
+  }
+
   // issue:{
   //   create: boolean;
   //   view: boolean;
@@ -185,29 +200,57 @@ export type UpdatePasswordRequest = {
   new_password: string;
 };
 
-// // Organization Types
+// Organization Types (NEW API)
+export type OrganizationStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
+
 export type Organization = {
-  id: string;
-  name: string;
-  customId: string;
-  address: string;
-  phone: string;
-  status: string;
-  email: string;
-  created_at: Date;
-  users?: User[];
-  vehicles?: Vehicle[];
-  reports?: Report[];
+  organization_id: string;
+  organization_name: string;
+  street_address: string;
+  organization_phone: string;
+  organization_email: string;
+  organization_logo: string;
+  created_at: string;
+  organization_customId: string;
+  organization_status: OrganizationStatus;
 };
 
 export type CreateOrganizationDto = {
-  name: string;
-  address: string;
-  phone: string;
-  email: string;
+  organization_name: string;
+  organization_email: string;
+  organization_phone: string;
+  organization_logo: string; // URL or file (for now string)
+  street_address: string;
 };
 
-export type UpdateOrganizationDto = Partial<CreateOrganizationDto>;
+export type PaginatedOrganizations = {
+  organizations: Organization[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
+
+// Unit Types (NEW API)
+export type Unit = {
+  unit_id: string;
+  unit_name: string;
+  unit_status: string;
+  organization_id: string;
+  positions: Array<{
+    position_id: string;
+    position_title: string;
+    position_status: string;
+    user_id: string;
+  }>;
+};
+
+export type CreateUnitDto = {
+  unit_name: string;
+  organization_id: string;
+};
 
 // User Types
 export type UserStatus = 'active' | 'inactive' | 'suspended';

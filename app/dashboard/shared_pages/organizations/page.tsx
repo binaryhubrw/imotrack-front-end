@@ -1,929 +1,397 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Plus, X, Loader2, CheckCircle, } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { DataTable, SortableHeader, StatusBadge } from '@/components/ui/table';
+"use client"
+import React, { useState } from "react"
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+  VisibilityState,
+} from "@tanstack/react-table"
+import { 
+  Download,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+} from "lucide-react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
+import { useRouter } from 'next/navigation';
+import { useOrganizations, useCreateOrganization } from '@/lib/queries';
+import { Organization } from '@/types/next-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ColumnDef } from '@tanstack/react-table';
+import { toast } from 'sonner';
+import type { CreateOrganizationDto } from '@/types/next-auth';
+import { SkeletonTable } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
-// Types
-interface Organization {
-  id: string;
-  customId: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  status: 'active' | 'inactive' | 'pending';
-  createdAt: string;
-  adminCount: number;
-}
-
-interface CreateOrganizationDto {
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-}
-
-interface UpdateOrganizationDto {
-  name?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-}
-
-// Fake data
-const generateFakeOrganizations = (): Organization[] => {
-  const statuses: Array<'active' | 'inactive' | 'pending'> = ['active', 'inactive', 'pending'];
-  const organizations: Organization[] = [];
-  
-  const companyNames = [
-    'Tech Solutions Inc', 'Global Dynamics', 'Innovation Labs', 'Digital Ventures',
-    'Smart Systems', 'Future Corp', 'Agile Partners', 'Cloud Nine Technologies',
-    'Data Insights', 'Quantum Computing', 'AI Innovations', 'Blockchain Solutions',
-    'Green Energy Co', 'Healthcare Plus', 'Education First', 'Finance Pro',
-    'Retail Express', 'Manufacturing Hub', 'Transport Solutions', 'Media Group'
-  ];
-
-  for (let i = 0; i < 50; i++) {
-    const companyName = companyNames[i % companyNames.length];
-    organizations.push({
-      id: `org_${i + 1}`,
-      customId: `ORG-${String(i + 1).padStart(4, '0')}`,
-      name: `${companyName} ${Math.floor(i / companyNames.length) + 1}`,
-      email: `contact@${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
-      phone: `+1 (${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
-      address: `${Math.floor(Math.random() * 9999) + 1} ${['Main St', 'Oak Ave', 'Park Blvd', 'First St', 'Second Ave'][Math.floor(Math.random() * 5)]}, ${['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'][Math.floor(Math.random() * 5)]}, ${['NY', 'CA', 'IL', 'TX', 'AZ'][Math.floor(Math.random() * 5)]}`,
-      status: statuses[Math.floor(Math.random() * statuses.length)],
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)).toISOString(),
-      adminCount: Math.floor(Math.random() * 5) + 1
-    });
-  }
-  
-  return organizations;
+// Status badge for organization status
+const StatusBadge = ({ status }: { status: Organization["organization_status"] }) => {
+  const statusConfig = {
+    ACTIVE: { className: "bg-green-100 text-green-700 border-green-200", dotColor: "bg-green-500" },
+    INACTIVE: { className: "bg-gray-100 text-gray-700 border-gray-200", dotColor: "bg-gray-400" },
+    PENDING: { className: "bg-yellow-100 text-yellow-700 border-yellow-200", dotColor: "bg-yellow-500" },
+  };
+  const config = statusConfig[status] || statusConfig.INACTIVE;
+  return (
+    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
+      <span className="capitalize">{status}</span>
+    </div>
+  );
 };
 
-export default function OrganizationsPage() {
-  const [organizations, setOrganizations] = useState<Organization[]>(generateFakeOrganizations());
-  const [loading, setLoading] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+// Create Organization Modal
+function CreateOrganizationModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (data: FormData) => void }) {
+  const [form, setForm] = useState({
+    organization_name: '',
+    organization_email: '',
+    organization_phone: '',
+    organization_logo: null as File | null,
+    street_address: '',
+  });
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Define columns for the DataTable
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, files } = e.target;
+    if (type === 'file' && files && files[0]) {
+      setForm(f => ({ ...f, organization_logo: files[0] }));
+      setLogoPreview(URL.createObjectURL(files[0]));
+    } else {
+      setForm(f => ({ ...f, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      // Validation
+      if (!form.organization_name || !form.organization_email || !form.organization_phone || !form.organization_logo || !form.street_address) {
+        setError('All fields are required.');
+        setSubmitting(false);
+        return;
+      }
+      if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(form.organization_email)) {
+        setError('Invalid email address.');
+        setSubmitting(false);
+        return;
+      }
+      if (!/^\d{10,15}$/.test(form.organization_phone)) {
+        setError('Phone number must be 10 to 15 digits.');
+        setSubmitting(false);
+        return;
+      }
+      // Prepare FormData
+      const fd = new FormData();
+      fd.append('organization_name', form.organization_name);
+      fd.append('organization_email', form.organization_email);
+      fd.append('organization_phone', form.organization_phone);
+      fd.append('organization_logo', form.organization_logo as File);
+      fd.append('street_address', form.street_address);
+      await onCreate(fd);
+      setForm({ organization_name: '', organization_email: '', organization_phone: '', organization_logo: null, street_address: '' });
+      setLogoPreview(null);
+      onClose();
+    } catch {
+      setError('Failed to create organization.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-gray-100">
+        <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold mb-6 text-center text-[#0872b3]">Create Organization</h2>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4 col-span-1">
+            <label className="block text-sm font-medium text-gray-700">Organization Name</label>
+            <input name="organization_name" value={form.organization_name} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="e.g. LoremDev" />
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <input name="organization_email" type="email" value={form.organization_email} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="user@example.com" />
+            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <input name="organization_phone" value={form.organization_phone} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="10-15 digits" />
+            <label className="block text-sm font-medium text-gray-700">Street Address</label>
+            <input name="street_address" value={form.street_address} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="1234 Main St" />
+          </div>
+          <div className="space-y-4 col-span-1 flex flex-col items-center justify-center">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Organization Logo</label>
+            <input name="organization_logo" type="file" accept="image/*" onChange={handleChange} required className="w-full" />
+            {logoPreview && (
+              <div className="mt-4 flex flex-col items-center">
+                <Image src={logoPreview} alt="Logo Preview" width={120} height={120} className="rounded-lg border border-gray-200 object-contain" />
+                <span className="text-xs text-gray-500 mt-2">Preview</span>
+              </div>
+            )}
+            <div className="mt-8 flex-1 flex flex-col justify-end">
+              <button type="submit" className="w-full py-3 bg-[#0872b3] text-white rounded-lg font-semibold text-lg mt-6 hover:bg-blue-700 transition disabled:opacity-50" disabled={submitting}>
+                {submitting ? 'Creating...' : 'Create Organization'}
+              </button>
+              {error && <div className="mt-4 text-red-600 text-center text-sm">{error}</div>}
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function OrganizationsPage() {
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<unknown[]>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = useState({})
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [showCreate, setShowCreate] = useState(false);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const router = useRouter();
+
+  const { data, isLoading, isError } = useOrganizations(page, limit);
+  const createOrg = useCreateOrganization();
+
+  const organizations = data?.organizations || [];
+  const pagination = data?.pagination;
+
   const columns: ColumnDef<Organization>[] = [
     {
-      accessorKey: 'customId',
-      header: ({ column }) => (
-        <SortableHeader column={column}>ID</SortableHeader>
-      ),
+      accessorKey: "organization_name",
+      header: "Name",
       cell: ({ row }) => (
-        <div className="font-mono text-sm">{row.getValue('customId')}</div>
+        <span className="font-medium text-gray-900">{row.original.organization_name}</span>
       ),
     },
     {
-      accessorKey: 'name',
-      header: ({ column }) => (
-        <SortableHeader column={column}>Name</SortableHeader>
-      ),
+      accessorKey: "organization_email",
+      header: "Email",
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue('name')}</div>
+        <span className="text-gray-700">{row.original.organization_email}</span>
       ),
     },
     {
-      accessorKey: 'email',
-      header: 'Email',
+      accessorKey: "organization_phone",
+      header: "Phone",
       cell: ({ row }) => (
-        <div className="text-sm text-gray-600">{row.getValue('email')}</div>
+        <span className="text-gray-700">{row.original.organization_phone}</span>
       ),
     },
     {
-      accessorKey: 'phone',
-      header: 'Phone',
+      accessorKey: "organization_status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.organization_status} />,
+    },
+    {
+      accessorKey: "created_at",
+      header: "Created",
       cell: ({ row }) => (
-        <div className="text-sm">{row.getValue('phone')}</div>
+        <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
       ),
     },
     {
-      accessorKey: 'address',
-      header: 'Address',
-      cell: ({ row }) => (
-        <div className="text-sm max-w-[200px] truncate" title={row.getValue('address')}>
-          {row.getValue('address')}
+      id: "actions",
+      header: "Actions",
+      cell: () => (
+        <div className="flex items-center gap-3">
+          <button
+            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+            onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
+            aria-label="Edit"
+          >
+            <Edit className="w-6 h-6" />
+          </button>
+          <button
+            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            onClick={e => { e.stopPropagation(); toast.info('Delete not implemented'); }}
+            aria-label="Delete"
+          >
+            <Trash2 className="w-6 h-6" />
+          </button>
         </div>
-      ),
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        const status = row.getValue('status') as string;
-        const variant = status === 'active' ? 'success' : status === 'inactive' ? 'error' : 'warning';
-        return <StatusBadge status={status} variant={variant} />;
-      },
-    },
-    {
-      accessorKey: 'adminCount',
-      header: 'Admins',
-      cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('adminCount')}</Badge>
       ),
     },
   ];
 
-  const handleView = (org: Organization) => {
-    console.log('View organization:', org);
-    // Navigate to organization details
-  };
-
-  const handleEdit = (org: Organization) => {
-    setSelectedOrg(org);
-    setShowEditModal(true);
-  };
-
-  const handleDelete = (org: Organization) => {
-    setSelectedOrg(org);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!selectedOrg) return;
-    
-    setLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setOrganizations(prev => prev.filter(org => org.id !== selectedOrg.id));
-    setShowDeleteConfirm(false);
-    setSelectedOrg(null);
-    setLoading(false);
-    
-    setSuccessMessage('Organization deleted successfully!');
-    setShowSuccessModal(true);
-    setTimeout(() => setShowSuccessModal(false), 2500);
-  };
-
-  const handleSave = async (formData: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => {
-    setLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if ('id' in formData) {
-      // Update existing organization
-      setOrganizations(prev => 
-        prev.map(org => 
-          org.id === formData.id 
-            ? { ...org, ...formData }
-            : org
-        )
-      );
-      setShowEditModal(false);
-      setSuccessMessage('Organization updated successfully!');
-    } else {
-      // Create new organization
-      const newOrg: Organization = {
-        id: `org_${Date.now()}`,
-        customId: `ORG-${String(organizations.length + 1).padStart(4, '0')}`,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        adminCount: 1,
-        ...formData
-      };
-      setOrganizations(prev => [...prev, newOrg]);
-      setShowAddModal(false);
-      setSuccessMessage('Organization added successfully!');
-    }
-    
-    setLoading(false);
-    setShowSuccessModal(true);
-    setTimeout(() => setShowSuccessModal(false), 2500);
-  };
-
-  return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">
-            Organizations
-          </h1>
-          <Button onClick={() => setShowAddModal(true)} className="bg-[#0872B3] hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Organization
-          </Button>
-        </div>
-
-        <DataTable
-          columns={columns}
-          data={organizations}
-          searchPlaceholder="Search organizations..."
-          actions={{
-            onView: handleView,
-            onEdit: handleEdit,
-            onDelete: handleDelete,
-            onExport: () => console.log('Export organizations'),
-          }}
-        />
-      </div>
-
-      <AnimatePresence>
-        {/* Add/Edit Modal */}
-        {(showAddModal || showEditModal) && (
-          <OrganizationModal
-            onClose={() => {
-              setShowAddModal(false);
-              setShowEditModal(false);
-              setSelectedOrg(null);
-            }}
-            onSave={handleSave}
-            organization={selectedOrg}
-            isLoading={loading}
-          />
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirm && selectedOrg && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-[#0872B3]">Confirm Delete</h2>
-                <button onClick={() => setShowDeleteConfirm(false)}>
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete <strong>{selectedOrg.name}</strong>? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteConfirm}
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                  Delete
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* Success Modal */}
-        {showSuccessModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl flex flex-col items-center"
-            >
-              <CheckCircle className="w-16 h-16 text-green-500 mb-4" />
-              <h2 className="text-xl font-bold mb-2 text-center">{successMessage}</h2>
-              <p className="text-gray-600 text-center">Your request has been processed successfully.</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
-  );
-}
-
-// Organization Modal Component
-function OrganizationModal({
-  onClose,
-  onSave,
-  organization,
-  isLoading
-}: {
-  onClose: () => void;
-  onSave: (org: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => void;
-  organization?: Organization | null;
-  isLoading: boolean;
-}) {
-  const [formData, setFormData] = useState({
-    name: organization?.name || '',
-    email: organization?.email || '',
-    phone: organization?.phone || '',
-    address: organization?.address || ''
+  const table = useReactTable<Organization>({
+    data: organizations,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+    },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (organization) {
-      onSave({ ...formData, id: organization.id });
-    } else {
-      onSave(formData);
-    }
-  };
+  // Filtered data for search
+  const filteredRows = organizations.filter(org =>
+    org.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
+    org.organization_email.toLowerCase().includes(globalFilter.toLowerCase())
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-    >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl"
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">
-            {organization ? 'Edit Organization' : 'Add Organization'}
-          </h2>
-          <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+    <div className="flex h-screen bg-gray-50">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Organizations</h1>
+                <p className="text-sm text-gray-600">Manage your Organization records</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="flex items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <Download className="w-5 h-5" />
+                Export
+              </button>
+              <button
+                className="flex items-center cursor-pointer gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => setShowCreate(true)}
+              >
+                <Plus className="w-5 h-5" />
+                Add New
+              </button>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Organization Name
-            </label>
-            <Input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
+        {/* Table Content */}
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            {/* Table Controls */}
+            <div className="px-4 py-3 border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={globalFilter}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48"
+                  />
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <Input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
+            {/* Table */}
+            <div className="overflow-x-auto">
+              {isLoading ? (
+                <div className="p-8">
+                  <SkeletonTable rows={6} columns={5} />
+                </div>
+              ) : isError ? (
+                <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
+              ) : filteredRows.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">No organizations found.</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRows.map((org) => (
+                      <TableRow
+                        key={org.organization_id}
+                        className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                        onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
+                        tabIndex={0}
+                        aria-label={`View details for organization ${org.organization_name}`}
+                      >
+                        {table.getAllColumns().map((col) => (
+                          <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
+                            {col.id === 'actions'
+                              ? flexRender(col.columnDef.cell, {})
+                              : flexRender(col.columnDef.cell, { row: { original: org } })}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
+                        {pagination && (
+                          <>
+                            Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone
-            </label>
-            <Input
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-            />
+            {/* Pagination */}
+            {pagination && (
+              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Page {pagination.page} of {pagination.pages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={pagination.page === 1}
+                    className="px-4 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+                    disabled={pagination.page === pagination.pages}
+                    className="px-4 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address
-            </label>
-            <Input
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading} className="bg-[#0872B3] hover:bg-blue-700">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {organization ? 'Update' : 'Save'}
-            </Button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
+        </div>
+      </div>
+      <CreateOrganizationModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreate={async (formData) => {
+          await createOrg.mutateAsync(formData as any); // lib/queries expects FormData now
+        }}
+      />
+    </div>
+  )
 }
-
-
-// /* eslint-disable @typescript-eslint/no-explicit-any */
-// 'use client';
-// import React, { useState } from 'react';
-// import { Search, Plus, Pencil, Trash2, X, Loader2, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-// import { motion, AnimatePresence } from 'framer-motion';
-// import { useRouter } from 'next/navigation';
-// import { useUpdateOrganization, useDeleteOrganization } from '@/lib/queries';
-// import { Organization, CreateOrganizationDto, UpdateOrganizationDto } from '@/types/next-auth';
-
-// export default function OrganizationsPage() {
-//   const { data: organizations, isLoading: isLoadingOrganizations, isError: isErrorOrganizations, error: organizationsError } = useOrganizations();
-//   const createOrganizationMutation = useCreateOrganization();
-//   const updateOrganizationMutation = useUpdateOrganization();
-//   const deleteOrganizationMutation = useDeleteOrganization();
-
-//   const [searchTerm, setSearchTerm] = useState('');
-//   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-//   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
-//   const [showAddModal, setShowAddModal] = useState(false);
-//   const [showEditModal, setShowEditModal] = useState(false);
-//   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
-//   const [showSuccessModal, setShowSuccessModal] = useState(false);
-//   const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
-//   const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
-
-//   const router = useRouter();
-
-//   // Pagination state
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const itemsPerPage = 10;
-//   const totalPages = Math.ceil(organizations?.length || 0 / itemsPerPage);
-//   const paginatedOrganizations = organizations?.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) || [];
-
-//   // Reset to first page if search/filter changes and current page is out of range
-//   React.useEffect(() => {
-//     if (currentPage > totalPages) setCurrentPage(1);
-//   }, [searchTerm, organizations?.length, totalPages,currentPage]);
-
-//   const handleDeleteClick = (id: string) => {
-//     setSelectedOrgId(id);
-//     setShowDeleteConfirm(true);
-//   };
-
-//   const handleDeleteConfirm = async () => {
-//     if (!selectedOrgId) return;
-//     try {
-//       await deleteOrganizationMutation.mutateAsync(selectedOrgId);
-//       setShowDeleteConfirm(false);
-//       setSelectedOrgId(null);
-//       setShowDeleteSuccessModal(true);
-//       setTimeout(() => setShowDeleteSuccessModal(false), 2500);
-//     } catch (error: any) {
-//       console.error('Failed to delete organization:', error);
-//     }
-//   };
-
-//   const handleAddClick = () => {
-//     setCurrentOrganization(null);
-//     setShowAddModal(true);
-//   };
-
-//   const handleEditClick = (org: Organization) => {
-//     setCurrentOrganization(org);
-//     setShowEditModal(true);
-//   };
-
-//   const handleSaveOrganization = async (orgData: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => {
-//     try {
-//       if ('id' in orgData && orgData.id) {
-//         // Update existing organization
-//         const { id, ...updates } = orgData;
-//         await updateOrganizationMutation.mutateAsync({ id, updates });
-//         setShowEditModal(false);
-//         setShowEditSuccessModal(true);
-//         setTimeout(() => setShowEditSuccessModal(false), 2500);
-//       } else {
-//         // Create new organization
-//         await createOrganizationMutation.mutateAsync(orgData as CreateOrganizationDto);
-//         setShowAddModal(false);
-//         setShowSuccessModal(true);
-//         setTimeout(() => setShowSuccessModal(false), 2500);
-//       }
-//     } catch (error: any) {
-//       console.error('Failed to save organization:', error);
-//       if (error.message?.toLowerCase().includes('already exist')) {
-//       } else {
-//       }
-//     }
-//   };
-
-//   if (isLoadingOrganizations) {
-//     return (
-//       <div className="flex h-full items-center justify-center">
-//         <Loader2 className="w-12 h-12 animate-spin text-[#0872B3]" />
-//       </div>
-//     );
-//   }
-
-//   if (isErrorOrganizations) {
-//     return (
-//       <div className="flex h-full items-center justify-center text-red-600">
-//         Error loading organizations: {organizationsError?.message || 'Unknown error'}
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <main className="min-h-screen bg-gradient-to-br bg-gray-50 px-2 sm:px-4 py-6 sm:py-8">
-//       <div className="max-w-7xl mx-auto">
-//         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-//           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-[#0872B3] to-blue-600 bg-clip-text text-transparent">
-//             Organizations
-//           </h1>
-//           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-//             <div className="relative group w-full sm:w-64">
-//               <input
-//                 type="text"
-//                 placeholder="Search organizations..."
-//                 className="w-full rounded-lg border border-gray-200 px-4 py-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-[#0872B3] bg-white/80 backdrop-blur-sm transition-all duration-200 group-hover:bg-white"
-//                 value={searchTerm}
-//                 onChange={e => setSearchTerm(e.target.value)}
-//               />
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-hover:text-gray-500 transition-colors" />
-//             </div>
-//             <motion.button 
-//               whileHover={{ scale: 1.02 }}
-//               whileTap={{ scale: 0.98 }}
-//               onClick={handleAddClick}
-//               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#0872B3] to-blue-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-sm font-semibold w-full sm:w-auto"
-//             >
-//               <Plus className="w-4 h-4" /> Add Organization
-//             </motion.button>
-//           </div>
-//         </div>
-//         <div className="overflow-x-auto rounded-xl shadow-md bg-white max-w-4xl mx-auto px-2 sm:px-4">
-//           <table className="min-w-[500px] w-full text-sm">
-//             <thead className="bg-gray-50/80 backdrop-blur-sm">
-//               <tr className="text-gray-600">
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">ID</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Name</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Email</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Phone</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Address</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Status</th>
-//                 <th className="px-4 py-4 text-left font-semibold whitespace-nowrap">Actions</th>
-//               </tr>
-//             </thead>
-//             <tbody className="divide-y divide-gray-100">
-//               {paginatedOrganizations.length === 0 ? (
-//                 <tr>
-//                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-//                     No organizations found.
-//                   </td>
-//                 </tr>
-//               ) : (
-//                 paginatedOrganizations.map((org, idx) => (
-//                   <motion.tr 
-//                     onClick={() => router.push(`/dashboard/admin/organizations/${org.id}`)}
-//                     key={org.id}
-//                     initial={{ opacity: 0, y: 20 }}
-//                     animate={{ opacity: 1, y: 0 }}
-//                     transition={{ delay: idx * 0.05 }}
-//                     className="group hover:bg-gray-50/50 cursor-pointer transition-colors duration-200"
-//                   >
-//                     <td className="px-4 py-4 font-mono text-gray-600">{org.customId}</td>
-//                     <td className="px-4 py-4 font-medium text-gray-900">{org.name}</td>
-//                     <td className="px-4 py-4 text-gray-600">{org.email}</td>
-//                     <td className="px-4 py-4 text-gray-600">{org.phone}</td>
-//                     <td className="px-4 py-4 text-gray-600">{org.address}</td>
-//                     <td className="px-4 py-4 text-gray-600">{org.status}</td>
-//                     <td className="px-4 py-4">
-//                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-//                         <motion.button 
-//                           whileHover={{ scale: 1.1 }}
-//                           whileTap={{ scale: 0.9 }}
-//                           onClick={e => { e.stopPropagation(); handleEditClick(org); }}
-//                           className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 transition-colors" 
-//                           aria-label="Edit" 
-//                           title="Edit"
-//                         >
-//                           <Pencil className="w-4 h-4" />
-//                         </motion.button>
-//                         <motion.button 
-//                           whileHover={{ scale: 1.1 }}
-//                           whileTap={{ scale: 0.9 }}
-//                           onClick={e => { e.stopPropagation(); handleDeleteClick(org.id); }}
-//                           className="p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors" 
-//                           aria-label="Delete" 
-//                           title="Delete"
-//                         >
-//                           <Trash2 className="w-4 h-4" />
-//                         </motion.button>
-//                       </div>
-//                     </td>
-//                   </motion.tr>
-//                 ))
-//               )}
-//             </tbody>
-//           </table>
-//           {/* Pagination Controls */}
-//           {totalPages > 1 && (
-//             <div className="flex items-center justify-center gap-8 mt-6 select-none w-full">
-//               <button
-//                 className={`border rounded-lg w-12 h-12 flex items-center justify-center transition-colors ${currentPage === 1 ? 'text-gray-400 border-gray-200 bg-white cursor-not-allowed' : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-100'}`}
-//                 onClick={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-//                 disabled={currentPage === 1}
-//                 aria-label="Previous page"
-//               >
-//                 <ChevronLeft size={22} />
-//               </button>
-//               <span className="text-lg text-gray-700">
-//                 Page <span className="font-bold text-gray-900">{currentPage}</span> of <span className="font-bold text-gray-900">{totalPages}</span>
-//               </span>
-//               <button
-//                 className={`border rounded-lg w-12 h-12 flex items-center justify-center transition-colors ${currentPage === totalPages ? 'text-gray-400 border-gray-200 bg-white cursor-not-allowed' : 'text-gray-600 border-gray-200 bg-white hover:bg-gray-100'}`}
-//                 onClick={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-//                 disabled={currentPage === totalPages}
-//                 aria-label="Next page"
-//               >
-//                 <ChevronRight size={22} />
-//               </button>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-
-//       <AnimatePresence>
-//         {/* Add Organization Modal */}
-//         {showAddModal && (
-//           <OrganizationModal 
-//             onClose={() => setShowAddModal(false)}
-//             onSave={handleSaveOrganization}
-//             isLoading={createOrganizationMutation.isPending}
-//           />
-//         )}
-
-//         {/* Success Modal */}
-//         {showSuccessModal && (
-//           <motion.div
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
-//           >
-//             <motion.div
-//               initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//               animate={{ scale: 1, opacity: 1, y: 0 }}
-//               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//               transition={{ type: 'spring', duration: 0.5 }}
-//               className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
-//             >
-//               <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
-//               <h2 className="text-2xl font-bold mb-2 text-center">Organization added successfully!</h2>
-//               <p className="text-gray-600 text-center">Your request is submitted.<br/>Thank you for adding a new organization.</p>
-//             </motion.div>
-//           </motion.div>
-//         )}
-
-//         {/* Edit Success Modal */}
-//         {showEditSuccessModal && (
-//           <motion.div
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
-//           >
-//             <motion.div
-//               initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//               animate={{ scale: 1, opacity: 1, y: 0 }}
-//               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//               transition={{ type: 'spring', duration: 0.5 }}
-//               className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
-//             >
-//               <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
-//               <h2 className="text-2xl font-bold mb-2 text-center">Organization updated successfully!</h2>
-//               <p className="text-gray-600 text-center">The organization information has been updated.<br/>Thank you for keeping your records up to date.</p>
-//             </motion.div>
-//           </motion.div>
-//         )}
-
-//         {/* Delete Success Modal */}
-//         {showDeleteSuccessModal && (
-//           <motion.div
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
-//           >
-//             <motion.div
-//               initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//               animate={{ scale: 1, opacity: 1, y: 0 }}
-//               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//               transition={{ type: 'spring', duration: 0.5 }}
-//               className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
-//             >
-//               <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
-//               <h2 className="text-2xl font-bold mb-2 text-center">Organization deleted successfully!</h2>
-//               <p className="text-gray-600 text-center">The organization has been removed.<br/>Thank you for keeping your records up to date.</p>
-//             </motion.div>
-//           </motion.div>
-//         )}
-
-//         {/* Edit Organization Modal */}
-//         {showEditModal && currentOrganization && (
-//           <OrganizationModal 
-//             onClose={() => setShowEditModal(false)}
-//             onSave={handleSaveOrganization}
-//             organization={currentOrganization}
-//             isLoading={updateOrganizationMutation.isPending}
-//           />
-//         )}
-
-//         {/* Delete Confirmation Modal */}
-//         {showDeleteConfirm && selectedOrgId && (
-//           <motion.div 
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-8 z-50"
-//           >
-//             <motion.div 
-//               initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//               animate={{ scale: 1, opacity: 1, y: 0 }}
-//               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//               transition={{ type: "spring", duration: 0.5 }}
-//               className="bg-white rounded-xl p-4 sm:p-8 max-w-md w-full shadow-2xl border border-gray-100 my-12"
-//             >
-//               <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-//                 <h2 className="text-2xl font-bold text-[#0872B3]">Confirm Delete</h2>
-//                 <button 
-//                   onClick={() => setShowDeleteConfirm(false)} 
-//                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-//                 >
-//                   <X className="w-5 h-5 text-gray-500" />
-//                 </button>
-//               </div>
-//               <div className="mb-8">
-//                 <p className="text-gray-600 text-lg">Are you sure you want to delete organization <span className="font-semibold text-gray-900">{selectedOrgId}</span>? This action cannot be undone.</p>
-//               </div>
-//               <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
-//                 <motion.button
-//                   whileHover={{ scale: 1.02 }}
-//                   whileTap={{ scale: 0.98 }}
-//                   onClick={() => setShowDeleteConfirm(false)}
-//                   className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-//                 >
-//                   Cancel
-//                 </motion.button>
-//                 <motion.button
-//                   whileHover={{ scale: 1.02 }}
-//                   whileTap={{ scale: 0.98 }}
-//                   onClick={handleDeleteConfirm}
-//                   disabled={deleteOrganizationMutation.isPending}
-//                   className="px-6 py-3 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-50"
-//                 >
-//                   {deleteOrganizationMutation.isPending ? (
-//                     <>
-//                       <Loader2 className="w-4 h-4 animate-spin" />
-//                       Deleting...
-//                     </>
-//                   ) : (
-//                     'Delete'
-//                   )}
-//                 </motion.button>
-//               </div>
-//             </motion.div>
-//           </motion.div>
-//         )}
-//       </AnimatePresence>
-//     </main>
-//   );
-// }
-
-// // Organization Modal Component (for Add and Edit)
-// function OrganizationModal({
-//   onClose,
-//   onSave,
-//   organization,
-//   isLoading
-// }: {
-//   onClose: () => void;
-//   onSave: (org: CreateOrganizationDto | (UpdateOrganizationDto & { id: string })) => void;
-//   organization?: Organization;
-//   isLoading: boolean;
-// }) {
-//   const [formData, setFormData] = useState<CreateOrganizationDto | UpdateOrganizationDto & { id?: string }>(
-//     organization ? 
-//       { id: organization.id, name: organization.name, email: organization.email, phone: organization.phone, address: organization.address } :
-//       { name: '', email: '', phone: '', address: '' } 
-//   );
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-//   };
-
-//   const handleSubmit = (e: React.FormEvent) => {
-//     e.preventDefault();
-//     onSave(formData as CreateOrganizationDto | (UpdateOrganizationDto & { id: string }));
-//   };
-
-//   return (
-//     <motion.div 
-//     initial={{ opacity: 0 }}
-//     animate={{ opacity: 1 }}
-//     exit={{ opacity: 0 }}
-//     className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 md:p-8 z-50"
-//   >
-//     <motion.div 
-//       initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//       animate={{ scale: 1, opacity: 1, y: 0 }}
-//       exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//       transition={{ type: 'spring', duration: 0.5 }}
-//       className="bg-white rounded-xl p-4 sm:p-8 max-w-xl w-full shadow-2xl border border-gray-100 my-4 sm:my-6 md:my-12 overflow-y-auto max-h-[90vh]"
-//     >
-//       <div className="flex justify-between items-center mb-8 pb-2">
-//         <h2 className="text-2xl font-bold text-gray-900">
-//           {organization ? 'Edit organization' : 'Add organization'}
-//         </h2>
-//         <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-//           <X className="w-5 h-5 text-gray-500" />
-//         </button>
-//       </div>
-//       <form onSubmit={handleSubmit} className="space-y-8">
-//         {/* Organization Info */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">Organization Name</label>
-//             <input 
-//               type="text" 
-//               name="name" 
-//               value={formData.name} 
-//               onChange={handleChange} 
-//               className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" 
-//               required 
-//             />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">Organization Email</label>
-//             <input 
-//               type="email" 
-//               name="email" 
-//               value={formData.email} 
-//               onChange={handleChange} 
-//               className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" 
-//               required 
-//             />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-//             <input 
-//               type="text" 
-//               name="phone" 
-//               value={formData.phone} 
-//               onChange={handleChange} 
-//               className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" 
-//             />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-//             <input 
-//               type="text" 
-//               name="address" 
-//               value={formData.address} 
-//               onChange={handleChange} 
-//               className="w-full rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872B3]" 
-//               required 
-//             />
-//           </div>
-//         </div>
-  
-//         {/* Organization Admin Section - Removed as it's not part of CreateOrganizationDto/UpdateOrganizationDto for now */}
-//         {/* Note: Admin creation might be a separate API call or handled implicitly on organization creation */}
-        
-//         {/* Buttons */}
-//         <div className="flex justify-end gap-4 pt-4">
-//           <button
-//             type="button"
-//             onClick={onClose}
-//             className="px-6 py-2 text-sm font-medium text-white bg-red-600 rounded shadow hover:bg-red-700 transition-colors"
-//           >
-//             Cancel
-//           </button>
-//           <button
-//             type="submit"
-//             disabled={isLoading}
-//             className="px-6 py-2 text-sm font-medium text-white bg-[#0872B3] rounded shadow hover:bg-blue-700 transition-colors disabled:opacity-50"
-//           >
-//             {isLoading ? 'Saving...' : organization ? 'Edit' : 'Save'}
-//           </button>
-//         </div>
-//       </form>
-//     </motion.div>
-//   </motion.div>
-//   );
-// }

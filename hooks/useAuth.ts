@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLogin } from '@/lib/queries';
+import { useLogin, useAuthLogout } from '@/lib/queries';
 import { 
   LoginCredentials, 
   AuthenticatedUserWithPosition
@@ -28,6 +28,7 @@ interface AuthState {
 export const useAuth = () => {
   const router = useRouter();
   const loginMutation = useLogin();
+  const logoutMutation = useAuthLogout();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
@@ -261,29 +262,25 @@ export const useAuth = () => {
     }));
   }, []);
 
-  const logout = useCallback(() => {
-    // Clear localStorage
-    localStorage.removeItem('user');
-    localStorage.removeItem('position');
-    localStorage.removeItem('organization');
-    localStorage.removeItem('unit');
-    localStorage.removeItem('token');
-    localStorage.removeItem('loginCredentials'); // Clear stored credentials
-    
-    // Reset state
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-      positions: [],
-      showPositionSelector: false,
-    });
-    
-    // Redirect to login
-    router.push('/login');
-    
-    toast.success('Logged out successfully');
-  }, [router]);
+  const logout = useCallback(async () => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true }));
+      await logoutMutation.mutateAsync();
+      // Reset state
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        positions: [],
+        showPositionSelector: false,
+      });
+      router.push('/login');
+    } catch (error) {
+      
+      setAuthState(prev => ({ ...prev, isLoading: false }));
+      // Error toast is already shown in the mutation
+    }
+  }, [logoutMutation, router]);
 
   return {
     ...authState,

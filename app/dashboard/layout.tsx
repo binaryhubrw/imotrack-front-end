@@ -303,9 +303,13 @@ export default function DashboardLayout({
                 onClick={() => setShowSettings((v) => !v)}
                 className="flex items-center gap-3 hover:bg-gray-100 p-2 rounded-lg"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm">
-                  {user.user.first_name ? user.user.first_name.charAt(0).toUpperCase() : "U"}
-                </div>
+                <Image
+                  width={24}
+                  height={24}
+                    src={user.user.avatar}
+                    alt={`${user.user.first_name} ${user.user.last_name}`}
+                    className="rounded-full object-cover shadow-lg ring-4 ring-white"
+                  />
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-700">
                     {user.user.first_name} {user.user.last_name}
