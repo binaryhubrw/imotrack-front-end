@@ -22,7 +22,8 @@ import {
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
 import { useUnits, useCreateUnit } from '@/lib/queries';
-import { Unit, CreateUnitDto } from '@/types/next-auth';
+import type { Unit } from '@/types/next-auth';
+import { CreateUnitDto } from '@/types/next-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -109,9 +110,16 @@ export default function UnitsPage() {
       ),
     },
     {
-      accessorKey: "unit_status",
+      accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.unit_status} />,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      accessorKey: "created_at",
+      header: "Created",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
+      ),
     },
     {
       accessorKey: "organization_id",
@@ -120,15 +128,13 @@ export default function UnitsPage() {
         <span className="text-xs text-gray-500">{row.original.organization_id}</span>
       ),
     },
-    // Remove created_at if not present in Unit type, or use fallback
-    // Uncomment below if Unit has created_at
-    // {
-    //   accessorKey: "created_at",
-    //   header: "Created",
-    //   cell: ({ row }) => (
-    //     <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
-    //   ),
-    // },
+    {
+      id: "positions",
+      header: "Positions",
+      cell: ({ row }) => (
+        <span className="text-xs text-gray-700">{row.original.positions?.length ?? 0}</span>
+      ),
+    },
     {
       id: "actions",
       header: "Actions",
@@ -228,7 +234,7 @@ export default function UnitsPage() {
             <div className="overflow-x-auto">
               {isLoading ? (
                 <div className="p-8">
-                  <SkeletonTable rows={6} columns={4} />
+                  <SkeletonTable rows={6} columns={6} />
                 </div>
               ) : isError ? (
                 <div className="p-8 text-center text-red-500">Failed to load units.</div>
@@ -256,19 +262,17 @@ export default function UnitsPage() {
                     ))}
                   </TableHeader>
                   <TableBody>
-                    {filteredRows.map((unit) => (
+                    {table.getRowModel().rows.map((row) => (
                       <TableRow
-                        key={unit.unit_id}
+                        key={row.original.unit_id}
                         className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-                        onClick={() => router.push(`/dashboard/shared_pages/units/${unit.unit_id}`)}
+                        onClick={() => router.push(`/dashboard/shared_pages/units/${row.original.unit_id}`)}
                         tabIndex={0}
-                        aria-label={`View details for unit ${unit.unit_name}`}
+                        aria-label={`View details for unit ${row.original.unit_name}`}
                       >
-                        {table.getAllColumns().map((col) => (
-                          <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
-                            {col.id === 'actions'
-                              ? flexRender(col.columnDef.cell, { row: { original: unit } })
-                              : flexRender(col.columnDef.cell, { row: { original: unit } })}
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -277,7 +281,7 @@ export default function UnitsPage() {
                   <TableFooter>
                     <TableRow>
                       <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-                        Showing {filteredRows.length} units
+                        Showing {table.getRowModel().rows.length} units
                       </TableCell>
                     </TableRow>
                   </TableFooter>

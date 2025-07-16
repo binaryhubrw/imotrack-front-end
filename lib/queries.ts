@@ -12,10 +12,15 @@ import {
   PaginatedOrganizations,
   Organization,
   CreateOrganizationDto,
-  Unit,
   CreateUnitDto,
+  Pagination,
+  Unit,
+  Position,
+  CreatePositionDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
+// Define Unit type matching API response
+
 
 // User authentication with JSON
 export const useLogin = () => {
@@ -315,12 +320,6 @@ export const useAuthLogout =()=> {
   });
 }
 
-export type Pagination = {
-  page: number;
-  limit: number;
-  total: number;
-  pages: number;
-};
 
 // Fetch paginated organizations
 export const useOrganizations = (page = 1, limit = 10) => {
@@ -373,13 +372,17 @@ export const useUnits = () => {
     queryKey: ['units'],
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<{ units: Unit[] }>>('/v2/organizations/units');
+      console.log('Units API response:', data);
       if (!data.data) throw new Error('No data');
-      return data.data.units;
+      // Map status field to status, and ensure all fields are present
+      return data.data.units.map((unit) => ({
+        ...unit,
+        status: unit.status || 'ACTIVE',
+      }));
     },
   });
 };
 
-// Create unit (multipart/form-data)
 export const useCreateUnit = () => {
   const queryClient = useQueryClient();
   return useMutation<Unit, Error, CreateUnitDto>({
@@ -403,6 +406,73 @@ export const useCreateUnit = () => {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create unit.'));
+    },
+  });
+};
+
+
+
+// --- Get all positions in a unit ---
+export const useUnitPositions = (unit_id: string) => {
+  return useQuery<Position[], Error>({
+    queryKey: ['unit-positions', unit_id],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Position[]>>(`/v2/organizations/units/${unit_id}/positions`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!unit_id,
+  });
+};
+
+// --- Create a new position in a unit ---
+export const useCreatePosition = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Position, Error, CreatePositionDto>({
+    mutationFn: async (position) => {
+      const formData = new FormData();
+      formData.append('position_name', position.position_name);
+      formData.append('position_description', position.position_description);
+      formData.append('unit_id', position.unit_id);
+      formData.append('position_access', JSON.stringify(position.position_access));
+      const { data } = await api.post<ApiResponse<Position>>('/v2/organizations/positions', formData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['unit-positions', variables.unit_id] });
+      toast.success('Position created successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create position.'));
+    },
+  });
+};
+
+// --- Delete (soft) a position ---
+export const useDeletePosition = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, Error, { positionId: string; unit_id: string }>({
+    mutationFn: async ({ positionId }) => {
+      const { data } = await api.delete<ApiResponse<{ message: string }>>(`/v2/organizations/positions/${positionId}`);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['unit-positions', variables.unit_id] });
+      toast.success('Position deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete position.'));
     },
   });
 };

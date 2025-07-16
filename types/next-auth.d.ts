@@ -38,6 +38,8 @@ export interface position_accesses {
     delete: boolean;
   }
 
+
+
   // issue:{
   //   create: boolean;
   //   view: boolean;
@@ -58,6 +60,30 @@ export interface position_accesses {
   // };
 
 }
+export type Unit = {
+  unit_id: string;
+  unit_name: string;
+  created_at: string;
+  organization_id: string;
+  status: string;
+  positions: Array<{
+    position_id: string;
+    position_name: string;
+    position_description: string;
+    position_access: Record<string, unknown>;
+    created_at: string;
+    user_id: string;
+    unit_id: string;
+    position_status: string;
+  }>;
+};
+
+  export interface Pagination{
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
 
 // Generic API response type for all backend responses
 export type ApiResponse<T = unknown> = {
@@ -268,7 +294,29 @@ export type UserListItem = {
   phone: string | null;
   status: UserStatus;
 };
+// --- Position Types ---
+export type Position = {
+  position_id: string;
+  position_name: string;
+  position_description?: string;
+  position_status: string;
+  position_access?: Record<string, any>;
+  created_at?: string;
+  user_id?: string;
+  unit_id?: string;
+  user?: {
+    user_id: string;
+    first_name: string;
+    last_name: string;
+  };
+};
 
+export type CreatePositionDto = {
+  position_name: string;
+  position_description: string;
+  unit_id: string;
+  position_access: Record<string, any>;
+};
 // // For single user response (GET /api/users/:id)
 // export type UserDetails = {
 //   id: string;
