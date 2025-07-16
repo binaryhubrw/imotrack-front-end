@@ -40,7 +40,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   return (
     <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
       <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
-      <span className="capitalize">{status}</span>
+      <span className="capitalize">{status.toLowerCase()}</span>
     </div>
   );
 };
@@ -99,7 +99,12 @@ export default function UnitsPage() {
   const { data, isLoading, isError } = useUnits();
   const createUnit = useCreateUnit();
 
-  const units = data || [];
+  // The useUnits hook returns the units array directly after processing
+  const units: Unit[] = data || [];
+
+  // Debug log to check the structure
+  console.log('Raw API data:', data);
+  console.log('Extracted units:', units);
 
   const columns: ColumnDef<Unit>[] = [
     {
@@ -118,22 +123,59 @@ export default function UnitsPage() {
       accessorKey: "created_at",
       header: "Created",
       cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
+        <span className="text-xs text-gray-500">
+          {new Date(row.original.created_at).toLocaleDateString()}
+        </span>
       ),
     },
     {
       accessorKey: "organization_id",
       header: "Organization ID",
       cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{row.original.organization_id}</span>
+        <span className="text-xs text-gray-500 font-mono">
+          {row.original.organization_id ? row.original.organization_id.substring(0, 8) + '...' : 'N/A'}
+        </span>
       ),
     },
     {
       id: "positions",
       header: "Positions",
-      cell: ({ row }) => (
-        <span className="text-xs text-gray-700">{row.original.positions?.length ?? 0}</span>
-      ),
+      cell: ({ row }) => {
+        const positions = row.original.positions as { position_status: string }[] || [];
+        const positionsCount = positions.length;
+        const activePositions = positions.filter((p) => p.position_status === 'ACTIVE').length;
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900">{positionsCount} total</span>
+            <span className="text-xs text-green-600">{activePositions} active</span>
+          </div>
+        );
+      },
+    },
+    {
+      id: "position_details",
+      header: "Position Names",
+      cell: ({ row }) => {
+        const positions = row.original.positions as { position_id: string; position_name: string }[] || [];
+        if (positions.length === 0) {
+          return <span className="text-xs text-gray-400">No positions</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {positions.slice(0, 2).map((position, index) => (
+              <span
+                key={position.position_id || index}
+                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+              >
+                {position.position_name}
+              </span>
+            ))}
+            {positions.length > 2 && (
+              <span className="text-xs text-gray-500">+{positions.length - 2} more</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "actions",
@@ -145,14 +187,14 @@ export default function UnitsPage() {
             onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
             aria-label="Edit"
           >
-            <Edit className="w-6 h-6" />
+            <Edit className="w-4 h-4" />
           </button>
           <button
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
             onClick={e => { e.stopPropagation(); toast.info('Delete not implemented'); }}
             aria-label="Delete"
           >
-            <Trash2 className="w-6 h-6" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -179,9 +221,19 @@ export default function UnitsPage() {
   });
 
   // Filtered data for search
-  const filteredRows = units.filter(unit =>
-    unit.unit_name.toLowerCase().includes(globalFilter.toLowerCase())
+  const filteredRows = units.filter((unit: Unit) =>
+    unit.unit_name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+    (unit.positions && unit.positions.some((position: { position_name: string }) =>
+      position.position_name?.toLowerCase().includes(globalFilter.toLowerCase())
+    ))
   );
+
+  if (isLoading) {
+    return <div className="p-8"><SkeletonTable rows={6} columns={7} /></div>;
+  }
+  if (isError) {
+    return <div className="p-8 text-center text-red-500">Failed to load units. Please try again.</div>;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -192,7 +244,9 @@ export default function UnitsPage() {
             <div className="flex items-center gap-3">
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Units</h1>
-                <p className="text-sm text-gray-600">Manage your Units records</p>
+                <p className="text-sm text-gray-600">
+                  Manage your Units records ({units.length} units)
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -215,31 +269,49 @@ export default function UnitsPage() {
         <div className="flex-1 overflow-auto p-4">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             {/* Table Controls */}
-            <div className="px-4 py-3 border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search units or positions..."
                     value={globalFilter}
                     onChange={(e) => setGlobalFilter(e.target.value)}
-                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48"
+                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
                   />
                 </div>
+                {globalFilter && (
+                  <span className="text-sm text-gray-500">
+                    {filteredRows.length} of {units.length} units
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
-              {isLoading ? (
-                <div className="p-8">
-                  <SkeletonTable rows={6} columns={6} />
+              {units.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Plus className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No units found</h3>
+                    <p className="text-gray-500">Get started by creating your first unit.</p>
+                  </div>
+                  <Button
+                    onClick={() => setShowCreate(true)}
+                    className="bg-[#0872b3] hover:bg-blue-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Unit
+                  </Button>
                 </div>
-              ) : isError ? (
-                <div className="p-8 text-center text-red-500">Failed to load units.</div>
-              ) : filteredRows.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">No units found.</div>
+              ) : filteredRows.length === 0 && globalFilter ? (
+                <div className="p-8 text-center text-gray-500">
+                  No units match your search criteria.
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -262,7 +334,7 @@ export default function UnitsPage() {
                     ))}
                   </TableHeader>
                   <TableBody>
-                    {table.getRowModel().rows.map((row) => (
+                    {table.getRowModel().rows.map(row => (
                       <TableRow
                         key={row.original.unit_id}
                         className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
@@ -270,8 +342,8 @@ export default function UnitsPage() {
                         tabIndex={0}
                         aria-label={`View details for unit ${row.original.unit_name}`}
                       >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-sm">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                           </TableCell>
                         ))}
@@ -281,7 +353,7 @@ export default function UnitsPage() {
                   <TableFooter>
                     <TableRow>
                       <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-                        Showing {table.getRowModel().rows.length} units
+                        Showing {globalFilter ? filteredRows.length : units.length} of {units.length} units
                       </TableCell>
                     </TableRow>
                   </TableFooter>

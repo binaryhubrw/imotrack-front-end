@@ -275,6 +275,7 @@ export const useAuth = () => {
         showPositionSelector: false,
       });
       router.push('/login');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       
       setAuthState(prev => ({ ...prev, isLoading: false }));

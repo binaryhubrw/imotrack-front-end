@@ -317,6 +317,99 @@ export type CreatePositionDto = {
   unit_id: string;
   position_access: Record<string, any>;
 };
+
+
+
+// --- User Types for new API ---
+export interface User {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  user_gender: string;
+  user_phone: string;
+  position_id: string;
+  position_name: string;
+}
+
+export interface UnitWithUsers {
+  unit_id: string;
+  unit_name: string;
+  users: User[];
+}
+
+export interface CreateUserDto {
+  first_name: string;
+  last_name: string;
+  user_nid: string;
+  user_phone: string;
+  user_gender: string;
+  user_dob: string;
+  street_address: string;
+  position_id: string;
+  email: string;
+}
+
+
+// --- Vehicle Model Types ---
+export type VehicleModel = {
+  vehicle_model_id: string;
+  vehicle_model_name: string;
+  vehicle_type: string;
+  manufacturer_name: string;
+  created_at: string;
+};
+
+export type CreateVehicleModelDto = {
+  vehicle_model_name: string;
+  vehicle_type: string;
+  manufacturer_name: string;
+};
+
+
+
+
+// --- Vehicle Types ---
+export type Vehicle = {
+  vehicle_id: string;
+  plate_number: string;
+  vehicle_type: string;
+  transmission_mode: string;
+  vehicle_model_id: string;
+  vehicle_photo: string;
+  vehicle_year: number;
+  vehicle_capacity: number;
+  vehicle_status: string;
+  energy_type: string;
+  last_service_date: string;
+  created_at: string;
+  organization_id: string;
+};
+
+export type CreateVehicleDto = {
+  plate_number: string;
+  vehicle_type: string;
+  transmission_mode: string;
+  vehicle_model_id: string;
+  vehicle_photo?: File | null;
+  vehicle_year: number;
+  vehicle_capacity: number;
+  energy_type: string;
+  organization_id: string;
+};
+
+export type UpdateVehicleDto = {
+  plate_number?: string;
+  vehicle_type?: string;
+  transmission_mode?: string;
+  vehicle_model_id?: string;
+  vehicle_photo?: string; // URL or base64 string (not file)
+  vehicle_year?: number;
+  vehicle_capacity?: number;
+  vehicle_status?: string;
+  energy_type?: string;
+  organization_id?: string;
+};
 // // For single user response (GET /api/users/:id)
 // export type UserDetails = {
 //   id: string;

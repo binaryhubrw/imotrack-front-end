@@ -15,6 +15,8 @@ import {
   faSignOutAlt,
   faShield,
   faMapPin,
+  faStairs,
+  faWheelchairMove,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -28,6 +30,18 @@ const MODULE_NAV = [
     label: "Organizations",
     href: "/dashboard/shared_pages/organizations",
     icon: <FontAwesomeIcon icon={faBuilding} />,
+  },
+  {
+    key: "positions",
+    label: "Positions",
+    href: "/dashboard/shared_pages/positions",
+    icon: <FontAwesomeIcon icon={faStairs} />,
+  },
+  {
+    key: "vehicleModels",
+    label: "VehicleModels",
+    href: "/dashboard/shared_pages/vehicle-model",
+    icon: <FontAwesomeIcon icon={faWheelchairMove} />,
   },
   {
     key: "units",
