@@ -28,7 +28,6 @@ import Link from "next/link";
 export default function HomePage() {
   return (
 
-
     <main className="text-[#0872b3]">
       {/* Hero Section */}
       <section

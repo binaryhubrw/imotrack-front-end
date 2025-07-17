@@ -11,12 +11,10 @@ import {
   UpdatePasswordRequest,
   PaginatedOrganizations,
   Organization,
-  CreateOrganizationDto,
   CreateUnitDto,
   Pagination,
   Unit,
   Position,
-  CreatePositionDto,
   UnitWithUsers,
   CreateUserDto,
   User,
@@ -25,6 +23,7 @@ import {
   Vehicle,
   CreateVehicleDto,
   UpdateVehicleDto,
+  position_accesses,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 // Define Unit type matching API response
@@ -346,16 +345,10 @@ export const useOrganizations = (page = 1, limit = 10) => {
 // Create organization (multipart/form-data)
 export const useCreateOrganization = () => {
   const queryClient = useQueryClient();
-  return useMutation<Organization, Error, CreateOrganizationDto>({
-    mutationFn: async (org) => {
-      const formData = new FormData();
-      formData.append('organization_name', org.organization_name);
-      formData.append('organization_email', org.organization_email);
-      formData.append('organization_phone', org.organization_phone);
-      formData.append('organization_logo', org.organization_logo); // can be file or url
-      formData.append('street_address', org.street_address);
+  return useMutation<Organization, Error, FormData>({
+    mutationFn: async (formData) => {
       const { data } = await api.post<ApiResponse<Organization>>('/v2/organizations', formData, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       if (!data.data) throw new Error('No data');
       return data.data;
@@ -374,16 +367,14 @@ export const useCreateOrganization = () => {
   });
 };
 
-// Fetch all units in the requester's organization
 export const useUnits = () => {
   return useQuery<Unit[], Error>({
     queryKey: ['units'],
     queryFn: async () => {
-      const { data } = await api.get<{ units: Unit[] }>('/v2/organizations/units');
-      console.log('Units API response:', data);
-      if (!data) throw new Error('No data');
-      // Map status field to status, and ensure all fields are present
-      return data.units.map((unit) => ({
+      const response = await api.get<{ message: string; data: Unit[] }>('/v2/organizations/units');
+      console.log('Units API response:', response.data);
+      if (!response.data.data) throw new Error('No data');
+      return response.data.data.map((unit) => ({
         ...unit,
         status: unit.status || 'ACTIVE',
       }));
@@ -418,8 +409,6 @@ export const useCreateUnit = () => {
   });
 };
 
-
-
 // --- Get all positions in a unit ---
 export const useUnitPositions = (unit_id: string) => {
   return useQuery<Position[], Error>({
@@ -436,20 +425,20 @@ export const useUnitPositions = (unit_id: string) => {
 // --- Create a new position in a unit ---
 export const useCreatePosition = () => {
   const queryClient = useQueryClient();
-  return useMutation<Position, Error, CreatePositionDto>({
-    mutationFn: async (position) => {
-      const formData = new FormData();
-      formData.append('position_name', position.position_name);
-      formData.append('position_description', position.position_description);
-      formData.append('unit_id', position.unit_id);
-      formData.append('position_access', JSON.stringify(position.position_access));
-      const { data } = await api.post<ApiResponse<Position>>('/v2/organizations/positions', formData, {
+  return useMutation({
+    mutationFn: async (positionData: {
+      position_name: string;
+      position_description: string;
+      unit_id: string;
+      position_access: position_accesses;
+    }) => {
+      const { data } = await api.post('/v2/organizations/positions', positionData, {
         headers: { 'Content-Type': 'application/json' },
       });
       if (!data.data) throw new Error('No data');
       return data.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['unit-positions', variables.unit_id] });
       toast.success('Position created successfully!');
     },
@@ -484,7 +473,6 @@ export const useDeletePosition = () => {
     },
   });
 };
-
 
 
 // --- GET all users grouped by unit ---
@@ -523,7 +511,6 @@ export const useCreateUser = () => {
     },
   });
 };
-
 
 
 // --- Get all vehicle models ---

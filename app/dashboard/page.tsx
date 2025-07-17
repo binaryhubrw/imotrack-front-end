@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Car,
   FileText,
@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkeletonDashboard } from "@/components/ui/skeleton";
 
 type StatCardProps = {
   icon: React.ElementType;
@@ -69,109 +69,21 @@ const StatCard = ({
 );
 
 export default function MainDashboard() {
-  const { user } = useAuth();
+  const [delayedLoading, setDelayedLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
-  if (!user) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDelayedLoading(false);
+    }, 1500); // 1 second delay
+
+    return () => clearTimeout(timer);
+  }, []);
+  if (isLoading || !user || delayedLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-            <Skeleton className="h-10 w-32" />
-          </div>
-
-          {/* Stats Cards Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Skeleton className="w-5 h-5 rounded" />
-                      <Skeleton className="h-4 w-20" />
-                    </div>
-                    <Skeleton className="h-8 w-16 mb-1" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="w-12 h-12 rounded-xl" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Content Grid Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <Skeleton className="h-6 w-32" />
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="p-3 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-8 h-8 rounded-lg" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-24 mb-1" />
-                        <Skeleton className="h-3 w-32" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Array.from({ length: 3 }).map((_, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                        <Skeleton className="w-8 h-8 rounded-lg" />
-                        <div className="flex-1">
-                          <Skeleton className="h-4 w-48 mb-1" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Position Access Skeleton */}
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-40" />
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-5 w-12" />
-                    </div>
-                    <div className="space-y-1">
-                      {Array.from({ length: 4 }).map((_, actionIndex) => (
-                        <div key={actionIndex} className="flex items-center justify-between">
-                          <Skeleton className="h-3 w-12" />
-                          <Skeleton className="w-2 h-2 rounded-full" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="max-w-7xl mx-auto">
+          <SkeletonDashboard />
         </div>
       </div>
     );
@@ -429,10 +341,9 @@ export default function MainDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(user.position.position_access).map(([module, permissions]) => {
+              {Object.entries(user.position.position_access as Record<string, Record<string, boolean>>).map(([module, permissions]) => {
                 const permissionCount = Object.values(permissions).filter(Boolean).length;
                 const totalPermissions = Object.keys(permissions).length;
-                
                 return (
                   <div key={module} className="p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">

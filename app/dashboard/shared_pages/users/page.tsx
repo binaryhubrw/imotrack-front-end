@@ -30,6 +30,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 // Define the type for CreateUserDto
 import type { CreateUserDto } from '@/types/next-auth';
+import { SkeletonUsersTable } from "@/components/ui/skeleton";
 
 function CreateUserModal({ open, onClose, onCreate, isLoading, unitId }: {
   open: boolean;
@@ -304,17 +305,7 @@ export default function UsersPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading users...</p>
-          </div>
-        </div>
-      </div>
+      <SkeletonUsersTable rows={10}/>
     );
   }
 
@@ -343,7 +334,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-600 text-sm mt-1">Manage your organization&apos;s users and their permissions</p>
         </div>
-        <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreate(true)}>
+        <Button className="flex text-white items-center gap-2 bg-[#0872b3] hover:bg-blue-700" onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4" /> Add User
         </Button>
       </div>
@@ -367,7 +358,7 @@ export default function UsersPage() {
                 {table.getHeaderGroups().map(headerGroup => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
-                      <TableHead key={header.id} className="px-3 py-2 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+                      <TableHead key={header.id} className="px-3 py-6 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
                     ))}
                   </TableRow>
                 ))}
@@ -377,13 +368,13 @@ export default function UsersPage() {
                   table.getRowModel().rows.map(row => (
                     <TableRow key={row.original.user_id} className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors">
                       {row.getVisibleCells().map(cell => (
-                        <TableCell key={cell.id} className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                        <TableCell key={cell.id} className="px-3 py-6 whitespace-nowrap text-xs text-gray-900">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="px-3 py-8 text-center text-gray-500">No users found</TableCell>
+                    <TableCell colSpan={columns.length} className="px-3 py-6 text-center text-gray-500">No users found</TableCell>
                   </TableRow>
                 )}
               </TableBody>

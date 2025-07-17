@@ -22,11 +22,11 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFoo
 import { useRouter } from 'next/navigation';
 import { useOrganizations, useCreateOrganization } from '@/lib/queries';
 import { Organization } from '@/types/next-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+// import { Button } from '@/components/ui/button';
+// import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import type { CreateOrganizationDto } from '@/types/next-auth';
 import { SkeletonTable } from '@/components/ui/skeleton';
+import { SkeletonOrganizationsTable } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
 // Status badge for organization status
@@ -46,7 +46,15 @@ const StatusBadge = ({ status }: { status: Organization["organization_status"] }
 };
 
 // Create Organization Modal
-function CreateOrganizationModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (data: FormData) => void }) {
+function CreateOrganizationModal({ 
+  open, 
+  onClose, 
+  onCreate 
+}: { 
+  open: boolean; 
+  onClose: () => void; 
+  onCreate: (data: FormData) => Promise<void>; 
+}) {
   const [form, setForm] = useState({
     organization_name: '',
     organization_email: '',
@@ -72,35 +80,45 @@ function CreateOrganizationModal({ open, onClose, onCreate }: { open: boolean; o
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    
     try {
       // Validation
       if (!form.organization_name || !form.organization_email || !form.organization_phone || !form.organization_logo || !form.street_address) {
         setError('All fields are required.');
-        setSubmitting(false);
         return;
       }
+      
       if (!/^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(form.organization_email)) {
         setError('Invalid email address.');
-        setSubmitting(false);
         return;
       }
+      
       if (!/^\d{10,15}$/.test(form.organization_phone)) {
         setError('Phone number must be 10 to 15 digits.');
-        setSubmitting(false);
         return;
       }
+      
       // Prepare FormData
-      const fd = new FormData();
-      fd.append('organization_name', form.organization_name);
-      fd.append('organization_email', form.organization_email);
-      fd.append('organization_phone', form.organization_phone);
-      fd.append('organization_logo', form.organization_logo as File);
-      fd.append('street_address', form.street_address);
-      await onCreate(fd);
-      setForm({ organization_name: '', organization_email: '', organization_phone: '', organization_logo: null, street_address: '' });
+      const formData = new FormData();
+      formData.append('organization_name', form.organization_name);
+      formData.append('organization_email', form.organization_email);
+      formData.append('organization_phone', form.organization_phone);
+      formData.append('organization_logo', form.organization_logo);
+      formData.append('street_address', form.street_address);
+      
+      await onCreate(formData);
+      
+      // Reset form on success
+      setForm({ 
+        organization_name: '', 
+        organization_email: '', 
+        organization_phone: '', 
+        organization_logo: null, 
+        street_address: '' 
+      });
       setLogoPreview(null);
       onClose();
-    } catch {
+    } catch (err) {
       setError('Failed to create organization.');
     } finally {
       setSubmitting(false);
@@ -108,36 +126,108 @@ function CreateOrganizationModal({ open, onClose, onCreate }: { open: boolean; o
   };
 
   if (!open) return null;
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-gray-100">
-        <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl" onClick={onClose}>&times;</button>
+        <button 
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl" 
+          onClick={onClose}
+        >
+          &times;
+        </button>
         <h2 className="text-2xl font-bold mb-6 text-center text-[#0872b3]">Create Organization</h2>
+        
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4 col-span-1">
-            <label className="block text-sm font-medium text-gray-700">Organization Name</label>
-            <input name="organization_name" value={form.organization_name} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="e.g. LoremDev" />
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input name="organization_email" type="email" value={form.organization_email} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="user@example.com" />
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
-            <input name="organization_phone" value={form.organization_phone} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="10-15 digits" />
-            <label className="block text-sm font-medium text-gray-700">Street Address</label>
-            <input name="street_address" value={form.street_address} onChange={handleChange} required className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500" placeholder="1234 Main St" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Organization Name</label>
+              <input 
+                name="organization_name" 
+                value={form.organization_name} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                placeholder="e.g. LoremDev" 
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input 
+                name="organization_email" 
+                type="email" 
+                value={form.organization_email} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                placeholder="user@example.com" 
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input 
+                name="organization_phone" 
+                value={form.organization_phone} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                placeholder="10-15 digits" 
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+              <input 
+                name="street_address" 
+                value={form.street_address} 
+                onChange={handleChange} 
+                required 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                placeholder="1234 Main St" 
+              />
+            </div>
           </div>
+          
           <div className="space-y-4 col-span-1 flex flex-col items-center justify-center">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Organization Logo</label>
-            <input name="organization_logo" type="file" accept="image/*" onChange={handleChange} required className="w-full" />
+            <div className="w-full">
+              <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Organization Logo</label>
+              <input 
+                name="organization_logo" 
+                type="file" 
+                accept="image/*" 
+                onChange={handleChange} 
+                required 
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+              />
+            </div>
+            
             {logoPreview && (
               <div className="mt-4 flex flex-col items-center">
-                <Image src={logoPreview} alt="Logo Preview" width={120} height={120} className="rounded-lg border border-gray-200 object-contain" />
+                <Image 
+                  src={logoPreview} 
+                  alt="Logo Preview" 
+                  width={120} 
+                  height={120} 
+                  className="rounded-lg border border-gray-200 object-contain" 
+                />
                 <span className="text-xs text-gray-500 mt-2">Preview</span>
               </div>
             )}
-            <div className="mt-8 flex-1 flex flex-col justify-end">
-              <button type="submit" className="w-full py-3 bg-[#0872b3] text-white rounded-lg font-semibold text-lg mt-6 hover:bg-blue-700 transition disabled:opacity-50" disabled={submitting}>
+            
+            <div className="mt-8 flex-1 flex flex-col justify-end w-full">
+              <button 
+                type="submit" 
+                className="w-full py-3 bg-[#0872b3] text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" 
+                disabled={submitting}
+              >
                 {submitting ? 'Creating...' : 'Create Organization'}
               </button>
-              {error && <div className="mt-4 text-red-600 text-center text-sm">{error}</div>}
+              
+              {error && (
+                <div className="mt-4 text-red-600 text-center text-sm">{error}</div>
+              )}
             </div>
           </div>
         </form>
@@ -246,6 +336,11 @@ export default function OrganizationsPage() {
     org.organization_email.toLowerCase().includes(globalFilter.toLowerCase())
   );
 
+  // Handle organization creation
+  const handleCreateOrganization = async (formData: FormData) => {
+    await createOrg.mutateAsync(formData);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -296,9 +391,72 @@ export default function OrganizationsPage() {
             {/* Table */}
             <div className="overflow-x-auto">
               {isLoading ? (
-                <div className="p-8">
-                  <SkeletonTable rows={6} columns={5} />
-                </div>
+                
+                <>
+                {/* Table */}
+<div className="overflow-x-auto">
+  {isLoading ? (
+    <SkeletonOrganizationsTable rows={6} />
+  ) : isError ? (
+    <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
+  ) : filteredRows.length === 0 ? (
+    <div className="p-8 text-center text-gray-500">No organizations found.</div>
+  ) : (
+    <Table>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead
+                key={header.id}
+                className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+              >
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {filteredRows.map((org) => (
+          <TableRow
+            key={org.organization_id}
+            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+            onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
+            tabIndex={0}
+            aria-label={`View details for organization ${org.organization_name}`}
+          >
+            {table.getAllColumns().map((col) => (
+              <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
+                {col.id === 'actions'
+                  ? flexRender(col.columnDef.cell, {})
+                  : flexRender(col.columnDef.cell, { row: { original: org } })}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
+            {pagination && (
+              <>
+                Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
+              </>
+            )}
+          </TableCell>
+        </TableRow>
+      </TableFooter>
+    </Table>
+  )}
+</div>
+                </>
+
               ) : isError ? (
                 <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
               ) : filteredRows.length === 0 ? (
@@ -385,12 +543,11 @@ export default function OrganizationsPage() {
           </div>
         </div>
       </div>
+      
       <CreateOrganizationModal
         open={showCreate}
         onClose={() => setShowCreate(false)}
-        onCreate={async (formData) => {
-          await createOrg.mutateAsync(formData as any); // lib/queries expects FormData now
-        }}
+        onCreate={handleCreateOrganization}
       />
     </div>
   )

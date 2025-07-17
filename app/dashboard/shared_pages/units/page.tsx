@@ -27,7 +27,7 @@ import { CreateUnitDto } from '@/types/next-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { SkeletonTable } from '@/components/ui/skeleton';
+import { SkeletonOrganizationsTable, SkeletonTable } from '@/components/ui/skeleton';
 
 // Status badge for unit status
 const StatusBadge = ({ status }: { status: string }) => {
@@ -229,7 +229,71 @@ export default function UnitsPage() {
   );
 
   if (isLoading) {
-    return <div className="p-8"><SkeletonTable rows={6} columns={7} /></div>;
+    return (
+    <>
+<div className="overflow-x-auto">
+  {isLoading ? (
+    <SkeletonOrganizationsTable rows={6} />
+  ) : isError ? (
+    <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
+  ) : filteredRows.length === 0 ? (
+    <div className="p-8 text-center text-gray-500">No organizations found.</div>
+  ) : (
+    <Table>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <TableHead
+                key={header.id}
+                className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+              >
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
+              </TableHead>
+            ))}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {filteredRows.map((org) => (
+          <TableRow
+            key={org.organization_id}
+            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+            onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
+            tabIndex={0}
+            aria-label={`View details for organization ${org.organization_name}`}
+          >
+            {table.getAllColumns().map((col) => (
+              <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
+                {col.id === 'actions'
+                  ? flexRender(col.columnDef.cell, {})
+                  : flexRender(col.columnDef.cell, { row: { original: org } })}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
+            {pagination && (
+              <>
+                Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
+              </>
+            )}
+          </TableCell>
+        </TableRow>
+      </TableFooter>
+    </Table>
+  )}
+</div>
+    </>
+    )
   }
   if (isError) {
     return <div className="p-8 text-center text-red-500">Failed to load units. Please try again.</div>;

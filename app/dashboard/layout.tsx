@@ -13,7 +13,6 @@ import {
   faDashboard,
   faCog,
   faSignOutAlt,
-  faShield,
   faMapPin,
   faStairs,
   faWheelchairMove,
@@ -32,6 +31,12 @@ const MODULE_NAV = [
     icon: <FontAwesomeIcon icon={faBuilding} />,
   },
   {
+    key: "units",
+    label: "Units",
+    href: "/dashboard/shared_pages/units",
+    icon: <FontAwesomeIcon icon={faMapPin} />,
+  },
+  {
     key: "positions",
     label: "Positions",
     href: "/dashboard/shared_pages/positions",
@@ -43,18 +48,7 @@ const MODULE_NAV = [
     href: "/dashboard/shared_pages/vehicle-model",
     icon: <FontAwesomeIcon icon={faWheelchairMove} />,
   },
-  {
-    key: "units",
-    label: "Units",
-    href: "/dashboard/shared_pages/units",
-    icon: <FontAwesomeIcon icon={faMapPin} />,
-  },
-  {
-    key: "positions",
-    label: "Position Access",
-    href: "/dashboard/shared_pages/create_roles_permissions",
-    icon: <FontAwesomeIcon icon={faShield} />,
-  },
+  
   {
     key: "users",
     label: "Users",
@@ -117,26 +111,8 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
-  // const [hasRedirected, setHasRedirected] = useState(false);
 
-  // Reset redirect flag when user changes
-  // useEffect(() => {
-  //   if (user) {
-  //     setHasRedirected(false);
-  //   }
-  // }, [user]);
 
-  // Temporarily disable automatic redirects to break the infinite loop
-  // useEffect(() => {
-  //   if (!isLoading && !user && !hasRedirected) {
-  //     console.log('Dashboard: No user found, redirecting to login');
-  //     setHasRedirected(true);
-  //     router.push("/login");
-  //     return;
-  //   }
-  // }, [user, isLoading, router, hasRedirected]);
-
-  // Build nav items dynamically based on permissions
   const getNavItems = () => {
     if (!user) return [];
     // Type for position_access: Record<string, { view?: boolean }>

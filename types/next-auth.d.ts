@@ -72,11 +72,12 @@ export type Unit = {
     position_description: string;
     position_access: Record<string, unknown>;
     created_at: string;
-    user_id: string;
+    user_id: string | null; // ✅ allow null
     unit_id: string;
     position_status: string;
   }>;
 };
+
 
   export interface Pagination{
   page: number;
@@ -300,7 +301,7 @@ export type Position = {
   position_name: string;
   position_description?: string;
   position_status: string;
-  position_access?: Record<string, any>;
+  position_access?: position_access;
   created_at?: string;
   user_id?: string;
   unit_id?: string;
@@ -315,7 +316,7 @@ export type CreatePositionDto = {
   position_name: string;
   position_description: string;
   unit_id: string;
-  position_access: Record<string, any>;
+  position_access: position_accesses;
 };
 
 
