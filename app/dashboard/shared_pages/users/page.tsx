@@ -112,78 +112,244 @@ function CreateUserModal({ open, onClose, onCreate, isLoading, unitId }: {
   };
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
-        <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors" onClick={handleClose} disabled={isLoading}>
-          <X className="w-5 h-5" />
-        </button>
-        <h2 className="text-xl font-bold mb-4 text-gray-900">Create New User</h2>
-        <form className="space-y-3" onSubmit={e => e.preventDefault()}>
-          <div className="grid grid-cols-2 gap-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300">
+    
+    {/* Header */}
+    <div className="sticky top-0 bg-white border-b border-gray-100 p-6 rounded-t-xl">
+      <button 
+        className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100" 
+        onClick={handleClose} 
+        disabled={isLoading}
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <h2 className="text-2xl font-bold text-[#0872b3] pr-10">Create New User</h2>
+      <p className="text-sm text-gray-600 mt-1">Fill in the details to create a new user account</p>
+    </div>
+
+    {/* Form Content */}
+    <div className="p-6">
+      <form className="space-y-6" onSubmit={e => e.preventDefault()}>
+        
+        {/* Personal Information */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-[#0872b3] border-b border-[#0872b3]/20 pb-2">Personal Information</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">First Name</label>
-              <Input name="first_name" placeholder="First name" value={form.first_name} onChange={handleChange} onBlur={handleBlur} className={errors.first_name && touched.first_name ? 'border-red-500' : ''} disabled={isLoading} />
-              {errors.first_name && touched.first_name && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.first_name}</p>}
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">First Name</label>
+              <Input 
+                name="first_name" 
+                placeholder="Enter first name" 
+                value={form.first_name} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.first_name && touched.first_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+                disabled={isLoading} 
+              />
+              {errors.first_name && touched.first_name && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.first_name}
+                </p>
+              )}
             </div>
+            
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Last Name</label>
-              <Input name="last_name" placeholder="Last name" value={form.last_name} onChange={handleChange} onBlur={handleBlur} className={errors.last_name && touched.last_name ? 'border-red-500' : ''} disabled={isLoading} />
-              {errors.last_name && touched.last_name && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.last_name}</p>}
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Last Name</label>
+              <Input 
+                name="last_name" 
+                placeholder="Enter last name" 
+                value={form.last_name} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.last_name && touched.last_name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+                disabled={isLoading} 
+              />
+              {errors.last_name && touched.last_name && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.last_name}
+                </p>
+              )}
             </div>
           </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-            <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} onBlur={handleBlur} className={errors.email && touched.email ? 'border-red-500' : ''} disabled={isLoading} />
-            {errors.email && touched.email && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.email}</p>}
+            <label className="block text-sm font-medium text-[#0872b3] mb-2">Email Address</label>
+            <Input 
+              name="email" 
+              type="email" 
+              placeholder="Enter email address" 
+              value={form.email} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.email && touched.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+              disabled={isLoading} 
+            />
+            {errors.email && touched.email && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.email}
+              </p>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">National ID</label>
-              <Input name="user_nid" placeholder="National ID" value={form.user_nid} onChange={handleChange} onBlur={handleBlur} className={errors.user_nid && touched.user_nid ? 'border-red-500' : ''} disabled={isLoading} />
-              {errors.user_nid && touched.user_nid && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.user_nid}</p>}
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">National ID</label>
+              <Input 
+                name="user_nid" 
+                placeholder="Enter National ID" 
+                value={form.user_nid} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.user_nid && touched.user_nid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+                disabled={isLoading} 
+              />
+              {errors.user_nid && touched.user_nid && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.user_nid}
+                </p>
+              )}
             </div>
+            
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-              <Input name="user_phone" placeholder="Phone" value={form.user_phone} onChange={handleChange} onBlur={handleBlur} className={errors.user_phone && touched.user_phone ? 'border-red-500' : ''} disabled={isLoading} />
-              {errors.user_phone && touched.user_phone && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.user_phone}</p>}
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Phone Number</label>
+              <Input 
+                name="user_phone" 
+                placeholder="Enter phone number" 
+                value={form.user_phone} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.user_phone && touched.user_phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+                disabled={isLoading} 
+              />
+              {errors.user_phone && touched.user_phone && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.user_phone}
+                </p>
+              )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-              <select name="user_gender" value={form.user_gender} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs" disabled={isLoading}>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Gender</label>
+              <select 
+                name="user_gender" 
+                value={form.user_gender} 
+                onChange={handleChange} 
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white" 
+                disabled={isLoading}
+              >
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
               </select>
             </div>
+            
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
-              <Input name="user_dob" type="date" value={form.user_dob} onChange={handleChange} onBlur={handleBlur} className={errors.user_dob && touched.user_dob ? 'border-red-500' : ''} disabled={isLoading} />
-              {errors.user_dob && touched.user_dob && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.user_dob}</p>}
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Date of Birth</label>
+              <Input 
+                name="user_dob" 
+                type="date" 
+                value={form.user_dob} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.user_dob && touched.user_dob ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+                disabled={isLoading} 
+              />
+              {errors.user_dob && touched.user_dob && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.user_dob}
+                </p>
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Address & Position */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-[#0872b3] border-b border-[#0872b3]/20 pb-2">Address & Position</h3>
+          
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Street Address</label>
-            <Input name="street_address" placeholder="Street address" value={form.street_address} onChange={handleChange} onBlur={handleBlur} className={errors.street_address && touched.street_address ? 'border-red-500' : ''} disabled={isLoading} />
-            {errors.street_address && touched.street_address && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.street_address}</p>}
+            <label className="block text-sm font-medium text-[#0872b3] mb-2">Street Address</label>
+            <Input 
+              name="street_address" 
+              placeholder="Enter street address" 
+              value={form.street_address} 
+              onChange={handleChange} 
+              onBlur={handleBlur} 
+              className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200 ${errors.street_address && touched.street_address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+              disabled={isLoading} 
+            />
+            {errors.street_address && touched.street_address && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.street_address}
+              </p>
+            )}
           </div>
+
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Position</label>
-            <select name="position_id" value={form.position_id} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs" disabled={isLoading || loadingPositions || !positions || positions.length === 0}>
-              {loadingPositions && <option>Loading...</option>}
+            <label className="block text-sm font-medium text-[#0872b3] mb-2">Position</label>
+            <select 
+              name="position_id" 
+              value={form.position_id} 
+              onChange={handleChange} 
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white" 
+              disabled={isLoading || loadingPositions || !positions || positions.length === 0}
+            >
+              {loadingPositions && <option>Loading positions...</option>}
               {positions && positions.length > 0 ? positions.map(pos => (
                 <option key={pos.position_id} value={pos.position_id}>{pos.position_name}</option>
               )) : !loadingPositions && <option value="">No positions available</option>}
             </select>
-            {errors.position_id && touched.position_id && <p className="text-red-500 text-xs mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.position_id}</p>}
+            {errors.position_id && touched.position_id && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                {errors.position_id}
+              </p>
+            )}
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={isLoading || loadingPositions || !positions || positions.length === 0} className="min-w-[100px]">{isLoading ? 'Creating...' : 'Create User'}</Button>
-          </div>
-        </form>
+        </div>
+      </form>
+    </div>
+
+    {/* Footer */}
+    <div className="sticky bottom-0 bg-white border-t border-gray-100 p-6 rounded-b-xl">
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={handleClose} 
+          disabled={isLoading}
+          className="border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          disabled={isLoading || loadingPositions || !positions || positions.length === 0} 
+          className="min-w-[120px] bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200"
+        >
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Creating...
+            </span>
+          ) : (
+            'Create User'
+          )}
+        </Button>
       </div>
     </div>
+  </div>
+</div>
   );
 }
 

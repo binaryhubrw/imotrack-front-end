@@ -359,7 +359,17 @@ export const useCreateOrganization = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create organization.'));
@@ -367,7 +377,7 @@ export const useCreateOrganization = () => {
   });
 };
 
-export const useUnits = () => {
+export const useOrganizationUnits = () => {
   return useQuery<Unit[], Error>({
     queryKey: ['units'],
     queryFn: async () => {
@@ -401,7 +411,17 @@ export const useCreateUnit = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create unit.'));
@@ -432,19 +452,47 @@ export const useCreatePosition = () => {
       unit_id: string;
       position_access: position_accesses;
     }) => {
-      const { data } = await api.post('/v2/organizations/positions', positionData, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      try {
+        const { data } = await api.post('/v2/organizations/positions', positionData, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!data.data) throw new Error('No data');
+        return data.data;
+      } catch (error: unknown) {
+        // Show toast for specific backend error
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'response' in error &&
+          error.response &&
+          typeof error.response === 'object' &&
+          'data' in error.response &&
+          error.response.data &&
+          typeof error.response.data === 'object' &&
+          'message' in error.response.data
+        ) {
+          toast.error((error.response.data as { message?: string }).message);
+        }
+        throw error;
+      }
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['unit-positions', variables.unit_id] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
       toast.success('Position created successfully!');
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create position.'));
@@ -466,14 +514,23 @@ export const useDeletePosition = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete position.'));
     },
   });
 };
-
 
 // --- GET all users grouped by unit ---
 export const useUsers = () => {
@@ -504,7 +561,17 @@ export const useCreateUser = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create user.'));
@@ -555,7 +622,17 @@ export const useCreateVehicleModel = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create vehicle model.'));
@@ -580,7 +657,17 @@ export const useUpdateVehicleModel = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update vehicle model.'));
@@ -603,7 +690,17 @@ export const useDeleteVehicleModel = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle model.'));
@@ -664,7 +761,17 @@ export const useCreateVehicle = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create vehicle.'));
@@ -689,7 +796,17 @@ export const useUpdateVehicle = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update vehicle.'));
@@ -712,7 +829,17 @@ export const useDeleteVehicle = () => {
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
-      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response && error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle.'));

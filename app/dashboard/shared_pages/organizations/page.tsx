@@ -22,10 +22,8 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFoo
 import { useRouter } from 'next/navigation';
 import { useOrganizations, useCreateOrganization } from '@/lib/queries';
 import { Organization } from '@/types/next-auth';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
+
 import { toast } from 'sonner';
-import { SkeletonTable } from '@/components/ui/skeleton';
 import { SkeletonOrganizationsTable } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
@@ -192,16 +190,18 @@ function CreateOrganizationModal({
           
           <div className="space-y-4 col-span-1 flex flex-col items-center justify-center">
             <div className="w-full">
-              <label className="block text-sm font-medium text-gray-700 mb-2 text-center">Organization Logo</label>
-              <input 
-                name="organization_logo" 
-                type="file" 
-                accept="image/*" 
-                onChange={handleChange} 
-                required 
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
-              />
-            </div>
+        <label className="block text-sm font-medium text-[#0872b3] mb-2 text-center">
+          Organization Logo
+        </label>
+        <input 
+          name="organization_logo" 
+          type="file" 
+          accept="image/*" 
+          onChange={handleChange} 
+          required 
+          className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#0872b3]/10 file:text-[#0872b3] hover:file:bg-[#0872b3]/20 focus:outline-none focus:ring-2 focus:ring-[#0872b3] focus:ring-offset-2 transition-all duration-200" 
+        />
+      </div>
             
             {logoPreview && (
               <div className="mt-4 flex flex-col items-center">

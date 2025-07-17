@@ -21,13 +21,13 @@ import {
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
-import { useUnits, useCreateUnit } from '@/lib/queries';
+import { useOrganizationUnits, useCreateUnit } from '@/lib/queries';
 import type { Unit } from '@/types/next-auth';
 import { CreateUnitDto } from '@/types/next-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { SkeletonOrganizationsTable, SkeletonTable } from '@/components/ui/skeleton';
+import { SkeletonOrganizationsTable } from '@/components/ui/skeleton';
 
 // Status badge for unit status
 const StatusBadge = ({ status }: { status: string }) => {
@@ -73,17 +73,48 @@ function CreateUnitModal({ open, onClose, onCreate }: { open: boolean; onClose: 
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Create Unit</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input name="unit_name" placeholder="Unit Name" value={form.unit_name} onChange={handleChange} required />
-          <Input name="organization_id" placeholder="Organization ID" value={form.organization_id} onChange={handleChange} required />
-          <Button type="submit" className="w-full" disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</Button>
-        </form>
-      </div>
-    </div>
+   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+  <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
+    <button 
+      className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200" 
+      onClick={onClose}
+    >
+      &times;
+    </button>
+    
+    <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
+    
+    <form onSubmit={handleSubmit} className="space-y-5">
+  <Input 
+    name="unit_name" 
+    placeholder="Unit Name" 
+    value={form.unit_name} 
+    onChange={handleChange} 
+    required 
+    className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+  />
+
+  <Input 
+    name="organization_id" 
+    placeholder="Organization ID" 
+    value={form.organization_id} 
+    onChange={handleChange} 
+    required 
+    className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+  />
+
+  <Button 
+    type="submit" 
+    className="w-full bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200 h-11 text-base"
+    disabled={submitting}
+  >
+    {submitting ? 'Creating...' : 'Create'}
+  </Button>
+</form>
+
+  </div>
+</div>
+
   );
 }
 
@@ -96,15 +127,10 @@ export default function UnitsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const router = useRouter();
 
-  const { data, isLoading, isError } = useUnits();
+  const { data, isLoading, isError } = useOrganizationUnits();
   const createUnit = useCreateUnit();
 
-  // The useUnits hook returns the units array directly after processing
   const units: Unit[] = data || [];
-
-  // Debug log to check the structure
-  console.log('Raw API data:', data);
-  console.log('Extracted units:', units);
 
   const columns: ColumnDef<Unit>[] = [
     {
@@ -266,7 +292,7 @@ export default function UnitsPage() {
             className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
             onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
             tabIndex={0}
-            aria-label={`View details for organization ${org.organization_name}`}
+            aria-label={`View details for organization ${org.organization_id}`}
           >
             {table.getAllColumns().map((col) => (
               <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
