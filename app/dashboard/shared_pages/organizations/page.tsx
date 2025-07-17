@@ -116,7 +116,7 @@ function CreateOrganizationModal({
       });
       setLogoPreview(null);
       onClose();
-    } catch (err) {
+    } catch {
       setError('Failed to create organization.');
     } finally {
       setSubmitting(false);
@@ -238,7 +238,7 @@ function CreateOrganizationModal({
 
 export default function OrganizationsPage() {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<unknown[]>([])
+  const [columnFilters, setColumnFilters] = useState<import("@tanstack/react-table").ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
@@ -423,19 +423,17 @@ export default function OrganizationsPage() {
         ))}
       </TableHeader>
       <TableBody>
-        {filteredRows.map((org) => (
+        {table.getRowModel().rows.map((row) => (
           <TableRow
-            key={org.organization_id}
+            key={row.original.organization_id}
             className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-            onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
+            onClick={() => router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`)}
             tabIndex={0}
-            aria-label={`View details for organization ${org.organization_name}`}
+            aria-label={`View details for organization ${row.original.organization_name}`}
           >
-            {table.getAllColumns().map((col) => (
-              <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
-                {col.id === 'actions'
-                  ? flexRender(col.columnDef.cell, {})
-                  : flexRender(col.columnDef.cell, { row: { original: org } })}
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}
           </TableRow>
@@ -483,23 +481,26 @@ export default function OrganizationsPage() {
                     ))}
                   </TableHeader>
                   <TableBody>
-                    {filteredRows.map((org) => (
-                      <TableRow
-                        key={org.organization_id}
-                        className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-                        onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
-                        tabIndex={0}
-                        aria-label={`View details for organization ${org.organization_name}`}
-                      >
-                        {table.getAllColumns().map((col) => (
-                          <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
-                            {col.id === 'actions'
-                              ? flexRender(col.columnDef.cell, {})
-                              : flexRender(col.columnDef.cell, { row: { original: org } })}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                    {table.getRowModel().rows
+                      .filter(row =>
+                        row.original.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
+                        row.original.organization_email.toLowerCase().includes(globalFilter.toLowerCase())
+                      )
+                      .map((row) => (
+                        <TableRow
+                          key={row.original.organization_id}
+                          className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                          onClick={() => router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`)}
+                          tabIndex={0}
+                          aria-label={`View details for organization ${row.original.organization_name}`}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
                   </TableBody>
                   <TableFooter>
                     <TableRow>

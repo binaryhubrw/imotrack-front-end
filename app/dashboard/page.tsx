@@ -1,28 +1,43 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   Car,
   FileText,
   TrendingUp,
   Calendar,
   Users,
-  CheckCircle,
   AlertCircle,
   Clock,
   Building,
   MapPin,
   Shield,
+  Settings,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useDashboard } from "@/hooks/DashboardContext";
+
+// Icon mapping
+const iconMap = {
+  Building,
+  MapPin,
+  Users,
+  Shield,
+  Car,
+  Settings,
+  FileText,
+  Activity,
+};
 
 type StatCardProps = {
   icon: React.ElementType;
   title: string;
-  value: string;
+  value: string | number;
   subtitle?: string;
   bgColor: string;
   textColor: string;
@@ -68,18 +83,60 @@ const StatCard = ({
   </div>
 );
 
+const ActivityIcon = ({ type }: { type: string }) => {
+  switch (type) {
+    case 'user_created':
+      return <Users className="w-4 h-4" />;
+    case 'vehicle_added':
+      return <Car className="w-4 h-4" />;
+    case 'organization_updated':
+      return <Building className="w-4 h-4" />;
+    case 'position_assigned':
+      return <Shield className="w-4 h-4" />;
+    case 'unit_created':
+      return <MapPin className="w-4 h-4" />;
+    default:
+      return <Activity className="w-4 h-4" />;
+  }
+};
+
+const getActivityColor = (type: string) => {
+  switch (type) {
+    case 'user_created':
+      return 'text-blue-600';
+    case 'vehicle_added':
+      return 'text-green-600';
+    case 'organization_updated':
+      return 'text-purple-600';
+    case 'position_assigned':
+      return 'text-orange-600';
+    case 'unit_created':
+      return 'text-teal-600';
+    default:
+      return 'text-gray-600';
+  }
+};
+
+const formatTimeAgo = (timestamp: string) => {
+  const now = new Date();
+  const past = new Date(timestamp);
+  const diffMs = now.getTime() - past.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return past.toLocaleDateString();
+};
+
 export default function MainDashboard() {
-  const [delayedLoading, setDelayedLoading] = useState(true);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { stats, recentActivity, quickActions, isLoading, error } = useDashboard();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDelayedLoading(false);
-    }, 1500); // 1 second delay
-
-    return () => clearTimeout(timer);
-  }, []);
-  if (isLoading || !user || delayedLoading) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
         <div className="max-w-7xl mx-auto">
@@ -89,152 +146,90 @@ export default function MainDashboard() {
     );
   }
 
-  // Sample data based on user's position access
-  const getDashboardStats = () => {
+  if (error) {
+    toast.error(`Dashboard error: ${error}`);
+  }
+
+  const getDashboardCards = () => {
+    const cards = [];
     const positionAccess = user.position.position_access;
-    const stats = [];
 
-    // Always show basic stats
-    stats.push({
-      icon: Users,
-      title: "Total Users",
-      value: "1,234",
-      bgColor: "bg-blue-600",
-      textColor: "text-blue-600",
-      trend: "+12 this month",
-    });
+    // Always show users if they have access
+    if (positionAccess.users?.view) {
+      cards.push({
+        icon: Users,
+        title: "Total Users",
+        value: stats.totalUsers,
+        bgColor: "bg-blue-600",
+        textColor: "text-blue-600",
+        subtitle: "Active users in system",
+      });
+    }
 
-    if (positionAccess.organizations.view) {
-      stats.push({
+    // Organizations
+    if (positionAccess.organizations?.view) {
+      cards.push({
         icon: Building,
         title: "Organizations",
-        value: "5",
+        value: stats.totalOrganizations,
         bgColor: "bg-purple-600",
         textColor: "text-purple-600",
-        trend: "+1 this quarter",
+        subtitle: "Registered organizations",
       });
     }
 
-    if (positionAccess.units.view) {
-      stats.push({
+    // Units
+    if (positionAccess.units?.view) {
+      cards.push({
         icon: MapPin,
         title: "Units",
-        value: "25",
+        value: stats.totalUnits,
         bgColor: "bg-green-600",
         textColor: "text-green-600",
-        trend: "+3 this month",
+        subtitle: "Organizational units",
       });
     }
 
-    if (positionAccess.positions.view) {
-      stats.push({
+    // Positions
+    if (positionAccess.positions?.view) {
+      cards.push({
         icon: Shield,
         title: "Positions",
-        value: "15",
+        value: stats.totalPositions,
         bgColor: "bg-orange-600",
         textColor: "text-orange-600",
-        trend: "+2 this month",
+        subtitle: "Total positions",
       });
     }
 
-    // Add vehicle-related stats for fleet managers
-    if (user.position.position_name.toLowerCase().includes('fleet')) {
-      stats.push({
+    // Vehicles
+    if (positionAccess.vehicles?.view) {
+      cards.push({
         icon: Car,
-        title: "Total Vehicles",
-        value: "45",
+        title: "Fleet Vehicles",
+        value: stats.totalVehicles,
         bgColor: "bg-indigo-600",
         textColor: "text-indigo-600",
-        trend: "+5 this month",
+        subtitle: `${stats.activeVehicles} active, ${stats.inactiveVehicles} inactive`,
       });
     }
 
-    // Add request-related stats for staff
-    if (user.position.position_name.toLowerCase().includes('staff')) {
-      stats.push({
-        icon: FileText,
-        title: "My Requests",
-        value: "8",
+    // Vehicle Models
+    if (positionAccess.vehicleModels?.view) {
+      cards.push({
+        icon: Settings,
+        title: "Vehicle Models",
+        value: stats.totalVehicleModels,
         bgColor: "bg-teal-600",
         textColor: "text-teal-600",
-        trend: "+2 this week",
+        subtitle: "Available models",
       });
     }
 
-    return stats;
+    return cards;
   };
 
-  const getRecentActivity = () => {
-    const activities = [
-      {
-        id: 1,
-        type: "user_login",
-        message: "User logged in successfully",
-        time: "2 minutes ago",
-        icon: CheckCircle,
-        color: "text-green-600",
-      },
-      {
-        id: 2,
-        type: "permission_update",
-        message: "Position access permissions updated",
-        time: "1 hour ago",
-        icon: Shield,
-        color: "text-blue-600",
-      },
-      {
-        id: 3,
-        type: "data_access",
-        message: "Accessed organizations module",
-        time: "3 hours ago",
-        icon: Building,
-        color: "text-purple-600",
-      },
-    ];
-
-    return activities;
-  };
-
-  const getQuickActions = () => {
-    const actions = [];
-    const positionAccess = user.position.position_access;
-
-    if (positionAccess.organizations.create) {
-      actions.push({
-        title: "Add Organization",
-        description: "Create a new organization",
-        icon: Building,
-        href: "/dashboard/shared_pages/organizations",
-        color: "bg-blue-100 text-blue-800",
-      });
-    }
-
-    if (positionAccess.users.create) {
-      actions.push({
-        title: "Add User",
-        description: "Create a new user account",
-        icon: Users,
-        href: "/dashboard/shared_pages/users",
-        color: "bg-green-100 text-green-800",
-      });
-    }
-
-    if (positionAccess.positions.view) {
-      actions.push({
-        title: "Manage Permissions",
-        description: "Configure position access",
-        icon: Shield,
-        href: "/dashboard/shared_pages/position_access",
-        color: "bg-purple-100 text-purple-800",
-      });
-    }
-
-    return actions;
-  };
-
-  const stats = getDashboardStats();
-  const activities = getRecentActivity();
-  const quickActions = getQuickActions();
+  const dashboardCards = getDashboardCards();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
@@ -249,20 +244,42 @@ export default function MainDashboard() {
               {user.position.position_name} • {user.organization.organization_name} • {user.unit.unit_name}
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-700">
-              {new Date().toLocaleDateString()}
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-700">
+                {new Date().toLocaleDateString()}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <StatCard key={index} {...stat} />
-          ))}
-        </div>
+        {dashboardCards.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {dashboardCards.map((card, index) => (
+              <StatCard key={index} {...card} />
+            ))}
+          </div>
+        )}
+
+        {/* Loading overlay for stats */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-8 bg-gray-200 rounded w-16 mb-1"></div>
+                    <div className="h-3 bg-gray-200 rounded w-32"></div>
+                  </div>
+                  <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -277,26 +294,31 @@ export default function MainDashboard() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {quickActions.length > 0 ? (
-                  quickActions.map((action, index) => (
-                    <div
-                      key={index}
-                      className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${action.color}`}>
-                          <action.icon className="w-4 h-4" />
+                  quickActions.map((action) => {
+                    const IconComponent = iconMap[action.icon as keyof typeof iconMap] || Activity;
+                    return (
+                      <a
+                        key={action.id}
+                        href={action.href}
+                        className="block p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${action.color}`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{action.title}</h4>
+                            <p className="text-sm text-gray-500">{action.description}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">{action.title}</h4>
-                          <p className="text-sm text-gray-500">{action.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                      </a>
+                    );
+                  })
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No quick actions available for your position</p>
+                    <p>No quick actions available</p>
+                    <p className="text-sm">Check your position permissions</p>
                   </div>
                 )}
               </CardContent>
@@ -313,19 +335,27 @@ export default function MainDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                      <div className={`p-2 rounded-lg bg-white ${activity.color}`}>
-                        <activity.icon className="w-4 h-4" />
+                {recentActivity.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity) => (
+                      <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                        <div className={`p-2 rounded-lg bg-white ${getActivityColor(activity.type)}`}>
+                          <ActivityIcon type={activity.type} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                          <p className="text-xs text-gray-500">{formatTimeAgo(activity.timestamp)}</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                        <p className="text-xs text-gray-500">{activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No recent activity</p>
+                    <p className="text-sm">Activity will appear here as changes are made</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -344,11 +374,15 @@ export default function MainDashboard() {
               {Object.entries(user.position.position_access as Record<string, Record<string, boolean>>).map(([module, permissions]) => {
                 const permissionCount = Object.values(permissions).filter(Boolean).length;
                 const totalPermissions = Object.keys(permissions).length;
+                const hasAnyPermission = permissionCount > 0;
+                
                 return (
-                  <div key={module} className="p-4 rounded-lg border border-gray-200">
+                  <div key={module} className={`p-4 rounded-lg border ${hasAnyPermission ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium text-gray-900 capitalize">{module}</h4>
-                      <Badge variant="outline">{permissionCount}/{totalPermissions}</Badge>
+                      <Badge variant={hasAnyPermission ? "default" : "secondary"}>
+                        {permissionCount}/{totalPermissions}
+                      </Badge>
                     </div>
                     <div className="space-y-1">
                       {Object.entries(permissions).map(([action, hasPermission]) => (

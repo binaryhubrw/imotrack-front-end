@@ -286,19 +286,17 @@ export default function UnitsPage() {
         ))}
       </TableHeader>
       <TableBody>
-        {filteredRows.map((org) => (
+        {table.getRowModel().rows.map((row) => (
           <TableRow
-            key={org.organization_id}
+            key={row.original.organization_id}
             className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-            onClick={() => router.push(`/dashboard/shared_pages/organizations/${org.organization_id}`)}
+            onClick={() => router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`)}
             tabIndex={0}
-            aria-label={`View details for organization ${org.organization_id}`}
+            aria-label={`View details for organization ${row.original.organization_id}`}
           >
-            {table.getAllColumns().map((col) => (
-              <TableCell key={col.id} className="px-4 py-4 whitespace-nowrap text-base">
-                {col.id === 'actions'
-                  ? flexRender(col.columnDef.cell, {})
-                  : flexRender(col.columnDef.cell, { row: { original: org } })}
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}
           </TableRow>
@@ -307,11 +305,7 @@ export default function UnitsPage() {
       <TableFooter>
         <TableRow>
           <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-            {pagination && (
-              <>
-                Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
-              </>
-            )}
+            Showing {filteredRows.length} of {units.length} organizations
           </TableCell>
         </TableRow>
       </TableFooter>

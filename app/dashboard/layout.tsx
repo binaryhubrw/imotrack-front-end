@@ -48,7 +48,7 @@ const MODULE_NAV = [
     href: "/dashboard/shared_pages/vehicle-model",
     icon: <FontAwesomeIcon icon={faWheelchairMove} />,
   },
-  
+
   {
     key: "users",
     label: "Users",
@@ -112,11 +112,13 @@ export default function DashboardLayout({
   const { user, logout, isLoading } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
 
-
   const getNavItems = () => {
     if (!user) return [];
     // Type for position_access: Record<string, { view?: boolean }>
-    const access = (user.position.position_access as unknown) as Record<string, { view?: boolean }>;
+    const access = user.position.position_access as unknown as Record<
+      string,
+      { view?: boolean }
+    >;
     return [
       {
         href: `/dashboard`,
@@ -127,7 +129,7 @@ export default function DashboardLayout({
         // Always show if marked always
         if (mod.always) return true;
         // If module is in access and has view permission
-        if ((access[mod.key] && access[mod.key].view)) return true;
+        if (access[mod.key] && access[mod.key].view) return true;
         return false;
       }),
     ];
@@ -146,7 +148,10 @@ export default function DashboardLayout({
           </div>
           <nav className="flex-1 p-2 space-y-2">
             {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3 px-2 py-3 rounded-lg">
+              <div
+                key={index}
+                className="flex items-center gap-3 px-2 py-3 rounded-lg"
+              >
                 <Skeleton className="w-5 h-5 bg-white/20" />
                 <Skeleton className="h-4 w-20 bg-white/20" />
               </div>
@@ -215,7 +220,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside
         className={`fixed z-40 h-full w-64 transform bg-[#0872B3] text-white transition-transform duration-300 md:relative md:translate-x-0 md:z-10
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         {/* Header */}
@@ -240,7 +245,7 @@ export default function DashboardLayout({
             ✕
           </button>
         </div>
-        
+
         {/* Navigation */}
         <nav className="flex-1 p-2 space-y-2">
           {navItems.map((item) => (
@@ -248,9 +253,11 @@ export default function DashboardLayout({
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-2 py-3 rounded-lg transition-colors duration-200 text-sm
-                ${pathname === item.href
-                  ? 'bg-blue-900/50 text-white'
-                  : 'text-blue-100 hover:bg-blue-900/30 hover:text-white'}
+                ${
+                  pathname === item.href
+                    ? "bg-blue-900/50 text-white"
+                    : "text-blue-100 hover:bg-blue-900/30 hover:text-white"
+                }
               `}
             >
               <span className="w-5 text-center">{item.icon}</span>
@@ -258,7 +265,7 @@ export default function DashboardLayout({
             </Link>
           ))}
         </nav>
-        
+
         {/* Logout button */}
         <div className="p-4 border-t border-blue-900/20">
           <button
@@ -279,7 +286,20 @@ export default function DashboardLayout({
             className="text-[#0872B3] text-2xl focus:outline-none md:hidden p-2 rounded-lg hover:bg-gray-100"
             aria-label="Open sidebar"
           >
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-menu"><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="feather feather-menu"
+            >
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
           <h1 className="text-lg md:text-xl font-semibold text-[#0872B3] hidden md:block">
             {user.position.position_name} Dashboard
@@ -296,10 +316,11 @@ export default function DashboardLayout({
                 <Image
                   width={24}
                   height={24}
-                    src={user.user.avatar}
-                    alt={`${user.user.first_name} ${user.user.last_name}`}
-                    className="rounded-full object-cover shadow-lg ring-4 ring-white"
-                  />
+                  src={user.user.avatar || "/default-avatar.png"}
+                  alt={`${user.user.first_name} ${user.user.last_name}`}
+                  className="rounded-full object-cover shadow-lg ring-4 ring-white"
+                />
+
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-700">
                     {user.user.first_name} {user.user.last_name}
@@ -314,7 +335,7 @@ export default function DashboardLayout({
                   <button
                     onClick={() => {
                       setShowSettings(false);
-                      router.push('/dashboard/shared_pages/profile');
+                      router.push("/dashboard/shared_pages/profile");
                     }}
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
                   >
@@ -336,12 +357,10 @@ export default function DashboardLayout({
             </div>
           </div>
         </header>
-        
+
         {/* Main content scrollable area */}
         <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 bg-gray-50">
-          <div className="max-w-7xl mx-auto w-full">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
         </main>
       </div>
     </div>
