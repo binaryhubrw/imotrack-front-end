@@ -50,6 +50,13 @@ const MODULE_NAV = [
     icon: <FontAwesomeIcon icon={faWheelchairMove} />,
   },
 
+    {
+    key: "reservations",
+    label: "Reservations",
+    href: "/dashboard/shared_pages/all-reservations",
+    icon: <FontAwesomeIcon icon={faWheelchairMove} />,
+  },
+
   {
     key: "users",
     label: "Users",

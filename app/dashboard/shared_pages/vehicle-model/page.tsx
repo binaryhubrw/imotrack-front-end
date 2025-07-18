@@ -1,161 +1,612 @@
 "use client";
-import React, { useState } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  SortingState,
+  useReactTable,
+  VisibilityState,
+  ColumnFiltersState,
+} from "@tanstack/react-table";
+import { 
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  Car,
+  Eye,
+} from "lucide-react";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useVehicleModels, useCreateVehicleModel, useDeleteVehicleModel } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-// Modal for creating a vehicle model
-function CreateVehicleModelModal({ open, onClose, onCreate, isLoading }: {
+// Define the VehicleModel type based on your API structure
+interface VehicleModel {
+  vehicle_model_id: string;
+  vehicle_model_name: string;
+  vehicle_type: string;
+  manufacturer_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Define the CreateVehicleModelDto type
+interface CreateVehicleModelDto {
+  vehicle_model_name: string;
+  vehicle_type: string;
+  manufacturer_name: string;
+}
+
+function CreateVehicleModelModal({ 
+  open, 
+  onClose, 
+  onCreate, 
+  isLoading 
+}: {
   open: boolean;
   onClose: () => void;
-  onCreate: (data: { vehicle_model_name: string; vehicle_type: string; manufacturer_name: string }) => void;
+  onCreate: (data: CreateVehicleModelDto) => void;
   isLoading: boolean;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CreateVehicleModelDto>({
     vehicle_model_name: '',
     vehicle_type: '',
     manufacturer_name: '',
   });
-  const [touched, setTouched] = useState<{ [k: string]: boolean }>({});
-  const [errors, setErrors] = useState<{ [k: string]: string }>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const validate = () => {
-    const errs: { [k: string]: string } = {};
-    if (!form.vehicle_model_name.trim()) errs.vehicle_model_name = 'Model name is required';
-    if (!form.vehicle_type.trim()) errs.vehicle_type = 'Vehicle type is required';
-    if (!form.manufacturer_name.trim()) errs.manufacturer_name = 'Manufacturer is required';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.vehicle_model_name.trim()) newErrors.vehicle_model_name = 'Model name is required';
+    if (!form.vehicle_type.trim()) newErrors.vehicle_type = 'Vehicle type is required';
+    if (!form.manufacturer_name.trim()) newErrors.manufacturer_name = 'Manufacturer name is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: '' });
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name } = e.target;
+    setTouched({ ...touched, [name]: true });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ vehicle_model_name: true, vehicle_type: true, manufacturer_name: true });
-    if (!validate()) return;
-    await onCreate(form);
-    setForm({ vehicle_model_name: '', vehicle_type: '', manufacturer_name: '' });
-    setTouched({});
+    setTouched(Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
+    if (!validateForm()) return;
+    
+    try {
+      await onCreate(form);
+      setForm({
+        vehicle_model_name: '',
+        vehicle_type: '',
+        manufacturer_name: '',
+      });
+      setErrors({});
+      setTouched({});
+    } catch {
+      // error handled by mutation
+    }
+  };
+
+  const handleClose = () => {
+    setForm({
+      vehicle_model_name: '',
+      vehicle_type: '',
+      manufacturer_name: '',
+    });
     setErrors({});
+    setTouched({});
     onClose();
   };
 
   if (!open) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Create Vehicle Model</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Model Name</label>
-            <Input name="vehicle_model_name" placeholder="e.g. Toyota Hiace" value={form.vehicle_model_name} onChange={handleChange} onBlur={() => setTouched(t => ({ ...t, vehicle_model_name: true }))} required />
-            {errors.vehicle_model_name && touched.vehicle_model_name && <p className="text-xs text-red-500 mt-1">{errors.vehicle_model_name}</p>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300">
+        
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-6 rounded-t-xl">
+          <button 
+            className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100" 
+            onClick={handleClose} 
+            disabled={isLoading}
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
+              <Car className="w-5 h-5 text-[#0872b3]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-[#0872b3]">Create Vehicle Model</h2>
+              <p className="text-sm text-gray-600 mt-1">Add a new vehicle model to the system</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Vehicle Type</label>
-            <Input name="vehicle_type" placeholder="e.g. VAN, AMBULANCE" value={form.vehicle_type} onChange={handleChange} onBlur={() => setTouched(t => ({ ...t, vehicle_type: true }))} required />
-            {errors.vehicle_type && touched.vehicle_type && <p className="text-xs text-red-500 mt-1">{errors.vehicle_type}</p>}
+        </div>
+
+        {/* Form Content */}
+        <div className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Model Name <span className="text-red-500">*</span>
+              </label>
+              <Input 
+                name="vehicle_model_name" 
+                placeholder="e.g., Camry, Accord, Model 3" 
+                value={form.vehicle_model_name} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`transition-colors duration-200 ${
+                  errors.vehicle_model_name && touched.vehicle_model_name 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]'
+                }`} 
+                disabled={isLoading} 
+              />
+              {errors.vehicle_model_name && touched.vehicle_model_name && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.vehicle_model_name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vehicle Type <span className="text-red-500">*</span>
+              </label>
+              <select 
+                name="vehicle_type" 
+                value={form.vehicle_type} 
+                onChange={handleChange} 
+                onBlur={handleBlur}
+                className={`w-full border rounded-md px-3 py-2 focus:ring-2 transition-colors duration-200 bg-white ${
+                  errors.vehicle_type && touched.vehicle_type 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]'
+                }`}
+                disabled={isLoading}
+              >
+                <option value="">Select vehicle type</option>
+                <option value="SEDAN">Sedan</option>
+                <option value="SUV">SUV</option>
+                <option value="HATCHBACK">Hatchback</option>
+                <option value="TRUCK">Truck</option>
+                <option value="VAN">Van</option>
+                <option value="COUPE">Coupe</option>
+                <option value="CONVERTIBLE">Convertible</option>
+                <option value="WAGON">Wagon</option>
+              </select>
+              {errors.vehicle_type && touched.vehicle_type && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.vehicle_type}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Manufacturer <span className="text-red-500">*</span>
+              </label>
+              <Input 
+                name="manufacturer_name" 
+                placeholder="e.g., Toyota, Honda, Tesla" 
+                value={form.manufacturer_name} 
+                onChange={handleChange} 
+                onBlur={handleBlur} 
+                className={`transition-colors duration-200 ${
+                  errors.manufacturer_name && touched.manufacturer_name 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]'
+                }`} 
+                disabled={isLoading} 
+              />
+              {errors.manufacturer_name && touched.manufacturer_name && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.manufacturer_name}
+                </p>
+              )}
+            </div>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 p-6 rounded-b-xl">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleClose} 
+              disabled={isLoading}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isLoading} 
+              className="min-w-[120px] bg-[#0872b3] hover:bg-[#065a8f] text-white"
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Creating...
+                </span>
+              ) : (
+                'Create Model'
+              )}
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Manufacturer</label>
-            <Input name="manufacturer_name" placeholder="e.g. Toyota" value={form.manufacturer_name} onChange={handleChange} onBlur={() => setTouched(t => ({ ...t, manufacturer_name: true }))} required />
-            {errors.manufacturer_name && touched.manufacturer_name && <p className="text-xs text-red-500 mt-1">{errors.manufacturer_name}</p>}
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Creating...' : 'Create'}</Button>
-        </form>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function VehicleModelsPage() {
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const router = useRouter();
+
   const { data: vehicleModels, isLoading, isError } = useVehicleModels();
   const createVehicleModel = useCreateVehicleModel();
   const deleteVehicleModel = useDeleteVehicleModel();
 
-  const handleCreate = async (form: { vehicle_model_name: string; vehicle_type: string; manufacturer_name: string }) => {
+  const columns: ColumnDef<VehicleModel>[] = useMemo(() => [
+    {
+      accessorKey: "vehicle_model_name",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Model Name</span>,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
+            <Car className="w-4 h-4 text-[#0872b3]" />
+          </div>
+          <span className="text-sm font-medium text-gray-900">{row.getValue("vehicle_model_name")}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "manufacturer_name",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Manufacturer</span>,
+      cell: ({ row }) => (
+        <span className="text-sm text-gray-700">{row.getValue("manufacturer_name")}</span>
+      ),
+    },
+    {
+      accessorKey: "vehicle_type",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Type</span>,
+      cell: ({ row }) => {
+        const type = row.getValue("vehicle_type") as string;
+        const getTypeColor = (type: string) => {
+          switch (type.toLowerCase()) {
+            case 'sedan': return 'bg-blue-100 text-blue-800';
+            case 'suv': return 'bg-green-100 text-green-800';
+            case 'truck': return 'bg-orange-100 text-orange-800';
+            case 'van': return 'bg-purple-100 text-purple-800';
+            default: return 'bg-gray-100 text-gray-800';
+          }
+        };
+        return (
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${getTypeColor(type)}`}>
+            {type}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "created_at",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Created</span>,
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("created_at"));
+        return (
+          <span className="text-sm text-gray-500">
+            {date.toLocaleDateString()}
+          </span>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Actions</span>,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <button 
+            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" 
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}`);
+            }}
+            aria-label="View details"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button 
+            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}/edit`);
+            }}
+            aria-label="Edit"
+          >
+            <Edit className="w-4 h-4" />
+          </button>
+          <button 
+            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row.original.vehicle_model_id);
+            }}
+            aria-label="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+    },
+  ], [router]);
+
+  const table = useReactTable<VehicleModel>({
+    data: vehicleModels || [],
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: "includesString",
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+    },
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
+
+  const handleCreateVehicleModel = async (formData: CreateVehicleModelDto) => {
     try {
-      await createVehicleModel.mutateAsync(form);
-    } catch {
-      // error handled by mutation
+      await createVehicleModel.mutateAsync(formData);
+      setShowCreate(false);
+      toast.success('Vehicle model created successfully!');
+    } catch (error) {
+      console.error('Error creating vehicle model:', error);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this vehicle model?')) return;
+    
     try {
       await deleteVehicleModel.mutateAsync({ id });
-    } catch {
-      // error handled by mutation
+      toast.success('Vehicle model deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting vehicle model:', error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
+            <div>
+              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-48 mt-1 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 p-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
+              <Car className="w-4 h-4 text-[#0872b3]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Vehicle Models</h1>
+              <p className="text-gray-600 text-sm mt-1">Manage vehicle models in your fleet</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <p className="mt-4 text-red-600 font-semibold">Failed to load vehicle models</p>
+            <p className="text-gray-500 text-sm mt-2">An error occurred while fetching vehicle models</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Vehicle Models</h1>
-        <Button className="flex items-center gap-2" onClick={() => setShowCreate(true)}>
-          <Plus className="w-4 h-4" /> Create Model
-        </Button>
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
+              <Car className="w-4 h-4 text-[#0872b3]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Vehicle Models</h1>
+              <p className="text-gray-600 text-sm mt-1">Manage vehicle models in your fleet</p>
+            </div>
+          </div>
+          <Button 
+            className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white" 
+            onClick={() => setShowCreate(true)}
+          >
+            <Plus className="w-4 h-4" /> Add Model
+          </Button>
+        </div>
       </div>
+
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Loading vehicle models...</div>
-        ) : isError ? (
-          <div className="p-8 text-center text-red-500">Failed to load vehicle models. Please try again.</div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(vehicleModels || []).map((model) => (
-              <div key={model.vehicle_model_id} className="bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2 relative">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
-                      {model.vehicle_model_name}
-                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">{model.vehicle_type}</span>
-                    </div>
-                    <div className="text-gray-600 text-sm mt-1">Manufacturer: {model.manufacturer_name}</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                      onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
-                      aria-label="Edit"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
-                    <button
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleDelete(model.vehicle_model_id);
-                      }}
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">Created: {model.created_at ? new Date(model.created_at).toLocaleString() : 'N/A'}</div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+          {/* Search and Filters */}
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input 
+                  type="text" 
+                  placeholder="Search vehicle models..." 
+                  value={globalFilter ?? ""} 
+                  onChange={(e) => setGlobalFilter(e.target.value)} 
+                  className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] w-64" 
+                />
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">
+                  {table.getFilteredRowModel().rows.length} of {vehicleModels?.length || 0} models
+                </span>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead 
+                        key={header.id} 
+                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50"
+                      >
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.length > 0 ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow 
+                      key={row.id} 
+                      className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
+                      onClick={() => router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}`)}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell 
+                          key={cell.id} 
+                          className="px-4 py-4 whitespace-nowrap"
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <Car className="w-8 h-8 text-gray-300" />
+                        <p>No vehicle models found</p>
+                        <p className="text-sm">Get started by adding your first vehicle model</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="px-4 py-3 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">
+                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => table.previousPage()} 
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => table.nextPage()} 
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <CreateVehicleModelModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreate={handleCreate}
-        isLoading={createVehicleModel.isPending}
+
+      {/* Create Vehicle Model Modal */}
+      <CreateVehicleModelModal 
+        open={showCreate} 
+        onClose={() => setShowCreate(false)} 
+        isLoading={createVehicleModel.isPending} 
+        onCreate={handleCreateVehicleModel} 
       />
     </div>
   );

@@ -21,9 +21,9 @@ import {
   VehicleModel,
   CreateVehicleModelDto,
   Vehicle,
-  CreateVehicleDto,
-  UpdateVehicleDto,
   position_accesses,
+  VehicleType,
+  TransmissionMode,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 
@@ -950,7 +950,17 @@ export const useVehicle = (id: string) => {
 // --- Create a vehicle (multipart/form-data) ---
 export const useCreateVehicle = () => {
   const queryClient = useQueryClient();
-  return useMutation<Vehicle, Error, CreateVehicleDto>({
+  return useMutation<Vehicle, Error, {
+    plate_number: string;
+    vehicle_type: VehicleType;
+    transmission_mode: TransmissionMode;
+    vehicle_model_id: string;
+    vehicle_photo?: File;
+    vehicle_year: number;
+    vehicle_capacity: number;
+    energy_type: string;
+    organization_id: string;
+  }>({
     mutationFn: async (vehicle) => {
       const formData = new FormData();
       formData.append('plate_number', vehicle.plate_number);
@@ -995,9 +1005,30 @@ export const useCreateVehicle = () => {
 // --- Update a vehicle (application/json) ---
 export const useUpdateVehicle = () => {
   const queryClient = useQueryClient();
-  return useMutation<Vehicle, Error, { id: string; updates: UpdateVehicleDto }>({
+  return useMutation<Vehicle, Error, { id: string; updates: {
+    plate_number?: string;
+    vehicle_type?: VehicleType;
+    transmission_mode?: TransmissionMode;
+    vehicle_model_id?: string;
+    vehicle_year?: number;
+    vehicle_capacity?: number;
+    energy_type?: string;
+    organization_id?: string;
+    vehicle_photo?: File;
+  } }>({
     mutationFn: async ({ id, updates }) => {
-      const { data } = await api.put<{ data: Vehicle }>(`/v2/vehicles/${id}`, updates, {
+      // Only send allowed fields
+      const allowed: Record<string, unknown> = {};
+      if (updates.plate_number) allowed.plate_number = updates.plate_number;
+      if (updates.vehicle_type) allowed.vehicle_type = updates.vehicle_type;
+      if (updates.transmission_mode) allowed.transmission_mode = updates.transmission_mode;
+      if (updates.vehicle_model_id) allowed.vehicle_model_id = updates.vehicle_model_id;
+      if (updates.vehicle_year) allowed.vehicle_year = updates.vehicle_year;
+      if (updates.vehicle_capacity) allowed.vehicle_capacity = updates.vehicle_capacity;
+      if (updates.energy_type) allowed.energy_type = updates.energy_type;
+      if (updates.organization_id) allowed.organization_id = updates.organization_id;
+      // For photo, you may need to use FormData if updating image
+      const { data } = await api.put<{ data: Vehicle }>(`/v2/vehicles/${id}`, allowed, {
         headers: { 'Content-Type': 'application/json' },
       });
       if (!data.data) throw new Error('No data');
