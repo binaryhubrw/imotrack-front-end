@@ -3,7 +3,7 @@ import React from 'react'
 export default function Reservations() {
   return (
     <div>
-      reservations
+   IN progress
     </div>
   )
 }

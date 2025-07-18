@@ -6,6 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Edit, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 export default function VehicleModelDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +29,7 @@ export default function VehicleModelDetailPage() {
     vehicle_type: '',
     manufacturer_name: '',
   });
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   React.useEffect(() => {
     if (model) {
@@ -45,14 +56,17 @@ export default function VehicleModelDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this vehicle model?')) return;
+  const handleDelete = () => {
+    setShowDeleteDialog(true);
+  };
+  const confirmDelete = async () => {
     try {
       await deleteVehicleModel.mutateAsync({ id });
       toast.success("Vehicle model deleted!");
+      setShowDeleteDialog(false);
       router.push("/dashboard/shared_pages/vehicle-model");
     } catch {
-      // error handled by mutation
+      setShowDeleteDialog(false);
     }
   };
 
@@ -76,7 +90,27 @@ export default function VehicleModelDetailPage() {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Vehicle Type</label>
-            <Input name="vehicle_type" value={form.vehicle_type} onChange={handleChange} required />
+            <select
+              name="vehicle_type"
+              value={form.vehicle_type}
+              onChange={e => setForm({ ...form, vehicle_type: e.target.value })}
+              required
+              className="w-full border rounded-md px-3 py-2 focus:ring-2 transition-colors duration-200 bg-white"
+            >
+              <option value="">Select vehicle type</option>
+              <option value="SEDAN">SEDAN</option>
+              <option value="SUV">SUV</option>
+              <option value="HATCHBACK">HATCHBACK</option>
+              <option value="TRUCK">TRUCK</option>
+              <option value="VAN">VAN</option>
+              <option value="COUPE">COUPE</option>
+              <option value="CONVERTIBLE">CONVERTIBLE</option>
+              <option value="WAGON">WAGON</option>
+              <option value="AMBULANCE">AMBULANCE</option>
+              <option value="MOTORCYCLE">MOTORCYCLE</option>
+              <option value="BUS">BUS</option>
+              <option value="OTHER">OTHER</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Manufacturer</label>
@@ -109,6 +143,20 @@ export default function VehicleModelDetailPage() {
           </tbody>
         </table>
       )}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this vehicle model? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

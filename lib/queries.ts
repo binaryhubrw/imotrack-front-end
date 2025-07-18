@@ -848,7 +848,8 @@ export const useCreateVehicleModel = () => {
       ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create vehicle model.'));
+      // Show raw error if nothing else
+      toast.error(apiMsg || JSON.stringify(error) || (error instanceof Error ? error.message : 'Failed to create vehicle model.'));
     },
   });
 };
@@ -916,7 +917,8 @@ export const useDeleteVehicleModel = () => {
       ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle model.'));
+      // Show a user-friendly fallback if no message
+      toast.error(apiMsg || 'Failed to delete vehicle model. Please try again.');
     },
   });
 };

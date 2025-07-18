@@ -29,24 +29,17 @@ import { useVehicleModels, useCreateVehicleModel, useDeleteVehicleModel } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-
-// Define the VehicleModel type based on your API structure
-interface VehicleModel {
-  vehicle_model_id: string;
-  vehicle_model_name: string;
-  vehicle_type: string;
-  manufacturer_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// Define the CreateVehicleModelDto type
-interface CreateVehicleModelDto {
-  vehicle_model_name: string;
-  vehicle_type: string;
-  manufacturer_name: string;
-}
+import type { VehicleModel, CreateVehicleModelDto } from '@/types/next-auth';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 function CreateVehicleModelModal({ 
   open, 
@@ -190,14 +183,18 @@ function CreateVehicleModelModal({
                 disabled={isLoading}
               >
                 <option value="">Select vehicle type</option>
-                <option value="SEDAN">Sedan</option>
+                <option value="SEDAN">SEDAN</option>
                 <option value="SUV">SUV</option>
-                <option value="HATCHBACK">Hatchback</option>
-                <option value="TRUCK">Truck</option>
-                <option value="VAN">Van</option>
-                <option value="COUPE">Coupe</option>
-                <option value="CONVERTIBLE">Convertible</option>
-                <option value="WAGON">Wagon</option>
+                <option value="HATCHBACK">HATCHBACK</option>
+                <option value="TRUCK">TRUCK</option>
+                <option value="VAN">VAN</option>
+                <option value="COUPE">COUPE</option>
+                <option value="CONVERTIBLE">CONVERTIBLE</option>
+                <option value="WAGON">WAGON</option>
+                <option value="AMBULANCE">AMBULANCE</option>
+                <option value="MOTORCYCLE">MOTORCYCLE</option>
+                <option value="BUS">BUS</option>
+                <option value="OTHER">OTHER</option>
               </select>
               {errors.vehicle_type && touched.vehicle_type && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -275,6 +272,8 @@ export default function VehicleModelsPage() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const router = useRouter();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { data: vehicleModels, isLoading, isError } = useVehicleModels();
   const createVehicleModel = useCreateVehicleModel();
@@ -342,7 +341,7 @@ export default function VehicleModelsPage() {
             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" 
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}`);
+              router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}`);
             }}
             aria-label="View details"
           >
@@ -352,7 +351,7 @@ export default function VehicleModelsPage() {
             className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}/edit`);
+              router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}/edit`);
             }}
             aria-label="Edit"
           >
@@ -404,20 +403,25 @@ export default function VehicleModelsPage() {
     try {
       await createVehicleModel.mutateAsync(formData);
       setShowCreate(false);
-      toast.success('Vehicle model created successfully!');
     } catch (error) {
       console.error('Error creating vehicle model:', error);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle model?')) return;
-    
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+    setShowDeleteDialog(true);
+  };
+  const confirmDelete = async () => {
+    if (!deleteId) return;
     try {
-      await deleteVehicleModel.mutateAsync({ id });
-      toast.success('Vehicle model deleted successfully!');
-    } catch (error) {
-      console.error('Error deleting vehicle model:', error);
+      await deleteVehicleModel.mutateAsync({ id: deleteId });
+      setShowDeleteDialog(false);
+      setDeleteId(null);
+    } catch {
+      // error handled by mutation
+      setShowDeleteDialog(false);
+      setDeleteId(null);
     }
   };
 
@@ -541,7 +545,7 @@ export default function VehicleModelsPage() {
                     <TableRow 
                       key={row.id} 
                       className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
-                      onClick={() => router.push(`/dashboard/vehicle-models/${row.original.vehicle_model_id}`)}
+                      onClick={() => router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}`)}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
@@ -608,6 +612,20 @@ export default function VehicleModelsPage() {
         isLoading={createVehicleModel.isPending} 
         onCreate={handleCreateVehicleModel} 
       />
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this vehicle model? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

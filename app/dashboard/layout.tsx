@@ -66,7 +66,7 @@ const MODULE_NAV = [
   {
     key: "vehicles",
     label: "Vehicles",
-    href: "/dashboard/shared_pages/vehicles-info",
+    href: "/dashboard/shared_pages/vehicles",
     icon: <FontAwesomeIcon icon={faCar} />,
   },
   {
