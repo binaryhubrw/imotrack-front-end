@@ -128,22 +128,74 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     refetch: refetchVehicleModels,
   } = useVehicleModels();
 
-  // Calculate dashboard stats
+  // Debug logs for API data
+  useEffect(() => {
+    console.log("[DashboardContext] organizations:", organizations);
+    console.log("[DashboardContext] units:", units);
+    console.log("[DashboardContext] users:", users);
+    console.log("[DashboardContext] vehicles:", vehicles);
+    console.log("[DashboardContext] vehicleModels:", vehicleModels);
+  }, [organizations, units, users, vehicles, vehicleModels]);
+
+  // Calculate dashboard stats (robust to data shape)
   const calculateStats = (): DashboardStats => {
-    const totalUsers = users
-      ? users.reduce((total, unit) => total + unit.users.length, 0)
-      : 0;
-    const totalOrganizations = organizations?.organizations?.length || 0;
-    const totalUnits = units?.length || 0;
-    const totalPositions = units
-      ? units.reduce((total, unit) => total + unit.positions.length, 0)
-      : 0;
-    const totalVehicles = vehicles?.length || 0;
-    const totalVehicleModels = vehicleModels?.length || 0;
-    const activeVehicles =
-      vehicles?.filter((v) => v.vehicle_status === "ACTIVE").length || 0;
-    const inactiveVehicles =
-      vehicles?.filter((v) => v.vehicle_status === "INACTIVE").length || 0;
+    // Organizations: can be { organizations: Organization[], ... } or Organization[]
+    type Organization = { organization_id: string };
+    let orgArr: Organization[] = [];
+    if (Array.isArray(organizations)) {
+      orgArr = organizations as Organization[];
+    } else if (
+      organizations &&
+      typeof organizations === 'object' &&
+      Array.isArray((organizations as { organizations?: unknown }).organizations)
+    ) {
+      orgArr = (organizations as { organizations: Organization[] }).organizations;
+    }
+    const totalOrganizations = orgArr.length;
+    console.log('[DashboardContext] totalOrganizations:', totalOrganizations, orgArr);
+
+    // Units: should be array
+    const unitArr = Array.isArray(units) ? units : [];
+    const totalUnits = unitArr.length;
+    console.log('[DashboardContext] totalUnits:', totalUnits, unitArr);
+
+    // Users: can be array of units with .users[]
+    let totalUsers = 0;
+    if (Array.isArray(users)) {
+      totalUsers = users.reduce((total, unit) => {
+        if (Array.isArray(unit.users)) {
+          return total + unit.users.length;
+        }
+        return total;
+      }, 0);
+    }
+    console.log('[DashboardContext] totalUsers:', totalUsers, users);
+
+    // Positions: sum all positions in all units
+    let totalPositions = 0;
+    if (Array.isArray(units)) {
+      totalPositions = units.reduce((total, unit) => {
+        if (Array.isArray(unit.positions)) {
+          return total + unit.positions.length;
+        }
+        return total;
+      }, 0);
+    }
+    console.log('[DashboardContext] totalPositions:', totalPositions, units);
+
+    // Vehicles: should be array
+    const vehicleArr = Array.isArray(vehicles) ? vehicles : [];
+    const totalVehicles = vehicleArr.length;
+    const activeVehicles = vehicleArr.filter((v) => v.vehicle_status === "ACTIVE").length;
+    const inactiveVehicles = vehicleArr.filter((v) => v.vehicle_status === "INACTIVE").length;
+    console.log('[DashboardContext] totalVehicles:', totalVehicles, vehicleArr);
+    console.log('[DashboardContext] activeVehicles:', activeVehicles);
+    console.log('[DashboardContext] inactiveVehicles:', inactiveVehicles);
+
+    // Vehicle Models: should be array
+    const vehicleModelArr = Array.isArray(vehicleModels) ? vehicleModels : [];
+    const totalVehicleModels = vehicleModelArr.length;
+    console.log('[DashboardContext] totalVehicleModels:', totalVehicleModels, vehicleModelArr);
 
     return {
       totalUsers,

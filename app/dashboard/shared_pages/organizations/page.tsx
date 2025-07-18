@@ -14,9 +14,9 @@ import {
 import { 
   Download,
   Plus,
-  Edit,
   Trash2,
   Search,
+  Clipboard,
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
@@ -290,14 +290,18 @@ export default function OrganizationsPage() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <button
-            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-            onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
-            aria-label="Edit"
+            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            onClick={e => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(row.original.organization_id);
+              toast.success('Organization ID copied!');
+            }}
+            aria-label="Copy ID"
           >
-            <Edit className="w-6 h-6" />
+            <Clipboard className="w-6 h-6" />
           </button>
           <button
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"

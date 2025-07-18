@@ -470,6 +470,137 @@ function SkeletonUnitsTable({
   )
 }
 
+// Generic Entity Details Page Skeleton
+function SkeletonEntityDetails({ 
+  className, 
+  showRelatedSection = true,
+  relatedItemsCount = 4,
+  contactFieldsCount = 4,
+  detailFieldsCount = 3,
+  ...props 
+}: { 
+  className?: string
+  showRelatedSection?: boolean
+  relatedItemsCount?: number
+  contactFieldsCount?: number
+  detailFieldsCount?: number
+}) {
+  return (
+    <div className={cn("min-h-screen bg-gray-50", className)} {...props}>
+      {/* Header */}
+      <div className="bg-blue-600 text-white px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-6 w-6 rounded bg-white/20" />
+            <Skeleton className="h-7 w-48 bg-white/20" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-16 rounded bg-white/20" />
+            <Skeleton className="h-9 w-20 rounded bg-red-500/80" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Entity Info Card */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-6">
+          {/* Entity Icon and Name */}
+          <div className="flex items-start gap-4 mb-6">
+            <div className="flex-shrink-0">
+              <Skeleton className="h-12 w-12 rounded-lg" />
+            </div>
+            <div className="flex-1">
+              <Skeleton className="h-8 w-32 mb-2" />
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Skeleton className="h-4 w-8" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Entity Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {Array.from({ length: detailFieldsCount }, (_, index) => (
+              <div key={index} className="space-y-1">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton 
+                  className={cn(
+                    "h-5",
+                    index === 1 ? "w-20 rounded-full" : "w-36"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Contact Information Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Array.from({ length: contactFieldsCount }, (_, index) => (
+              <div key={index} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-4 w-12" />
+                </div>
+                <Skeleton 
+                  className={cn(
+                    "h-4",
+                    index === 0 ? "w-48" : // Email - wider
+                    index === 1 ? "w-32" : // Address - medium
+                    index === 2 ? "w-28" : // Phone - smaller
+                    "w-16" // Logo/other - smallest
+                  )}
+                />
+                {index === 3 && (
+                  <Skeleton className="h-8 w-16 rounded" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Related Items Section */}
+        {showRelatedSection && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            {/* Section Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <Skeleton className="h-5 w-5 rounded" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+
+            {/* Related Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: relatedItemsCount }, (_, index) => (
+                <div key={index} className="bg-gray-50 rounded-lg p-4">
+                  <div className="space-y-3">
+                    {/* Item Name */}
+                    <Skeleton className="h-5 w-24" />
+                    
+                    {/* Item ID */}
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-8" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+
+                    {/* Additional Item Info */}
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
 // Positions Cards Skeleton
 function SkeletonPositionsCards({ 
   cards = 3, 
@@ -948,5 +1079,6 @@ export {
   SkeletonPositionsCards,
   SkeletonStatusBadge,
   SkeletonDashboard,
+  SkeletonEntityDetails,
   skeletonVariants 
 }

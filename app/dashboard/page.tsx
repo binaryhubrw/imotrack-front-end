@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useDashboard } from "@/hooks/DashboardContext";
+import { useRouter } from "next/navigation";
 
 // Icon mapping
 const iconMap = {
@@ -135,6 +136,17 @@ const formatTimeAgo = (timestamp: string) => {
 export default function MainDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { stats, recentActivity, quickActions, isLoading, error } = useDashboard();
+  const router = useRouter();
+
+  // Map stat card titles to routes
+  const statCardRoutes: Record<string, string> = {
+    "Total Users": "/dashboard/shared_pages/users",
+    "Organizations": "/dashboard/shared_pages/organizations",
+    "Units": "/dashboard/shared_pages/units",
+    "Positions": "/dashboard/shared_pages/positions",
+    "Fleet Vehicles": "/dashboard/shared_pages/vehicles-info",
+    "Vehicle Models": "/dashboard/shared_pages/vehicle-model",
+  };
 
   if (authLoading || !user) {
     return (
@@ -258,7 +270,14 @@ export default function MainDashboard() {
         {dashboardCards.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {dashboardCards.map((card, index) => (
-              <StatCard key={index} {...card} />
+              <StatCard
+                key={index}
+                {...card}
+                onClick={() => {
+                  const route = statCardRoutes[card.title];
+                  if (route) router.push(route);
+                }}
+              />
             ))}
           </div>
         )}
@@ -297,10 +316,11 @@ export default function MainDashboard() {
                   quickActions.map((action) => {
                     const IconComponent = iconMap[action.icon as keyof typeof iconMap] || Activity;
                     return (
-                      <a
+                      <button
                         key={action.id}
-                        href={action.href}
-                        className="block p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                        onClick={() => router.push(action.href)}
+                        className="block w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white"
+                        style={{ cursor: 'pointer' }}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${action.color}`}>
@@ -311,7 +331,7 @@ export default function MainDashboard() {
                             <p className="text-sm text-gray-500">{action.description}</p>
                           </div>
                         </div>
-                      </a>
+                      </button>
                     );
                   })
                 ) : (

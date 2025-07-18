@@ -21,6 +21,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DashboardProvider } from "@/hooks/DashboardContext";
 
 // Define all possible modules/pages and their nav info
 const MODULE_NAV = [
@@ -360,7 +361,11 @@ export default function DashboardLayout({
 
         {/* Main content scrollable area */}
         <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 bg-gray-50">
-          <div className="max-w-7xl mx-auto w-full">{children}</div>
+          <div className="max-w-7xl mx-auto w-full">
+            <DashboardProvider>
+              {children}
+            </DashboardProvider>
+          </div>
         </main>
       </div>
     </div>

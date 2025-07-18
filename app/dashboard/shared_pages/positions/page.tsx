@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { position_accesses } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useRouter } from 'next/navigation';
 
 // Default permissions structure
 const defaultPermissions: position_accesses = {
@@ -397,6 +398,7 @@ function AccessDenied({ message }: { message: string }) {
 
 export default function PositionsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
   const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
@@ -620,6 +622,16 @@ export default function PositionsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    <button
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
+                      aria-label="View position"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12C2.25 12 5.25 5.25 12 5.25c6.75 0 9.75 6.75 9.75 6.75s-3 6.75-9.75 6.75S2.25 12 2.25 12z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
                     <button
                       className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                       onClick={(e) => {

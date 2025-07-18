@@ -26,10 +26,11 @@ import {
   position_accesses,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
+
 // Define Unit type matching API response
 
 
-// User authentication with JSON
+// 1. AUTH
 export const useLogin = () => {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
@@ -342,6 +343,19 @@ export const useOrganizations = (page = 1, limit = 10) => {
   });
 };
 
+// --- GET /v2/organizations/{organization_id} ---
+export const useOrganization = (organization_id: string) => {
+  return useQuery({
+    queryKey: ['organization', organization_id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Organization }>(`/v2/organizations/${organization_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!organization_id,
+  });
+};
+//----------------------------------------------------------------------------------
 // Create organization (multipart/form-data)
 export const useCreateOrganization = () => {
   const queryClient = useQueryClient();
@@ -376,6 +390,76 @@ export const useCreateOrganization = () => {
     },
   });
 };
+
+// --- PATCH /v2/organizations/{organization_id} ---
+export const useUpdateOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Organization, Error, { organization_id: string; updates: Partial<Organization> }>({
+    mutationFn: async ({ organization_id, updates }) => {
+      const { data } = await api.patch<{ data: Organization }>(`/v2/organizations/${organization_id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast.success('Organization updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update organization.'));
+    },
+  });
+};
+//---------------------------------------------------------------------------------------------
+
+// --- DELETE /v2/organizations/{organization_id} ---
+export const useDeleteOrganization = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, Error, { organization_id: string }>({
+    mutationFn: async ({ organization_id }) => {
+      const { data } = await api.delete<{ message: string }>(`/v2/organizations/${organization_id}`);
+      if (!data.message) throw new Error('No data');
+      return { message: data.message };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
+      toast.success('Organization deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete organization.'));
+    },
+  });
+};
+
 
 export const useOrganizationUnits = () => {
   return useQuery<Unit[], Error>({
@@ -425,6 +509,87 @@ export const useCreateUnit = () => {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create unit.'));
+    },
+  });
+};
+//----------------------------------------------------------------
+// --- GET /v2/organizations/units/{unit_id} ---
+export const useOrganizationUnit = (unit_id: string) => {
+  return useQuery<Unit, Error>({
+    queryKey: ['unit', unit_id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Unit }>(`/v2/organizations/units/${unit_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!unit_id,
+  });
+};
+
+// --- PATCH /v2/organizations/units/{unit_id} ---
+export const useUpdateOrganizationUnit = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Unit, Error, { unit_id: string; updates: Partial<Unit> }>({
+    mutationFn: async ({ unit_id, updates }) => {
+      const { data } = await api.patch<{ data: Unit }>(`/v2/organizations/units/${unit_id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      toast.success('Unit updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update unit.'));
+    },
+  });
+};
+
+// --- DELETE /v2/organizations/units/{unit_id} ---
+export const useOrganizationDeleteUnit = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, Error, { unit_id: string }>({
+    mutationFn: async ({ unit_id }) => {
+      const { data } = await api.delete<{ message: string }>(`/v2/organizations/units/${unit_id}`);
+      if (!data.message) throw new Error('No data');
+      return { message: data.message };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      toast.success('Unit deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete unit.'));
     },
   });
 };
@@ -528,6 +693,54 @@ export const useDeletePosition = () => {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete position.'));
+    },
+  });
+};
+
+// --- GET /v2/organizations/positions/{position_id} ---
+export const usePosition = (position_id: string) => {
+  return useQuery<Position, Error>({
+    queryKey: ['position', position_id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Position }>(`/v2/organizations/positions/${position_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!position_id,
+  });
+};
+
+// --- PATCH /v2/organizations/positions/{position_id} ---
+export const useUpdatePosition = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Position, Error, { position_id: string; updates: Partial<Position> }>({
+    mutationFn: async ({ position_id, updates }) => {
+      const { data } = await api.patch<{ data: Position }>(`/v2/organizations/positions/${position_id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
+      toast.success('Position updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update position.'));
     },
   });
 };
@@ -846,6 +1059,7 @@ export const useDeleteVehicle = () => {
     },
   });
 };
+
 
 
 
