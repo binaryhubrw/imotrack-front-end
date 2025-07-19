@@ -14,10 +14,10 @@ import {
   useCreatePosition,
   useDeletePosition,
   useOrganizationUnits,
+  useUpdatePosition,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { SkeletonPositionsCards } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { position_accesses } from "@/types/next-auth";
@@ -405,6 +405,15 @@ export default function PositionsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
+  const updatePosition = useUpdatePosition();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [positionToEdit, setPositionToEdit] = useState<Position | null>(null);
+  const [editForm, setEditForm] = useState({
+    position_name: '',
+    position_description: '',
+    position_status: '',
+  });
 
   // Fetch organization units
   const { data: organizationUnits, isLoading: unitsLoading } =
@@ -476,6 +485,41 @@ export default function PositionsPage() {
       closeDeleteModal();
     } catch {
       setDeleteLoading(false);
+    }
+  };
+
+  // Open edit modal and prefill form
+  const openEditModal = (position: Position) => {
+    setPositionToEdit(position);
+    setEditForm({
+      position_name: position.position_name || '',
+      position_description: position.position_description || '',
+      position_status: position.position_status || '',
+    });
+    setEditModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setPositionToEdit(null);
+    setEditLoading(false);
+  };
+  const confirmEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!positionToEdit) return;
+    setEditLoading(true);
+    try {
+      await updatePosition.mutateAsync({
+        position_id: positionToEdit.position_id,
+        updates: editForm,
+      });
+      closeEditModal();
+      // Refetch positions
+      if (selectedUnitId) {
+        // Use positions query's refetch if available, or reload page
+        window.location.reload(); // fallback if no refetch
+      }
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -607,21 +651,12 @@ export default function PositionsPage() {
                   <div className="flex-1">
                     <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
                       {pos.position_name}
-                      <span
-                        className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          pos.position_status === "ACTIVE"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {pos.position_status}
-                      </span>
                     </div>
                     <div className="text-gray-600 text-sm mt-1">
                       {pos.position_description}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-2 z-10">
                     <button
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
@@ -636,7 +671,7 @@ export default function PositionsPage() {
                       className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toast.info("Edit functionality coming soon");
+                        openEditModal(pos);
                       }}
                       aria-label="Edit position"
                     >
@@ -654,11 +689,17 @@ export default function PositionsPage() {
                   </div>
                 </div>
 
-                <div className="mt-2 text-xs text-gray-500">
-                  Created:{" "}
-                  {pos.created_at
-                    ? new Date(pos.created_at).toLocaleString()
-                    : "N/A"}
+                <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:justify-between text-xs text-gray-500 gap-2">
+                  <div>
+                    Created: {pos.created_at ? new Date(pos.created_at).toLocaleString() : "N/A"}
+                  </div>
+                  <span className={`inline-block mt-1 lg:mt-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    pos.position_status === "ACTIVE"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {pos.position_status}
+                  </span>
                 </div>
 
                 <div className="mt-2">
@@ -764,6 +805,58 @@ export default function PositionsPage() {
     </div>
   </DialogContent>
 </Dialog>
+
+{editModalOpen && positionToEdit && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <form
+      onSubmit={confirmEdit}
+      className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+    >
+      <h2 className="text-xl font-bold mb-2">Edit Position</h2>
+      <label className="text-sm font-medium">Position Name
+        <input
+          className="w-full border rounded px-3 py-2 mt-1"
+          value={editForm.position_name}
+          onChange={e => setEditForm(f => ({ ...f, position_name: e.target.value }))}
+          required
+        />
+      </label>
+      <label className="text-sm font-medium">Description
+        <input
+          className="w-full border rounded px-3 py-2 mt-1"
+          value={editForm.position_description}
+          onChange={e => setEditForm(f => ({ ...f, position_description: e.target.value }))}
+          required
+        />
+      </label>
+      <label className="text-sm font-medium">Status
+        <input
+          className="w-full border rounded px-3 py-2 mt-1"
+          value={editForm.position_status}
+          onChange={e => setEditForm(f => ({ ...f, position_status: e.target.value }))}
+          required
+        />
+      </label>
+      <div className="flex gap-3 mt-4">
+        <button
+          type="button"
+          className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+          onClick={closeEditModal}
+          disabled={editLoading}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={editLoading}
+        >
+          {editLoading ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </form>
+  </div>
+)}
 
     </div>
   );

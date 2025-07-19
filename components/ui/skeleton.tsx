@@ -226,6 +226,268 @@ function SkeletonOrganizationsTable({
   )
 }
 
+// Enhanced Vehicle Models Table Skeleton
+function SkeletonVehicleModelsTable({ 
+  rows = 10, 
+  className, 
+  ...props 
+}: { 
+  rows?: number
+  className?: string
+}) {
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header Skeleton */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton shape="square" className="w-8 h-8" />
+            <div>
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48 mt-1" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-28" />
+        </div>
+      </div>
+
+      {/* Main Content Skeleton */}
+      <div className="flex-1 overflow-auto p-4">
+        <div className={cn("bg-white rounded-lg border border-gray-200 shadow-sm", className)} {...props}>
+          {/* Search and Filters Skeleton */}
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="relative">
+                <Skeleton className="h-10 w-64" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </div>
+
+          {/* Table Skeleton */}
+          <div className="overflow-x-auto">
+            <div className="min-w-full">
+              {/* Table Header Skeleton */}
+              <div className="bg-gray-50 border-b border-gray-100">
+                <div className="flex items-center px-4 py-3">
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <div className="w-24">
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Table Rows Skeleton */}
+              <div className="divide-y divide-gray-100">
+                {Array.from({ length: rows }, (_, rowIndex) => (
+                  <div key={rowIndex} className="flex items-center px-4 py-4 hover:bg-gray-50">
+                    {/* Model Name Column */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <Skeleton shape="square" className="w-8 h-8" />
+                        <Skeleton className="h-5 w-24" />
+                      </div>
+                    </div>
+                    
+                    {/* Manufacturer Column */}
+                    <div className="flex-1">
+                      <Skeleton className="h-5 w-20" />
+                    </div>
+                    
+                    {/* Type Column */}
+                    <div className="flex-1">
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                    </div>
+                    
+                    {/* Created Column */}
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    
+                    {/* Actions Column */}
+                    <div className="w-24 flex items-center gap-1">
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pagination Skeleton */}
+          <div className="px-4 py-3 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-9 w-20" />
+                <Skeleton className="h-9 w-16" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// Enhanced Vehicles Table Skeleton
+function SkeletonVehiclesTable({ 
+  rows = 10, 
+  className, 
+  ...props 
+}: { 
+  rows?: number
+  className?: string
+}) {
+  return (
+    <div className={cn("bg-white rounded-lg border border-gray-200 shadow-sm", className)} {...props}>
+      {/* Header Controls Skeleton */}
+      <div className="px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Skeleton className="h-10 w-64" />
+          </div>
+        </div>
+      </div>
+
+      {/* Table Header Skeleton */}
+      <div className="overflow-x-auto">
+        <div className="min-w-full">
+          <div className="border-b border-gray-100">
+            <div className="flex items-center px-4 py-4 bg-blue-50">
+              <div className="w-10">
+                <Skeleton className="h-4 w-8" />
+              </div>
+              <div className="flex-1 ml-4">
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <div className="flex-1">
+                <Skeleton className="h-4 w-12" />
+              </div>
+              <div className="flex-1">
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <div className="flex-1">
+                <Skeleton className="h-4 w-14" />
+              </div>
+              <div className="w-24">
+                <Skeleton className="h-4 w-16" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Table Rows Skeleton */}
+          <div className="divide-y divide-gray-100">
+            {Array.from({ length: rows }, (_, rowIndex) => (
+              <div key={rowIndex} className="flex items-center px-4 py-4 hover:bg-blue-50">
+                {/* Photo Column */}
+                <div className="w-10 h-10 mr-4">
+                  <Skeleton shape="square" className="w-10 h-10 rounded-lg" />
+                </div>
+                
+                {/* Plate Number Column */}
+                <div className="flex-1">
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                
+                {/* Type Column */}
+                <div className="flex-1">
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
+                
+                {/* Model Column */}
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                
+                {/* Status Column */}
+                <div className="flex-1">
+                  <Skeleton className="h-6 w-18 rounded-full" />
+                </div>
+                
+                {/* Actions Column */}
+                <div className="w-24 flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded" />
+                  <Skeleton className="h-8 w-8 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Skeleton */}
+      <div className="flex items-center justify-between mt-4 px-4 pb-4">
+        <div>
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-16 rounded" />
+          <Skeleton className="h-8 w-16 rounded" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Add this to your skeleton.tsx file
+
+
+
+// Individual Reservation Card Skeleton
+function SkeletonReservationCard({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2", className)} {...props}>
+      {/* Header with title and status */}
+      <div className="flex items-center justify-between mb-2">
+        <Skeleton className="h-6 w-32" /> {/* Title */}
+        <Skeleton className="h-5 w-20 rounded-full" /> {/* Status badge */}
+      </div>
+      
+      {/* Location and date info */}
+      <div className="space-y-1">
+        <Skeleton className="h-4 w-40" /> {/* From location */}
+        <Skeleton className="h-4 w-36" /> {/* To location */}
+        <Skeleton className="h-4 w-44" /> {/* Departure date */}
+        <Skeleton className="h-4 w-42" /> {/* Return date */}
+      </div>
+      
+      {/* Vehicle info (sometimes present) */}
+      <Skeleton className="h-4 w-28" />
+      
+      {/* Created date and user info */}
+      <div className="space-y-1 mt-2">
+        <Skeleton className="h-3 w-36" /> {/* Created date */}
+        <Skeleton className="h-3 w-32" /> {/* User info */}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-1 mt-3">
+        <Skeleton className="h-8 w-20 rounded" /> {/* Action button 1 */}
+        <Skeleton className="h-8 w-24 rounded" /> {/* Action button 2 */}
+        <Skeleton className="h-8 w-18 rounded" /> {/* Action button 3 */}
+      </div>
+    </div>
+  )
+}
 
 
 // Users Table Skeleton
@@ -1077,8 +1339,11 @@ export {
   SkeletonUnitsTable,
   SkeletonUsersTable,
   SkeletonPositionsCards,
+  SkeletonVehiclesTable,
   SkeletonStatusBadge,
+  SkeletonVehicleModelsTable,
   SkeletonDashboard,
   SkeletonEntityDetails,
+  SkeletonReservationCard,
   skeletonVariants 
 }

@@ -16,6 +16,7 @@ import {
   faMapPin,
   faStairs,
   faWheelchairMove,
+  faCarRear,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -47,13 +48,13 @@ const MODULE_NAV = [
     key: "vehicleModels",
     label: "VehicleModels",
     href: "/dashboard/shared_pages/vehicle-model",
-    icon: <FontAwesomeIcon icon={faWheelchairMove} />,
+    icon: <FontAwesomeIcon icon={faCarRear} />,
   },
 
     {
     key: "reservations",
     label: "Reservations",
-    href: "/dashboard/shared_pages/all-reservations",
+    href: "/dashboard/shared_pages/reservations",
     icon: <FontAwesomeIcon icon={faWheelchairMove} />,
   },
 

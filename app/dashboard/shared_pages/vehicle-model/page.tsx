@@ -25,7 +25,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { useVehicleModels, useCreateVehicleModel, useDeleteVehicleModel } from '@/lib/queries';
+import { useVehicleModels, useCreateVehicleModel, useDeleteVehicleModel, useUpdateVehicleModel } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -40,8 +40,23 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { SkeletonVehicleModelsTable } from "@/components/ui/skeleton";
 
-function CreateVehicleModelModal({ 
+// VehicleType enum moved here for local use
+export enum VehicleType {
+  AMBULANCE = "AMBULANCE",
+  SEDAN = "SEDAN",
+  SUV = "SUV",
+  TRUCK = "TRUCK",
+  VAN = "VAN",
+  MOTORCYCLE = "MOTORCYCLE",
+  BUS = "BUS",
+  OTHER = "OTHER"
+}
+
+const VEHICLE_TYPE_OPTIONS = Object.values(VehicleType);
+
+function CreateVehicleModal({ 
   open, 
   onClose, 
   onCreate, 
@@ -54,7 +69,7 @@ function CreateVehicleModelModal({
 }) {
   const [form, setForm] = useState<CreateVehicleModelDto>({
     vehicle_model_name: '',
-    vehicle_type: '',
+    vehicle_type: VehicleType.SEDAN,
     manufacturer_name: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -63,7 +78,7 @@ function CreateVehicleModelModal({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!form.vehicle_model_name.trim()) newErrors.vehicle_model_name = 'Model name is required';
-    if (!form.vehicle_type.trim()) newErrors.vehicle_type = 'Vehicle type is required';
+    if (!form.vehicle_type) newErrors.vehicle_type = 'Vehicle type is required';
     if (!form.manufacturer_name.trim()) newErrors.manufacturer_name = 'Manufacturer name is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -91,7 +106,7 @@ function CreateVehicleModelModal({
       await onCreate(form);
       setForm({
         vehicle_model_name: '',
-        vehicle_type: '',
+        vehicle_type: VehicleType.SEDAN,
         manufacturer_name: '',
       });
       setErrors({});
@@ -104,7 +119,7 @@ function CreateVehicleModelModal({
   const handleClose = () => {
     setForm({
       vehicle_model_name: '',
-      vehicle_type: '',
+      vehicle_type: VehicleType.SEDAN,
       manufacturer_name: '',
     });
     setErrors({});
@@ -173,7 +188,7 @@ function CreateVehicleModelModal({
               <select 
                 name="vehicle_type" 
                 value={form.vehicle_type} 
-                onChange={handleChange} 
+                onChange={e => setForm(f => ({ ...f, vehicle_type: e.target.value as VehicleType }))} 
                 onBlur={handleBlur}
                 className={`w-full border rounded-md px-3 py-2 focus:ring-2 transition-colors duration-200 bg-white ${
                   errors.vehicle_type && touched.vehicle_type 
@@ -182,19 +197,9 @@ function CreateVehicleModelModal({
                 }`}
                 disabled={isLoading}
               >
-                <option value="">Select vehicle type</option>
-                <option value="SEDAN">SEDAN</option>
-                <option value="SUV">SUV</option>
-                <option value="HATCHBACK">HATCHBACK</option>
-                <option value="TRUCK">TRUCK</option>
-                <option value="VAN">VAN</option>
-                <option value="COUPE">COUPE</option>
-                <option value="CONVERTIBLE">CONVERTIBLE</option>
-                <option value="WAGON">WAGON</option>
-                <option value="AMBULANCE">AMBULANCE</option>
-                <option value="MOTORCYCLE">MOTORCYCLE</option>
-                <option value="BUS">BUS</option>
-                <option value="OTHER">OTHER</option>
+                {VEHICLE_TYPE_OPTIONS.map((type: VehicleType) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
               </select>
               {errors.vehicle_type && touched.vehicle_type && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -274,6 +279,45 @@ export default function VehicleModelsPage() {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const updateVehicleModel = useUpdateVehicleModel();
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [modelToEdit, setModelToEdit] = useState<VehicleModel | null>(null);
+  const [editForm, setEditForm] = useState({
+    vehicle_model_name: '',
+    vehicle_type: undefined as VehicleType | undefined,
+    manufacturer_name: '',
+  });
+
+  // Open edit modal and prefill form
+  const openEditModal = (model: VehicleModel) => {
+    setModelToEdit(model);
+    setEditForm({
+      vehicle_model_name: model.vehicle_model_name || '',
+      vehicle_type: (model.vehicle_type as VehicleType | undefined),
+      manufacturer_name: model.manufacturer_name || '',
+    });
+    setEditModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setModelToEdit(null);
+    setEditLoading(false);
+  };
+  const confirmEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modelToEdit) return;
+    setEditLoading(true);
+    try {
+      await updateVehicleModel.mutateAsync({
+        id: modelToEdit.vehicle_model_id,
+        updates: editForm,
+      });
+      closeEditModal();
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const { data: vehicleModels, isLoading, isError } = useVehicleModels();
   const createVehicleModel = useCreateVehicleModel();
@@ -351,7 +395,7 @@ export default function VehicleModelsPage() {
             className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}/edit`);
+              openEditModal(row.original);
             }}
             aria-label="Edit"
           >
@@ -425,29 +469,10 @@ export default function VehicleModelsPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse"></div>
-            <div>
-              <div className="h-6 bg-gray-200 rounded w-32 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-48 mt-1 animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 p-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-12 bg-gray-200 rounded animate-pulse"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  if (isLoading){
+    return(
+      <SkeletonVehicleModelsTable/>
+    )
   }
 
   if (isError) {
@@ -606,7 +631,7 @@ export default function VehicleModelsPage() {
       </div>
 
       {/* Create Vehicle Model Modal */}
-      <CreateVehicleModelModal 
+      <CreateVehicleModal 
         open={showCreate} 
         onClose={() => setShowCreate(false)} 
         isLoading={createVehicleModel.isPending} 
@@ -626,6 +651,62 @@ export default function VehicleModelsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {editModalOpen && modelToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <form
+            onSubmit={confirmEdit}
+            className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+          >
+            <h2 className="text-xl font-bold mb-2">Edit Vehicle Model</h2>
+            <label className="text-sm font-medium">Model Name
+              <input
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
+                value={editForm.vehicle_model_name}
+                onChange={e => setEditForm(f => ({ ...f, vehicle_model_name: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="text-sm font-medium">Vehicle Type
+              <select
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
+                value={editForm.vehicle_type}
+                onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value as VehicleType }))}
+                required
+              >
+                <option value="">Select vehicle type</option>
+                {VEHICLE_TYPE_OPTIONS.map((type: VehicleType) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm font-medium">Manufacturer
+              <input
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
+                value={editForm.manufacturer_name}
+                onChange={e => setEditForm(f => ({ ...f, manufacturer_name: e.target.value }))}
+                required
+              />
+            </label>
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                onClick={closeEditModal}
+                disabled={editLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={editLoading}
+              >
+                {editLoading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

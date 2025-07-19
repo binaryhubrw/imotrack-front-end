@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   ColumnDef,
   flexRender,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
-import { useOrganizations, useCreateOrganization } from '@/lib/queries';
+import { useOrganizations, useCreateOrganization, useDeleteOrganization } from '@/lib/queries';
 import { Organization } from '@/types/next-auth';
 
 import { toast } from 'sonner';
@@ -243,17 +243,78 @@ export default function OrganizationsPage() {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
   const [showCreate, setShowCreate] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null);
+  const [deleteOrgName, setDeleteOrgName] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
   const router = useRouter();
 
   const { data, isLoading, isError } = useOrganizations(page, limit);
   const createOrg = useCreateOrganization();
+  const deleteOrg = useDeleteOrganization();
 
   const organizations = data?.organizations || [];
   const pagination = data?.pagination;
 
+  // Delete handlers
+  const handleDeleteClick = (orgId: string, orgName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeleteOrgId(orgId);
+    setDeleteOrgName(orgName);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteOrgId) return;
+    setDeleting(true);
+    try {
+      await deleteOrg.mutateAsync({ organization_id: deleteOrgId });
+      setShowDeleteConfirm(false);
+      setDeleteOrgId(null);
+      setDeleteOrgName('');
+      toast.success('Organization deleted successfully!');
+    } catch (error) {
+      toast.error('Failed to delete organization');
+      console.error('Delete error:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Escape key handler for delete modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showDeleteConfirm) {
+        setShowDeleteConfirm(false);
+        setDeleteOrgId(null);
+        setDeleteOrgName('');
+      }
+    };
+
+    if (showDeleteConfirm) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [showDeleteConfirm]);
+
   const columns: ColumnDef<Organization>[] = [
+    {
+      accessorKey: "organization_logo",
+      header: "Logo",
+      cell: ({ row }) => (
+        row.original.organization_logo ? (
+          <img
+            src={row.original.organization_logo}
+            alt={row.original.organization_name + ' logo'}
+            className="w-10 h-10 rounded object-contain bg-gray-100 border border-gray-200"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">N/A</div>
+        )
+      ),
+    },
     {
       accessorKey: "organization_name",
       header: "Name",
@@ -269,24 +330,11 @@ export default function OrganizationsPage() {
       ),
     },
     {
-      accessorKey: "organization_phone",
-      header: "Phone",
-      cell: ({ row }) => (
-        <span className="text-gray-700">{row.original.organization_phone}</span>
-      ),
-    },
-    {
       accessorKey: "organization_status",
       header: "Status",
-      cell: ({ row }) => <StatusBadge status={row.original.organization_status} />,
+      cell: ({ row }) => <StatusBadge status={row.original.organization_status} />, 
     },
-    {
-      accessorKey: "created_at",
-      header: "Created",
-      cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{new Date(row.original.created_at).toLocaleDateString()}</span>
-      ),
-    },
+    // Removed organization_phone and created_at columns
     {
       id: "actions",
       header: "Actions",
@@ -305,7 +353,7 @@ export default function OrganizationsPage() {
           </button>
           <button
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-            onClick={e => { e.stopPropagation(); toast.info('Delete not implemented'); }}
+            onClick={e => handleDeleteClick(row.original.organization_id, row.original.organization_name, e)}
             aria-label="Delete"
           >
             <Trash2 className="w-6 h-6" />
@@ -395,70 +443,7 @@ export default function OrganizationsPage() {
             {/* Table */}
             <div className="overflow-x-auto">
               {isLoading ? (
-                
-                <>
-                {/* Table */}
-<div className="overflow-x-auto">
-  {isLoading ? (
-    <SkeletonOrganizationsTable rows={6} />
-  ) : isError ? (
-    <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
-  ) : filteredRows.length === 0 ? (
-    <div className="p-8 text-center text-gray-500">No organizations found.</div>
-  ) : (
-    <Table>
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead
-                key={header.id}
-                className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow
-            key={row.original.organization_id}
-            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-            onClick={() => router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`)}
-            tabIndex={0}
-            aria-label={`View details for organization ${row.original.organization_name}`}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-            {pagination && (
-              <>
-                Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
-              </>
-            )}
-          </TableCell>
-        </TableRow>
-      </TableFooter>
-    </Table>
-  )}
-</div>
-                </>
-
+                <SkeletonOrganizationsTable rows={6} />
               ) : isError ? (
                 <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
               ) : filteredRows.length === 0 ? (
@@ -554,6 +539,53 @@ export default function OrganizationsPage() {
         onClose={() => setShowCreate(false)}
         onCreate={handleCreateOrganization}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Delete Organization</h2>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <strong>{deleteOrgName}</strong>? 
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteOrgId(null);
+                    setDeleteOrgName('');
+                  }}
+                  className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

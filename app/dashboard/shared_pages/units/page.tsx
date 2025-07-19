@@ -12,33 +12,51 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
+import { Download, Plus, Edit, Trash2, Search } from "lucide-react";
 import {
-  Download,
-  Plus,
-  Edit,
-  Trash2,
-  Search,
-} from "lucide-react";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
-import { useRouter } from 'next/navigation';
-import { useOrganizationUnits, useCreateUnit } from '@/lib/queries';
-import type { Unit } from '@/types/next-auth';
-import { CreateUnitDto } from '@/types/next-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { SkeletonOrganizationsTable } from '@/components/ui/skeleton';
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+  TableFooter,
+} from "@/components/ui/table";
+import { useRouter } from "next/navigation";
+import {
+  useOrganizationUnits,
+  useUpdateOrganizationUnit,
+  useOrganizationDeleteUnit,
+  useCreateUnit,
+} from "@/lib/queries";
+import type { Unit } from "@/types/next-auth";
+import { CreateUnitDto } from "@/types/next-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SkeletonOrganizationsTable } from "@/components/ui/skeleton";
 
 // Status badge for unit status
 const StatusBadge = ({ status }: { status: string }) => {
-  const statusConfig: Record<string, { className: string; dotColor: string }> = {
-    ACTIVE: { className: "bg-green-100 text-green-700 border-green-200", dotColor: "bg-green-500" },
-    INACTIVE: { className: "bg-gray-100 text-gray-700 border-gray-200", dotColor: "bg-gray-400" },
-    PENDING: { className: "bg-yellow-100 text-yellow-700 border-yellow-200", dotColor: "bg-yellow-500" },
-  };
+  const statusConfig: Record<string, { className: string; dotColor: string }> =
+    {
+      ACTIVE: {
+        className: "bg-green-100 text-green-700 border-green-200",
+        dotColor: "bg-green-500",
+      },
+      INACTIVE: {
+        className: "bg-gray-100 text-gray-700 border-gray-200",
+        dotColor: "bg-gray-400",
+      },
+      PENDING: {
+        className: "bg-yellow-100 text-yellow-700 border-yellow-200",
+        dotColor: "bg-yellow-500",
+      },
+    };
   const config = statusConfig[status] || statusConfig.INACTIVE;
   return (
-    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+    <div
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}
+    >
       <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
       <span className="capitalize">{status.toLowerCase()}</span>
     </div>
@@ -46,10 +64,18 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 // Create Unit Modal
-function CreateUnitModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (data: CreateUnitDto) => void }) {
+function CreateUnitModal({
+  open,
+  onClose,
+  onCreate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreate: (data: CreateUnitDto) => void;
+}) {
   const [form, setForm] = useState({
-    unit_name: '',
-    organization_id: '',
+    unit_name: "",
+    organization_id: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -62,7 +88,7 @@ function CreateUnitModal({ open, onClose, onCreate }: { open: boolean; onClose: 
     setSubmitting(true);
     try {
       await onCreate(form);
-      setForm({ unit_name: '', organization_id: '' });
+      setForm({ unit_name: "", organization_id: "" });
       onClose();
     } catch {
       // error handled in mutation
@@ -73,50 +99,50 @@ function CreateUnitModal({ open, onClose, onCreate }: { open: boolean; onClose: 
 
   if (!open) return null;
   return (
-   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-  <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
-    <button 
-      className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200" 
-      onClick={onClose}
-    >
-      &times;
-    </button>
-    
-    <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
-    
-    <form onSubmit={handleSubmit} className="space-y-5">
-  <Input 
-    name="unit_name" 
-    placeholder="Unit Name" 
-    value={form.unit_name} 
-    onChange={handleChange} 
-    required 
-    className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-  />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
+        <button
+          className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200"
+          onClick={onClose}
+        >
+          &times;
+        </button>
 
-  <Input 
-    name="organization_id" 
-    placeholder="Organization ID" 
-    value={form.organization_id} 
-    onChange={handleChange} 
-    required 
-    className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-  />
+        <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
 
-  <Button 
-    type="submit" 
-    className="w-full bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200 h-11 text-base"
-    disabled={submitting}
-  >
-    {submitting ? 'Creating...' : 'Create'}
-  </Button>
-</form>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Input
+            name="unit_name"
+            placeholder="Unit Name"
+            value={form.unit_name}
+            onChange={handleChange}
+            required
+            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+          />
 
-  </div>
-</div>
+          <Input
+            name="organization_id"
+            placeholder="Organization ID"
+            value={form.organization_id}
+            onChange={handleChange}
+            required
+            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+          />
 
+          <Button
+            type="submit"
+            className="w-full bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200 h-11 text-base"
+            disabled={submitting}
+          >
+            {submitting ? "Creating..." : "Create"}
+          </Button>
+        </form>
+      </div>
+    </div>
   );
 }
+
+
 
 export default function UnitsPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -125,19 +151,84 @@ export default function UnitsPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [editForm, setEditForm] = useState({
+    unit_name: "",
+    status: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
 
   const { data, isLoading, isError } = useOrganizationUnits();
+  const updateUnit = useUpdateOrganizationUnit();
+  const deleteUnit = useOrganizationDeleteUnit();
   const createUnit = useCreateUnit();
 
   const units: Unit[] = data || [];
+
+  const handleEdit = (unit: Unit, e: React.MouseEvent) => {
+  e.stopPropagation();
+  setEditingUnit(unit);
+  setEditForm({
+    unit_name: unit.unit_name || '',
+    status: unit.status || '',
+  });
+  setShowEdit(true);
+};
+
+const handleEditSave = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!editingUnit) return;
+  setSubmitting(true);
+  try {
+    await updateUnit.mutateAsync({
+      unit_id: editingUnit.unit_id,
+      updates: editForm,
+    });
+    setShowEdit(false);
+    setEditingUnit(null);
+    // The data will be refetched automatically due to react-query
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleDelete = (unit: Unit, e: React.MouseEvent) => {
+  e.stopPropagation();
+  setEditingUnit(unit);
+  setShowDeleteConfirm(true);
+};
+
+const handleDeleteConfirm = async () => {
+  if (!editingUnit) return;
+  setDeleting(true);
+  setDeleteError(null);
+  try {
+    await deleteUnit.mutateAsync({ unit_id: editingUnit.unit_id });
+    setShowDeleteConfirm(false);
+    setEditingUnit(null);
+  } catch (error: unknown) {
+    let message = 'Failed to delete unit.';
+    if (typeof error === 'object' && error && 'message' in error) {
+      message = (error as { message?: string }).message || message;
+    }
+    setDeleteError(message);
+    setDeleting(false);
+  }
+};
 
   const columns: ColumnDef<Unit>[] = [
     {
       accessorKey: "unit_name",
       header: "Unit Name",
       cell: ({ row }) => (
-        <span className="font-medium text-gray-900">{row.original.unit_name}</span>
+        <span className="font-medium text-gray-900">
+          {row.original.unit_name}
+        </span>
       ),
     },
     {
@@ -155,25 +246,23 @@ export default function UnitsPage() {
       ),
     },
     {
-      accessorKey: "organization_id",
-      header: "Organization ID",
-      cell: ({ row }) => (
-        <span className="text-xs text-gray-500 font-mono">
-          {row.original.organization_id ? row.original.organization_id.substring(0, 8) + '...' : 'N/A'}
-        </span>
-      ),
-    },
-    {
       id: "positions",
       header: "Positions",
       cell: ({ row }) => {
-        const positions = row.original.positions as { position_status: string }[] || [];
+        const positions =
+          (row.original.positions as { position_status: string }[]) || [];
         const positionsCount = positions.length;
-        const activePositions = positions.filter((p) => p.position_status === 'ACTIVE').length;
+        const activePositions = positions.filter(
+          (p) => p.position_status === "ACTIVE"
+        ).length;
         return (
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">{positionsCount} total</span>
-            <span className="text-xs text-green-600">{activePositions} active</span>
+            <span className="text-sm font-medium text-gray-900">
+              {positionsCount} total
+            </span>
+            <span className="text-xs text-green-600">
+              {activePositions} active
+            </span>
           </div>
         );
       },
@@ -182,7 +271,11 @@ export default function UnitsPage() {
       id: "position_details",
       header: "Position Names",
       cell: ({ row }) => {
-        const positions = row.original.positions as { position_id: string; position_name: string }[] || [];
+        const positions =
+          (row.original.positions as {
+            position_id: string;
+            position_name: string;
+          }[]) || [];
         if (positions.length === 0) {
           return <span className="text-xs text-gray-400">No positions</span>;
         }
@@ -197,7 +290,9 @@ export default function UnitsPage() {
               </span>
             ))}
             {positions.length > 2 && (
-              <span className="text-xs text-gray-500">+{positions.length - 2} more</span>
+              <span className="text-xs text-gray-500">
+                +{positions.length - 2} more
+              </span>
             )}
           </div>
         );
@@ -206,18 +301,18 @@ export default function UnitsPage() {
     {
       id: "actions",
       header: "Actions",
-      cell: () => (
+      cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <button
             className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-            onClick={e => { e.stopPropagation(); toast.info('Edit not implemented'); }}
+            onClick={(e) => handleEdit(row.original, e)}
             aria-label="Edit"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button
             className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-            onClick={e => { e.stopPropagation(); toast.info('Delete not implemented'); }}
+            onClick={(e) => handleDelete(row.original, e)}
             aria-label="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -238,85 +333,101 @@ export default function UnitsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    globalFilterFn: 'includesString',
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter,
     },
   });
 
-  // Filtered data for search
-  const filteredRows = units.filter((unit: Unit) =>
-    unit.unit_name?.toLowerCase().includes(globalFilter.toLowerCase()) ||
-    (unit.positions && unit.positions.some((position: { position_name: string }) =>
-      position.position_name?.toLowerCase().includes(globalFilter.toLowerCase())
-    ))
-  );
-
   if (isLoading) {
     return (
-    <>
-<div className="overflow-x-auto">
-  {isLoading ? (
-    <SkeletonOrganizationsTable rows={6} />
-  ) : isError ? (
-    <div className="p-8 text-center text-red-500">Failed to load organizations.</div>
-  ) : filteredRows.length === 0 ? (
-    <div className="p-8 text-center text-gray-500">No organizations found.</div>
-  ) : (
-    <Table>
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead
-                key={header.id}
-                className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
-              >
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow
-            key={row.original.organization_id}
-            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-            onClick={() => router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`)}
-            tabIndex={0}
-            aria-label={`View details for organization ${row.original.organization_id}`}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-base">
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-            Showing {filteredRows.length} of {units.length} organizations
-          </TableCell>
-        </TableRow>
-      </TableFooter>
-    </Table>
-  )}
-</div>
-    </>
-    )
+      <>
+        <div className="overflow-x-auto">
+          {isLoading ? (
+            <SkeletonOrganizationsTable rows={6} />
+          ) : isError ? (
+            <div className="p-8 text-center text-red-500">
+              Failed to load organizations.
+            </div>
+          ) : units.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              No organizations found.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <TableHead
+                        key={header.id}
+                        className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.original.organization_id}
+                    className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/shared_pages/organizations/${row.original.organization_id}`
+                      )
+                    }
+                    tabIndex={0}
+                    aria-label={`View details for organization ${row.original.organization_id}`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className="px-4 py-4 whitespace-nowrap text-base"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="text-right text-sm text-gray-500 px-4 py-3"
+                  >
+                    Showing {units.length} of {units.length}{" "}
+                    organizations
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          )}
+        </div>
+      </>
+    );
   }
   if (isError) {
-    return <div className="p-8 text-center text-red-500">Failed to load units. Please try again.</div>;
+    return (
+      <div className="p-8 text-center text-red-500">
+        Failed to load units. Please try again.
+      </div>
+    );
   }
 
   return (
@@ -367,7 +478,7 @@ export default function UnitsPage() {
                 </div>
                 {globalFilter && (
                   <span className="text-sm text-gray-500">
-                    {filteredRows.length} of {units.length} units
+                    {table.getFilteredRowModel().rows.length} of {units.length} units
                   </span>
                 )}
               </div>
@@ -381,8 +492,12 @@ export default function UnitsPage() {
                     <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                       <Plus className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No units found</h3>
-                    <p className="text-gray-500">Get started by creating your first unit.</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No units found
+                    </h3>
+                    <p className="text-gray-500">
+                      Get started by creating your first unit.
+                    </p>
                   </div>
                   <Button
                     onClick={() => setShowCreate(true)}
@@ -391,10 +506,6 @@ export default function UnitsPage() {
                     <Plus className="w-4 h-4 mr-2" />
                     Create Unit
                   </Button>
-                </div>
-              ) : filteredRows.length === 0 && globalFilter ? (
-                <div className="p-8 text-center text-gray-500">
-                  No units match your search criteria.
                 </div>
               ) : (
                 <Table>
@@ -418,17 +529,27 @@ export default function UnitsPage() {
                     ))}
                   </TableHeader>
                   <TableBody>
-                    {table.getRowModel().rows.map(row => (
+                    {table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.original.unit_id}
                         className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-                        onClick={() => router.push(`/dashboard/shared_pages/units/${row.original.unit_id}`)}
+                        onClick={() =>
+                          router.push(
+                            `/dashboard/shared_pages/units/${row.original.unit_id}`
+                          )
+                        }
                         tabIndex={0}
                         aria-label={`View details for unit ${row.original.unit_name}`}
                       >
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id} className="px-4 py-4 whitespace-nowrap text-sm">
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            className="px-4 py-4 whitespace-nowrap text-sm"
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -436,8 +557,13 @@ export default function UnitsPage() {
                   </TableBody>
                   <TableFooter>
                     <TableRow>
-                      <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
-                        Showing {globalFilter ? filteredRows.length : units.length} of {units.length} units
+                      <TableCell
+                        colSpan={columns.length}
+                        className="text-right text-sm text-gray-500 px-4 py-3"
+                      >
+                        Showing{" "}
+                        {globalFilter ? table.getFilteredRowModel().rows.length : units.length} of{" "}
+                        {units.length} units
                       </TableCell>
                     </TableRow>
                   </TableFooter>
@@ -454,6 +580,87 @@ export default function UnitsPage() {
           await createUnit.mutateAsync(data);
         }}
       />
+      {/* Edit Modal */}
+{showEdit && editingUnit && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <form
+      onSubmit={handleEditSave}
+      className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+    >
+      <h2 className="text-xl font-bold mb-2">Edit Unit</h2>
+      <label className="text-sm font-medium">Unit Name
+        <input
+          className="w-full border rounded px-3 py-2 mt-1"
+          value={editForm.unit_name}
+          onChange={e => setEditForm(f => ({ ...f, unit_name: e.target.value }))}
+          required
+        />
+      </label>
+      <div className="flex gap-3 mt-4">
+        <button
+          type="button"
+          className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+          onClick={() => setShowEdit(false)}
+          disabled={submitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={submitting}
+        >
+          {submitting ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+    </form>
+  </div>
+)}
+
+{/* Delete Confirmation Modal */}
+{showDeleteConfirm && editingUnit && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-red-100 rounded-lg">
+            <Trash2 className="w-6 h-6 text-red-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Delete Unit</h2>
+        </div>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete <strong>{editingUnit.unit_name}</strong>? This action cannot be undone.
+        </p>
+        {deleteError && (
+          <div className="mb-4 text-red-600 text-sm">{deleteError}</div>
+        )}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            disabled={deleting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDeleteConfirm}
+            className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+            disabled={deleting}
+          >
+            {deleting ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

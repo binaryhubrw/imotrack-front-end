@@ -381,14 +381,9 @@ export default function UsersPage() {
 
   const columns: ColumnDef<UserRow>[] = useMemo(() => [
     {
-      accessorKey: "first_name",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">First Name</span>,
-      cell: ({ row }) => <span className="text-xs text-gray-900 font-medium">{row.getValue("first_name")}</span>,
-    },
-    {
-      accessorKey: "last_name",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Last Name</span>,
-      cell: ({ row }) => <span className="text-xs text-gray-900 font-medium">{row.getValue("last_name")}</span>,
+      id: "name",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Name</span>,
+      cell: ({ row }) => <span className="text-xs text-gray-900 font-medium">{row.original.first_name} {row.original.last_name}</span>,
     },
     {
       accessorKey: "email",
@@ -425,7 +420,7 @@ export default function UsersPage() {
       id: "actions",
       header: () => <span className="text-xs font-semibold uppercase tracking-wider">Actions</span>,
       cell: ({  }) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0">
           <button className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" onClick={e => { e.stopPropagation(); }} aria-label="Edit"><Edit className="w-4 h-4" /></button>
           <button className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" onClick={e => { e.stopPropagation(); }} aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
         </div>
@@ -524,7 +519,7 @@ export default function UsersPage() {
                 {table.getHeaderGroups().map(headerGroup => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map(header => (
-                      <TableHead key={header.id} className="px-3 py-6 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+                      <TableHead key={header.id} className="px-1 py-4 text-left text-sm font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
                     ))}
                   </TableRow>
                 ))}
@@ -534,7 +529,7 @@ export default function UsersPage() {
                   table.getRowModel().rows.map(row => (
                     <TableRow key={row.original.user_id} className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors">
                       {row.getVisibleCells().map(cell => (
-                        <TableCell key={cell.id} className="px-3 py-6 whitespace-nowrap text-xs text-gray-900">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                        <TableCell key={cell.id} className="px-1 py-4 whitespace-nowrap text-sm text-gray-900">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                       ))}
                     </TableRow>
                   ))

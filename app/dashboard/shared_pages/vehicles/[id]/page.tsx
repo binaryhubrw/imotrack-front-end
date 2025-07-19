@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useVehicleModel, useUpdateVehicleModel, useDeleteVehicleModel } from '@/lib/queries';
+import { useVehicle, useUpdateVehicle, useDeleteVehicle, useVehicleModel } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -21,59 +21,78 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import type { VehicleType } from '@/types/next-auth';
+
+// Local enums for select options
+const VehicleType = {
+  AMBULANCE: "AMBULANCE",
+  SEDAN: "SEDAN",
+  SUV: "SUV",
+  TRUCK: "TRUCK",
+  VAN: "VAN",
+  MOTORCYCLE: "MOTORCYCLE",
+  BUS: "BUS",
+  OTHER: "OTHER"
+};
+const TransmissionMode = {
+  MANUAL: "MANUAL",
+  AUTOMATIC: "AUTOMATIC",
+  SEMI_AUTOMATIC: "SEMI_AUTOMATIC"
+};
 
 
-
-export default function VehicleModelDetailPage() {
+export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { data: model, isLoading, isError, refetch } = useVehicleModel(id);
-  const updateVehicleModel = useUpdateVehicleModel();
-  const deleteVehicleModel = useDeleteVehicleModel();
+  const { data: vehicle, isLoading, isError, refetch } = useVehicle(id);
+  const updateVehicle = useUpdateVehicle();
+  const deleteVehicle = useDeleteVehicle();
   
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
-    vehicle_model_name: '',
-    vehicle_type: undefined as VehicleType | undefined,
-    manufacturer_name: '',
+    plate_number: '',
+    vehicle_type: '',
+    transmission_mode: '',
+    vehicle_model_id: '',
+    vehicle_year: 2020,
+    vehicle_capacity: 1,
+    energy_type: '',
+    organization_id: '',
+    vehicle_photo: undefined as File | undefined,
   });
+  // Fetch related vehicle model
+  const { data: vehicleModel } = useVehicleModel(vehicle?.vehicle_model_id || '');
 
- 
-  const VEHICLE_TYPE_OPTIONS = [
-    { value: "SEDAN", label: "Sedan" },
-    { value: "SUV", label: "SUV" },
-    { value: "HATCHBACK", label: "Hatchback" },
-    { value: "TRUCK", label: "Truck" },
-    { value: "VAN", label: "Van" },
-    { value: "COUPE", label: "Coupe" },
-    { value: "CONVERTIBLE", label: "Convertible" },
-    { value: "WAGON", label: "Wagon" },
-    { value: "AMBULANCE", label: "Ambulance" },
-    { value: "MOTORCYCLE", label: "Motorcycle" },
-    { value: "BUS", label: "Bus" },
-    { value: "OTHER", label: "Other" },
-  ];
-  
   React.useEffect(() => {
-    if (model) {
+    if (vehicle) {
       setEditForm({
-        vehicle_model_name: model.vehicle_model_name || '',
-        vehicle_type: (model.vehicle_type as VehicleType | undefined),
-        manufacturer_name: model.manufacturer_name || '',
+        plate_number: vehicle.plate_number || '',
+        vehicle_type: vehicle.vehicle_type || '',
+        transmission_mode: vehicle.transmission_mode || '',
+        vehicle_model_id: vehicle.vehicle_model_id || '',
+        vehicle_year: vehicle.vehicle_year || 2020,
+        vehicle_capacity: vehicle.vehicle_capacity || 1,
+        energy_type: vehicle.energy_type || '',
+        organization_id: vehicle.organization_id || '',
+        vehicle_photo: undefined,
       });
     }
-  }, [model]);
+  }, [vehicle]);
 
   // Open edit modal and prefill form
   const handleEdit = () => {
-    if (!model) return;
+    if (!vehicle) return;
     setEditForm({
-      vehicle_model_name: model.vehicle_model_name || '',
-      vehicle_type: (model.vehicle_type as VehicleType | undefined),
-      manufacturer_name: model.manufacturer_name || '',
+      plate_number: vehicle.plate_number || '',
+      vehicle_type: vehicle.vehicle_type || '',
+      transmission_mode: vehicle.transmission_mode || '',
+      vehicle_model_id: vehicle.vehicle_model_id || '',
+      vehicle_year: vehicle.vehicle_year || 2020,
+      vehicle_capacity: vehicle.vehicle_capacity || 1,
+      energy_type: vehicle.energy_type || '',
+      organization_id: vehicle.organization_id || '',
+      vehicle_photo: undefined,
     });
     setShowEdit(true);
   };
@@ -83,7 +102,7 @@ export default function VehicleModelDetailPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await updateVehicleModel.mutateAsync({ id, updates: editForm });
+      await updateVehicle.mutateAsync({ id, updates: editForm });
       toast.success("Vehicle model updated!");
       setShowEdit(false);
       refetch();
@@ -100,7 +119,7 @@ export default function VehicleModelDetailPage() {
 
   const confirmDelete = async () => {
     try {
-      await deleteVehicleModel.mutateAsync({ id });
+      await deleteVehicle.mutateAsync({ id });
       toast.success("Vehicle model deleted!");
       setShowDeleteDialog(false);
       router.push("/dashboard/shared_pages/vehicle-model");
@@ -110,7 +129,8 @@ export default function VehicleModelDetailPage() {
   };
 
   const getVehicleTypeLabel = (type: string) => {
-    return VEHICLE_TYPE_OPTIONS.find(option => option.value === type)?.label || type;
+    const options = Object.values(VehicleType).map(value => ({ value, label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }));
+    return options.find(option => option.value === type)?.label || type;
   };
 
   if (isLoading) {
@@ -133,7 +153,7 @@ export default function VehicleModelDetailPage() {
       </div>
     );
   }
-  if (isError || !model) {
+  if (isError || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-red-500">Error loading vehicle model details</div>
@@ -174,8 +194,8 @@ export default function VehicleModelDetailPage() {
               <label className="text-sm font-medium">Model Name
                 <input
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
-                  value={editForm.vehicle_model_name}
-                  onChange={e => setEditForm(f => ({ ...f, vehicle_model_name: e.target.value }))}
+                  value={editForm.plate_number}
+                  onChange={e => setEditForm(f => ({ ...f, plate_number: e.target.value }))}
                   required
                 />
               </label>
@@ -184,13 +204,13 @@ export default function VehicleModelDetailPage() {
                 <select
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
                   value={editForm.vehicle_type}
-                  onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value as VehicleType }))}
+                  onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value }))}
                   required
                 >
                   <option value="">Select vehicle type</option>
-                  {VEHICLE_TYPE_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  {Object.values(VehicleType).map(value => (
+                    <option key={value} value={value}>
+                      {value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                     </option>
                   ))}
                 </select>
@@ -199,8 +219,8 @@ export default function VehicleModelDetailPage() {
               <label className="text-sm font-medium">Manufacturer
                 <input
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
-                  value={editForm.manufacturer_name}
-                  onChange={e => setEditForm(f => ({ ...f, manufacturer_name: e.target.value }))}
+                  value={vehicleModel?.vehicle_model_name}
+                  onChange={e => setEditForm(f => ({ ...f, plate_number: e.target.value }))}
                   required
                 />
               </label>
@@ -235,7 +255,7 @@ export default function VehicleModelDetailPage() {
                 <h1 className="text-2xl font-bold">Vehicle Model Details</h1>
               </div>
               <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                {getVehicleTypeLabel(model.vehicle_type)}
+                {getVehicleTypeLabel(vehicle.vehicle_type)}
               </div>
             </div>
           </div>
@@ -249,27 +269,27 @@ export default function VehicleModelDetailPage() {
               
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Model Name</div>
-                <div className="font-medium text-gray-900">{model.vehicle_model_name}</div>
+                <div className="font-medium text-gray-900">{vehicleModel?.vehicle_model_name}</div>
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Type</div>
                 <div className="font-medium text-gray-900">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {getVehicleTypeLabel(model.vehicle_type)}
+                    {getVehicleTypeLabel(vehicle.vehicle_type)}
                   </span>
                 </div>
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Manufacturer</div>
-                <div className="font-medium text-gray-900">{model.manufacturer_name}</div>
+                <div className="font-medium text-gray-900">{vehicleModel?.manufacturer_name}</div>
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Created At</div>
                 <div className="font-medium text-gray-900">
-                  {model.created_at ? new Date(model.created_at).toLocaleString() : 'N/A'}
+                  {vehicle.created_at ? new Date(vehicle.created_at).toLocaleString() : 'N/A'}
                 </div>
               </div>
             </div>
@@ -282,10 +302,10 @@ export default function VehicleModelDetailPage() {
                   <FontAwesomeIcon icon={faCar} className="text-blue-600 mt-1" />
                   <div>
                     <div className="font-semibold text-blue-900">
-                      {model.manufacturer_name} {model.vehicle_model_name}
+                      {vehicleModel?.manufacturer_name} {vehicleModel?.vehicle_model_name}
                     </div>
                     <div className="text-blue-700 text-sm">
-                      This is a {getVehicleTypeLabel(model.vehicle_type).toLowerCase()} model manufactured by {model.manufacturer_name}.
+                      This is a {getVehicleTypeLabel(vehicle.vehicle_type).toLowerCase()} model manufactured by {vehicleModel?.manufacturer_name}.
                     </div>
                   </div>
                 </div>
@@ -301,7 +321,7 @@ export default function VehicleModelDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{model.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
+              Are you sure you want to delete &quot;{vehicleModel?.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

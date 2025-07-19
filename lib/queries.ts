@@ -24,6 +24,13 @@ import {
   position_accesses,
   VehicleType,
   TransmissionMode,
+  Reservation,
+  CreateReservationDto,
+  CancelReservationDto,
+  UpdateReservationStatusDto,
+  AssignVehicleDto,
+  StartReservationDto,
+  CompleteReservationDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 
@@ -793,6 +800,8 @@ export const useCreateUser = () => {
 };
 
 
+
+
 // --- Get all vehicle models ---
 export const useVehicleModels = () => {
   return useQuery<VehicleModel[], Error>({
@@ -894,13 +903,13 @@ export const useDeleteVehicleModel = () => {
   const queryClient = useQueryClient();
   return useMutation<{ message: string }, Error, { id: string }>({
     mutationFn: async ({ id }) => {
-      const { data } = await api.delete<{ data: { message: string } }>(`/v2/vehicle-models/${id}`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      const { data } = await api.delete<{ message: string }>(`/v2/vehicle-models/${id}`);
+      if (!data.message) throw new Error('No data');
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-models'] });
-      toast.success('Vehicle model deleted successfully!');
+      toast.success(data.message || 'Vehicle model deleted successfully!');
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
@@ -918,17 +927,18 @@ export const useDeleteVehicleModel = () => {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       // Show a user-friendly fallback if no message
-      toast.error(apiMsg || 'Failed to delete vehicle model. Please try again.');
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle model. Please try again.'));
     },
   });
 };
 
 
-// --- Get all vehicles ---
+// --- Get all vehicles (with nested vehicle_model and organization) ---
 export const useVehicles = () => {
   return useQuery<Vehicle[], Error>({
     queryKey: ['vehicles'],
     queryFn: async () => {
+      // Returns Vehicle[] with nested vehicle_model and organization objects
       const { data } = await api.get<{ data: Vehicle[] }>('/v2/vehicles');
       if (!data.data) throw new Error('No data');
       return data.data;
@@ -936,11 +946,12 @@ export const useVehicles = () => {
   });
 };
 
-// --- Get a vehicle by ID ---
+// --- Get a vehicle by ID (with nested vehicle_model and organization) ---
 export const useVehicle = (id: string) => {
   return useQuery<Vehicle, Error>({
     queryKey: ['vehicle', id],
     queryFn: async () => {
+      // Returns Vehicle with nested vehicle_model and organization objects
       const { data } = await api.get<{ data: Vehicle }>(`/v2/vehicles/${id}`);
       if (!data.data) throw new Error('No data');
       return data.data;
@@ -1069,9 +1080,9 @@ export const useDeleteVehicle = () => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success('Vehicle deleted successfully!');
+      toast.success(data.message || 'Vehicle deleted successfully!');
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
@@ -1095,4 +1106,370 @@ export const useDeleteVehicle = () => {
 
 
 
+// --- Reservations ---
+export const useReservations = () => {
+  return useQuery<Reservation[], Error>({
+    queryKey: ['reservations'],
+    queryFn: async () => {
+      console.log('Fetching reservations...');
+      const { data } = await api.get<{ data: Reservation[] }>('/v2/reservations');
+      console.log('Reservations response:', data);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+export const useCreateReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, CreateReservationDto>({
+    mutationFn: async (dto) => {
+      console.log('Creating reservation with data:', dto);
+      try {
+        const response = await api.post('/v2/reservations', dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Create reservation full response:', response);
+        const { data } = response;
+        console.log('Create reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Create reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation created successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Create reservation error:', error);
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      const errorMessage = apiMsg || (error instanceof Error ? error.message : 'Failed to create reservation.');
+      console.error('Toast error message:', errorMessage);
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useCancelReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; dto: CancelReservationDto }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Cancelling reservation:', { id, dto });
+      try {
+        const response = await api.post(`/v2/reservations/${id}/cancel`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Cancel reservation full response:', response);
+        const { data } = response;
+        console.log('Cancel reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Cancel reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation cancelled successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to cancel reservation.'));
+    },
+  });
+};
+
+export const useUpdateReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; dto: UpdateReservationStatusDto }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Updating reservation status:', { id, dto });
+      try {
+        const response = await api.patch(`/v2/reservations/${id}`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Update reservation full response:', response);
+        const { data } = response;
+        console.log('Update reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Update reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation status updated!');
+    },
+    onError: (error: unknown) => {
+      console.error('Update reservation error:', error);
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update reservation.'));
+    },
+  });
+};
+
+export const useVehicleReservationAssignment = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; dto: AssignVehicleDto }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Assigning vehicle to reservation:', { id, dto });
+      try {
+        const response = await api.post(`/v2/reservations/${id}/assign-vehicle`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Assign vehicle full response:', response);
+        const { data } = response;
+        console.log('Assign vehicle data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Assign vehicle API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Vehicle assigned to reservation!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign vehicle.'));
+    },
+  });
+};
+
+export const useStartReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { reservationId: string; dto: StartReservationDto }>({
+    mutationFn: async ({ reservationId, dto }) => {
+      console.log('Starting reservation:', { reservationId, dto });
+      try {
+        const response = await api.post(`/v2/reservations/${reservationId}/start`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Start reservation full response:', response);
+        const { data } = response;
+        console.log('Start reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Start reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation started!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to start reservation.'));
+    },
+  });
+};
+
+export const useCompleteReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { reservationId: string; dto: CompleteReservationDto }>({
+    mutationFn: async ({ reservationId, dto }) => {
+      console.log('Completing reservation:', { reservationId, dto });
+      try {
+        const response = await api.post(`/v2/reservations/${reservationId}/complete`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        console.log('Complete reservation full response:', response);
+        const { data } = response;
+        console.log('Complete reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data) {
+          return data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (error) {
+        console.error('Complete reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation completed!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to complete reservation.'));
+    },
+  });
+};
+
+export const useDeleteReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      console.log('Deleting reservation with id:', id);
+      try {
+        const response = await api.delete(`/v2/reservations/${id}`);
+        console.log('Delete reservation full response:', response);
+        const { data } = response;
+        console.log('Delete reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data && data.message) {
+          return data;
+        } else {
+          return { message: 'Reservation deleted successfully' };
+        }
+      } catch (error) {
+        console.error('Delete reservation API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation deleted successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Delete reservation error:', error);
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete reservation.'));
+    },
+  });
+};
 

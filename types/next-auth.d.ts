@@ -351,6 +351,34 @@ export interface CreateUserDto {
 }
 
 
+
+export enum VehicleType {
+  AMBULANCE = "AMBULANCE",
+  SEDAN = "SEDAN",
+  SUV = "SUV",
+  TRUCK = "TRUCK",
+  VAN = "VAN",
+  MOTORCYCLE = "MOTORCYCLE",
+  BUS = "BUS",
+  OTHER = "OTHER"
+}
+
+export enum VehicleStatus {
+  AVAILABLE = "AVAILABLE",
+  OCCUPIED = "OCCUPIED",
+  MAINTENANCE = "MAINTENANCE",
+  OUT_OF_SERVICE = "OUT_OF_SERVICE"
+}
+
+export enum TransmissionMode {
+  MANUAL = "MANUAL",
+  AUTOMATIC = "AUTOMATIC",
+  SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
+}
+
+
+
+
 // --- Vehicle Model Types ---
 export type VehicleModel = {
   vehicle_model_id: string;
@@ -362,7 +390,7 @@ export type VehicleModel = {
 
 export type CreateVehicleModelDto = {
   vehicle_model_name: string;
-  vehicle_type: string;
+  vehicle_type: VehicleType;
   manufacturer_name: string;
 };
 
@@ -384,6 +412,25 @@ export type Vehicle = {
   last_service_date: string;
   created_at: string;
   organization_id: string;
+  // Add nested objects for backend compatibility
+  vehicle_model?: {
+    vehicle_model_id: string;
+    vehicle_model_name: string;
+    vehicle_type: string;
+    manufacturer_name: string;
+    created_at: string;
+  };
+  organization?: {
+    organization_id: string;
+    organization_name: string;
+    street_address: string;
+    organization_phone: string;
+    organization_email: string;
+    organization_logo: string;
+    created_at: string;
+    organization_customId: string;
+    organization_status: string;
+  };
 };
 
 export type CreateVehicleDto = {
@@ -411,28 +458,84 @@ export type UpdateVehicleDto = {
   organization_id?: string;
 };
 
-export enum VehicleType {
-  AMBULANCE = "AMBULANCE",
-  SEDAN = "SEDAN",
-  SUV = "SUV",
-  TRUCK = "TRUCK",
-  VAN = "VAN",
-  MOTORCYCLE = "MOTORCYCLE",
-  BUS = "BUS",
-  OTHER = "OTHER"
+// --- Reservation Types ---
+export type ReservationStatus =
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED';
+
+export interface ReservationUser {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  user_nid: string;
+  user_phone: string;
+  created_at: string;
+  user_dob: string;
+  user_photo: string | null;
+  user_gender: string;
+  street_address: string;
+  auth_id: string;
 }
 
-export enum VehicleStatus {
-  AVAILABLE = "AVAILABLE",
-  OCCUPIED = "OCCUPIED",
-  MAINTENANCE = "MAINTENANCE",
-  OUT_OF_SERVICE = "OUT_OF_SERVICE"
+export interface ReservedVehicle {
+  reserved_vehicle_id: string;
+  vehicle_id: string;
+  reservation_id: string;
+  starting_odometer?: number;
+  fuel_provided?: number;
+  returned_odometer?: number;
+  started_at?: string;
+  completed_at?: string;
 }
 
-export enum TransmissionMode {
-  MANUAL = "MANUAL",
-  AUTOMATIC = "AUTOMATIC",
-  SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
+export interface Reservation {
+  reservation_id: string;
+  created_at: string;
+  reservation_purpose: string;
+  start_location: string;
+  reservation_destination: string;
+  departure_date: string;
+  expected_returning_date: string;
+  reservation_status: ReservationStatus;
+  reviewed_at: string | null;
+  rejection_comment: string | null;
+  user_id: string;
+  user: ReservationUser;
+  reserved_vehicles: ReservedVehicle[];
+}
+
+export interface CreateReservationDto {
+  reservation_purpose: string;
+  start_location: string;
+  reservation_destination: string;
+  departure_date: string;
+  expected_returning_date: string;
+}
+
+export interface CancelReservationDto {
+  reason: string;
+}
+
+export interface UpdateReservationStatusDto {
+  status: ReservationStatus;
+  reason?: string;
+}
+
+export interface AssignVehicleDto {
+  vehicle_id: string;
+}
+
+export interface StartReservationDto {
+  starting_odometer: number;
+  fuel_provided: number;
+}
+
+export interface CompleteReservationDto {
+  returned_odometer: number;
 }
 
 
