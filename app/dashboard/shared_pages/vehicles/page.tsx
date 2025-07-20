@@ -26,6 +26,9 @@ import {
   Car,
   Image as ImageIcon,
   Loader2,
+  BarChart,
+  Calendar,
+  CheckCircle,
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useVehicles, useDeleteVehicle, useUpdateVehicle, useVehicleModels, useCreateVehicle } from '@/lib/queries';
@@ -674,38 +677,54 @@ export default function VehiclesPage() {
         </div>
         {/* Stats Cards - make more compact */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
-          <Card className="bg-blue-50 border-0 shadow-none rounded-lg">
-            <CardHeader className="pb-1 px-3 pt-3">
-              <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Total Vehicles</CardTitle>
+          {/* Total Vehicles */}
+          <Card className="bg-[#eaf6fb] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
+              <div className="rounded-full bg-[#0872b3]/10 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
+                <Car className="w-6 h-6 text-[#0872b3]" />
+              </div>
+              <CardTitle className="text-xs font-semibold text-[#0872b3] uppercase tracking-wider">Total Vehicles</CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-gray-900">{stats.totalVehicles}</div>
+              <div className="text-2xl font-bold text-[#0872b3]">{stats.totalVehicles}</div>
             </CardContent>
           </Card>
-          <Card className="bg-blue-50 border-0 shadow-none rounded-lg">
-            <CardHeader className="pb-1 px-3 pt-3">
-              <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Most Common Type</CardTitle>
+          {/* Most Common Type */}
+          <Card className="bg-[#f0f7f4] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
+              <div className="rounded-full bg-green-100 p-3 flex items-center justify-center animate-pulse group-hover:scale-110 transition-transform">
+                <BarChart className="w-6 h-6 text-green-600" />
+              </div>
+              <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">Most Common Type</CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-green-700">
                 {Object.entries(stats.vehiclesByType).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'}
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-blue-50 border-0 shadow-none rounded-lg">
-            <CardHeader className="pb-1 px-3 pt-3">
-              <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Average Year</CardTitle>
+          {/* Average Year */}
+          <Card className="bg-[#f7f3f0] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
+              <div className="rounded-full bg-orange-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
+                <Calendar className="w-6 h-6 text-orange-500" />
+              </div>
+              <CardTitle className="text-xs font-semibold text-orange-600 uppercase tracking-wider">Average Year</CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-gray-900">{stats.averageYear || 'N/A'}</div>
+              <div className="text-2xl font-bold text-orange-600">{stats.averageYear || 'N/A'}</div>
             </CardContent>
           </Card>
-          <Card className="bg-blue-50 border-0 shadow-none rounded-lg">
-            <CardHeader className="pb-1 px-3 pt-3">
+          {/* Active Vehicles (for now, just total) */}
+          <Card className="bg-[#f0f3f7] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
+              <div className="rounded-full bg-blue-100 p-3 flex items-center justify-center animate-pulse group-hover:scale-110 transition-transform">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
               <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Active Vehicles</CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-xl font-bold text-green-600">{stats.totalVehicles}</div>
+              <div className="text-2xl font-bold text-blue-700">{stats.totalVehicles}</div>
             </CardContent>
           </Card>
         </div>

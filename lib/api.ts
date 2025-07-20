@@ -28,13 +28,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error Response:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      url: error.config?.url,
-      method: error.config?.method,
-    });
+    const status = error.response?.status;
+    // Suppress logging for 403 and 404 errors (expected for restricted APIs)
+    if (status !== 403 && status !== 404) {
+      console.error('API Error Response:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
+    }
     
     if (error.response?.status === 401) {
       localStorage.removeItem('token');

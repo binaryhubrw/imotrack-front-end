@@ -414,6 +414,18 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Update error state
   useEffect(() => {
+    // Only show errors that are not 403/404 (forbidden/not found)
+    const filter403 = (err: unknown) => {
+      if (!err) return false;
+      // Check for axios error shape
+      if (typeof err === 'object' && err !== null) {
+        const e = err as { response?: { status?: number } };
+        if (e.response && (e.response.status === 403 || e.response.status === 404)) return false;
+        if ('status' in e && (e.status === 403 || e.status === 404)) return false;
+      }
+      if (typeof err === 'string' && (err.includes('403') || err.includes('404'))) return false;
+      return true;
+    };
     const errors = [
       orgsError,
       unitsError,
@@ -421,10 +433,10 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       vehiclesError,
       vehicleModelsError,
     ]
-      .filter(Boolean)
-      .map((err) => err?.message || "Unknown error");
-
-    setError(errors.length > 0 ? errors.join(", ") : null);
+      .filter(filter403)
+      .map((err) => err?.message || 'Unknown error');
+    // Only set error if there are non-403/404 errors
+    setError(errors.length > 0 ? errors.join(', ') : null);
   }, [orgsError, unitsError, usersError, vehiclesError, vehicleModelsError]);
 
   // Context value

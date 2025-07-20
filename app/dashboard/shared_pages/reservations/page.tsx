@@ -43,7 +43,6 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
     if (!form.reservation_destination.trim()) newErrors.reservation_destination = 'Destination is required';
     if (!form.departure_date) newErrors.departure_date = 'Departure date is required';
     if (!form.expected_returning_date) newErrors.expected_returning_date = 'Expected return date is required';
-    
     // Validate dates
     if (form.departure_date && form.expected_returning_date) {
       const departure = new Date(form.departure_date);
@@ -52,7 +51,6 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
         newErrors.expected_returning_date = 'Return date must be after departure date';
       }
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -76,37 +74,40 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Create Reservation</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
+        <button className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-blue-50" onClick={onClose}>&times;</button>
+        <h2 className="text-2xl font-bold text-[#0872b3] mb-2">Create Reservation</h2>
+        <p className="text-sm text-gray-600 mb-4">Fill in the details to create a new reservation</p>
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1">Purpose</label>
-            <Input name="reservation_purpose" value={form.reservation_purpose} onChange={handleChange} required />
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Purpose</label>
+            <Input name="reservation_purpose" value={form.reservation_purpose} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_purpose && touched.reservation_purpose ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
             {errors.reservation_purpose && touched.reservation_purpose && <p className="text-xs text-red-500 mt-1">{errors.reservation_purpose}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Start Location</label>
-            <Input name="start_location" value={form.start_location} onChange={handleChange} required />
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Start Location</label>
+            <Input name="start_location" value={form.start_location} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.start_location && touched.start_location ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
             {errors.start_location && touched.start_location && <p className="text-xs text-red-500 mt-1">{errors.start_location}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Destination</label>
-            <Input name="reservation_destination" value={form.reservation_destination} onChange={handleChange} required />
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Destination</label>
+            <Input name="reservation_destination" value={form.reservation_destination} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_destination && touched.reservation_destination ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
             {errors.reservation_destination && touched.reservation_destination && <p className="text-xs text-red-500 mt-1">{errors.reservation_destination}</p>}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Departure Date</label>
-            <Input name="departure_date" type="datetime-local" value={form.departure_date} onChange={handleChange} required />
-            {errors.departure_date && touched.departure_date && <p className="text-xs text-red-500 mt-1">{errors.departure_date}</p>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-1">Departure Date</label>
+              <Input name="departure_date" type="datetime-local" value={form.departure_date} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.departure_date && touched.departure_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
+              {errors.departure_date && touched.departure_date && <p className="text-xs text-red-500 mt-1">{errors.departure_date}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-1">Expected Return Date</label>
+              <Input name="expected_returning_date" type="datetime-local" value={form.expected_returning_date} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.expected_returning_date && touched.expected_returning_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
+              {errors.expected_returning_date && touched.expected_returning_date && <p className="text-xs text-red-500 mt-1">{errors.expected_returning_date}</p>}
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Expected Return Date</label>
-            <Input name="expected_returning_date" type="datetime-local" value={form.expected_returning_date} onChange={handleChange} required />
-            {errors.expected_returning_date && touched.expected_returning_date && <p className="text-xs text-red-500 mt-1">{errors.expected_returning_date}</p>}
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Creating...' : 'Create'}</Button>
+          <Button type="submit" className="w-full bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold py-2 rounded-lg transition-colors duration-200" disabled={isLoading}>{isLoading ? 'Creating...' : 'Create Reservation'}</Button>
         </form>
       </div>
     </div>
@@ -146,19 +147,19 @@ function AssignVehicleModal({ open, onClose, reservation, onAssign, isLoading }:
           <div>
             <label className="block text-sm font-medium mb-1">Available Vehicles</label>
             <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition shadow-sm">
                 <SelectValue placeholder="Select a vehicle" />
               </SelectTrigger>
-              <SelectContent>
-                                 {availableVehicles.map((vehicle) => (
-                   <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
-                     {vehicle.plate_number} - {vehicle.vehicle_model?.vehicle_model_name || 'Unknown Model'}
-                   </SelectItem>
-                 ))}
+              <SelectContent className="bg-white border border-gray-200 rounded-md shadow-lg mt-1">
+                {availableVehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id} className="hover:bg-blue-50 focus:bg-blue-100 px-3 py-2 cursor-pointer">
+                    {vehicle.plate_number} - {vehicle.vehicle_model?.vehicle_model_name || 'Unknown Model'}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || !selectedVehicle}>
+          <Button type="submit" className="w-full text-white bg-[#0872b3]" disabled={isLoading || !selectedVehicle}>
             {isLoading ? 'Assigning...' : 'Assign Vehicle'}
           </Button>
         </form>
@@ -188,7 +189,7 @@ function StartReservationModal({ open, onClose, reservation, onStart, isLoading 
         <h2 className="text-xl font-bold mb-4">Start Reservation</h2>
         <p className="text-sm text-gray-600 mb-4">Click to start the reservation</p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full p-2 text-white bg-[#0872b3]" disabled={isLoading}>
             {isLoading ? 'Starting...' : 'Start Reservation'}
           </Button>
         </form>
@@ -350,8 +351,14 @@ export default function ReservationsPage() {
   const handleStartReservation = async () => {
     if (!selectedReservation) return;
     try {
+      const reservedVehicleId = selectedReservation.reserved_vehicles && selectedReservation.reserved_vehicles.length > 0
+        ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
+        : undefined;
+      if (!reservedVehicleId) {
+        throw new Error('No reserved vehicle found for this reservation.');
+      }
       await startReservation.mutateAsync({ 
-        reservationId: selectedReservation.reservation_id, 
+        reservedVehicleId,
         dto: { starting_odometer: 0, fuel_provided: 0 } 
       });
     } catch {
@@ -434,23 +441,21 @@ export default function ReservationsPage() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Reservations</h1>
-        <Button className="flex items-center gap-2" onClick={() => setShowCreate(true)}>
-          <Plus className="w-4 h-4" /> Create Reservation
-        </Button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search reservations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h1 className="text-xl font-bold text-[#0872b3]">Reservations</h1>
+        <div className="flex flex-1 gap-3 items-center justify-end">
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search reservations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+            />
+          </div>
+          <Button className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200" onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4" /> Add Reservation
+          </Button>
         </div>
       </div>
 

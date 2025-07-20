@@ -1325,17 +1325,16 @@ export const useVehicleReservationAssignment = () => {
 
 export const useStartReservation = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { reservationId: string; dto: StartReservationDto }>({
-    mutationFn: async ({ reservationId, dto }) => {
-      console.log('Starting reservation:', { reservationId, dto });
+  return useMutation<Reservation, Error, { reservedVehicleId: string; dto: StartReservationDto }>({
+    mutationFn: async ({ reservedVehicleId, dto }) => {
+      console.log('Starting reservation for reserved vehicle:', { reservedVehicleId, dto });
       try {
-        const response = await api.post(`/v2/reservations/${reservationId}/start`, dto, {
+        const response = await api.post(`/v2/reservations/${reservedVehicleId}/start`, dto, {
           headers: { 'Content-Type': 'application/json' },
         });
         console.log('Start reservation full response:', response);
         const { data } = response;
         console.log('Start reservation data:', data);
-        
         // Handle different response formats
         if (data.data) {
           return data.data;
