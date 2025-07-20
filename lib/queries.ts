@@ -22,8 +22,6 @@ import {
   CreateVehicleModelDto,
   Vehicle,
   position_accesses,
-  VehicleType,
-  TransmissionMode,
   Reservation,
   CreateReservationDto,
   CancelReservationDto,
@@ -33,6 +31,7 @@ import {
   CompleteReservationDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
+import { TransmissionMode, VehicleType } from '@/types/enums';
 
 // Define Unit type matching API response
 

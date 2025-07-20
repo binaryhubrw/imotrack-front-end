@@ -34,30 +34,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
-import type { Vehicle, CreateVehicleDto, VehicleModel, VehicleType as VehicleTypeEnum, TransmissionMode as TransmissionModeEnum } from '@/types/next-auth';
+import type { Vehicle, CreateVehicleDto, VehicleModel } from '@/types/next-auth';
 import Image from "next/image";
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganizations } from '@/lib/queries';
 import type { Organization } from '@/types/next-auth';
 import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
-
-// Local enums for select options
-const VehicleType = {
-  AMBULANCE: "AMBULANCE",
-  SEDAN: "SEDAN",
-  SUV: "SUV",
-  TRUCK: "TRUCK",
-  VAN: "VAN",
-  MOTORCYCLE: "MOTORCYCLE",
-  BUS: "BUS",
-  OTHER: "OTHER"
-};
-const TransmissionMode = {
-  MANUAL: "MANUAL",
-  AUTOMATIC: "AUTOMATIC",
-  SEMI_AUTOMATIC: "SEMI_AUTOMATIC"
-};
+import { TransmissionMode, VehicleType } from "@/types/enums";
 
 // Edit Vehicle Modal Component
 function EditVehicleModal({
@@ -465,8 +449,8 @@ export default function VehiclesPage() {
     try {
       await createVehicle.mutateAsync({
         ...formData,
-        vehicle_type: formData.vehicle_type as VehicleTypeEnum,
-        transmission_mode: formData.transmission_mode as TransmissionModeEnum,
+        vehicle_type: formData.vehicle_type as VehicleType,
+        transmission_mode: formData.transmission_mode as TransmissionMode,
         vehicle_photo: formData.vehicle_photo ?? undefined,
       });
       setShowCreateModal(false);
@@ -621,8 +605,8 @@ export default function VehiclesPage() {
     // Fix type for vehicle_type and transmission_mode
     const updateData = {
       ...data,
-      vehicle_type: data.vehicle_type as VehicleTypeEnum | undefined,
-      transmission_mode: data.transmission_mode as TransmissionModeEnum | undefined,
+      vehicle_type: data.vehicle_type as VehicleType | undefined,
+      transmission_mode: data.transmission_mode as TransmissionMode | undefined,
       vehicle_photo: data.vehicle_photo && data.vehicle_photo instanceof File ? data.vehicle_photo : undefined,
     };
     await updateVehicle.mutateAsync({ id, updates: updateData });

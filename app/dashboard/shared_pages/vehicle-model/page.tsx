@@ -41,20 +41,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { SkeletonVehicleModelsTable } from "@/components/ui/skeleton";
-
-// VehicleType enum moved here for local use
-export enum VehicleType {
-  AMBULANCE = "AMBULANCE",
-  SEDAN = "SEDAN",
-  SUV = "SUV",
-  TRUCK = "TRUCK",
-  VAN = "VAN",
-  MOTORCYCLE = "MOTORCYCLE",
-  BUS = "BUS",
-  OTHER = "OTHER"
-}
-
-const VEHICLE_TYPE_OPTIONS = Object.values(VehicleType);
+import { VehicleType } from "@/types/enums";
 
 function CreateVehicleModal({ 
   open, 
@@ -197,9 +184,13 @@ function CreateVehicleModal({
                 }`}
                 disabled={isLoading}
               >
-                {VEHICLE_TYPE_OPTIONS.map((type: VehicleType) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                <option value={VehicleType.SEDAN}>SEDAN</option>
+                <option value={VehicleType.SUV}>SUV</option>
+                <option value={VehicleType.TRUCK}>TRUCK</option>
+                <option value={VehicleType.VAN}>VAN</option>
+                <option value={VehicleType.MOTORCYCLE}>MOTORCYCLE</option>
+                <option value={VehicleType.BUS}>BUS</option>
+                <option value={VehicleType.OTHER}>OTHER</option>
               </select>
               {errors.vehicle_type && touched.vehicle_type && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -285,7 +276,7 @@ export default function VehicleModelsPage() {
   const [modelToEdit, setModelToEdit] = useState<VehicleModel | null>(null);
   const [editForm, setEditForm] = useState({
     vehicle_model_name: '',
-    vehicle_type: undefined as VehicleType | undefined,
+    vehicle_type: VehicleType.SEDAN as VehicleType,
     manufacturer_name: '',
   });
 
@@ -294,7 +285,9 @@ export default function VehicleModelsPage() {
     setModelToEdit(model);
     setEditForm({
       vehicle_model_name: model.vehicle_model_name || '',
-      vehicle_type: (model.vehicle_type as VehicleType | undefined),
+      vehicle_type: Object.values(VehicleType).includes(model.vehicle_type as VehicleType)
+        ? (model.vehicle_type as VehicleType)
+        : VehicleType.SEDAN,
       manufacturer_name: model.manufacturer_name || '',
     });
     setEditModalOpen(true);
@@ -674,9 +667,13 @@ export default function VehicleModelsPage() {
                 required
               >
                 <option value="">Select vehicle type</option>
-                {VEHICLE_TYPE_OPTIONS.map((type: VehicleType) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
+                <option value={VehicleType.SEDAN}>SEDAN</option>
+                <option value={VehicleType.SUV}>SUV</option>
+                <option value={VehicleType.TRUCK}>TRUCK</option>
+                <option value={VehicleType.VAN}>VAN</option>
+                <option value={VehicleType.MOTORCYCLE}>MOTORCYCLE</option>
+                <option value={VehicleType.BUS}>BUS</option>
+                <option value={VehicleType.OTHER}>OTHER</option>
               </select>
             </label>
             <label className="text-sm font-medium">Manufacturer

@@ -21,7 +21,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { VehicleType, TransmissionMode } from '../../../../../types/next-auth';
+import { TransmissionMode, VehicleType } from "@/types/enums";
 
 
 
