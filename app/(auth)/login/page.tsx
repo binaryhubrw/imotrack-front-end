@@ -74,18 +74,23 @@ function PositionSelectionModal({
             >
               <div className="flex items-center justify-between">
                 <div className="text-left">
-                  <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                  <div className="font-semibold text-gray-900 group-hover:text-[#0872b3] transition-colors flex items-center gap-2">
+                    <span className="text-xs text-gray-500 font-medium mr-1">Role:</span>
                     {position.position_name}
+                    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-[#0872b3]/10 text-[#0872b3] font-semibold">Role</span>
                   </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {position.unit_name} • {position.organization_name}
+                  <div className="flex flex-wrap gap-2 mt-2 items-center">
+                    <span className="text-xs text-gray-500 font-medium">Unit:</span>
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 font-medium border border-blue-200 mr-2">{position.unit_name}</span>
+                    <span className="text-xs text-gray-500 font-medium">Organization:</span>
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 font-medium border border-green-200">{position.organization_name}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="w-2 h-2 bg-[#0872b3] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <FontAwesomeIcon
                     icon={faCheck}
-                    className="text-blue-600 opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:scale-110"
+                    className="text-[#0872b3] opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:scale-110"
                   />
                 </div>
               </div>
