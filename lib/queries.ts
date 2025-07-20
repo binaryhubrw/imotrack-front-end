@@ -1229,7 +1229,7 @@ export const useUpdateReservation = () => {
     mutationFn: async ({ id, dto }) => {
       console.log('Updating reservation status:', { id, dto });
       try {
-        const response = await api.patch(`/v2/reservations/${id}`, dto, {
+        const response = await api.patch(`/v2/reservations/${id}/status`, dto, {
           headers: { 'Content-Type': 'application/json' },
         });
         console.log('Update reservation full response:', response);

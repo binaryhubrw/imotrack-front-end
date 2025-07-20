@@ -21,23 +21,8 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { VehicleType, TransmissionMode } from '../../../../../types/next-auth';
 
-// Local enums for select options
-const VehicleType = {
-  AMBULANCE: "AMBULANCE",
-  SEDAN: "SEDAN",
-  SUV: "SUV",
-  TRUCK: "TRUCK",
-  VAN: "VAN",
-  MOTORCYCLE: "MOTORCYCLE",
-  BUS: "BUS",
-  OTHER: "OTHER"
-};
-const TransmissionMode = {
-  MANUAL: "MANUAL",
-  AUTOMATIC: "AUTOMATIC",
-  SEMI_AUTOMATIC: "SEMI_AUTOMATIC"
-};
 
 
 export default function VehicleDetailPage() {
@@ -102,7 +87,14 @@ export default function VehicleDetailPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await updateVehicle.mutateAsync({ id, updates: editForm });
+      await updateVehicle.mutateAsync({
+        id,
+        updates: {
+          ...editForm,
+          vehicle_type: editForm.vehicle_type as VehicleType,
+          transmission_mode: editForm.transmission_mode as TransmissionMode,
+        },
+      });
       toast.success("Vehicle model updated!");
       setShowEdit(false);
       refetch();
@@ -128,8 +120,20 @@ export default function VehicleDetailPage() {
     }
   };
 
+  // Local enums for select options
+  const VehicleTypeOptions = {
+    AMBULANCE: "AMBULANCE",
+    SEDAN: "SEDAN",
+    SUV: "SUV",
+    TRUCK: "TRUCK",
+    VAN: "VAN",
+    MOTORCYCLE: "MOTORCYCLE",
+    BUS: "BUS",
+    OTHER: "OTHER"
+  };
+
   const getVehicleTypeLabel = (type: string) => {
-    const options = Object.values(VehicleType).map(value => ({ value, label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }));
+    const options = Object.values(VehicleTypeOptions).map(value => ({ value, label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }));
     return options.find(option => option.value === type)?.label || type;
   };
 
@@ -208,7 +212,7 @@ export default function VehicleDetailPage() {
                   required
                 >
                   <option value="">Select vehicle type</option>
-                  {Object.values(VehicleType).map(value => (
+                  {Object.values(VehicleTypeOptions).map(value => (
                     <option key={value} value={value}>
                       {value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                     </option>

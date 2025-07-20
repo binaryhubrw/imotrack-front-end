@@ -15,8 +15,8 @@ import {
   faSignOutAlt,
   faMapPin,
   faStairs,
-  faWheelchairMove,
   faCarRear,
+  faCalendarCheck,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -55,7 +55,7 @@ const MODULE_NAV = [
     key: "reservations",
     label: "Reservations",
     href: "/dashboard/shared_pages/reservations",
-    icon: <FontAwesomeIcon icon={faWheelchairMove} />,
+    icon: <FontAwesomeIcon icon={faCalendarCheck} />,
   },
 
   {

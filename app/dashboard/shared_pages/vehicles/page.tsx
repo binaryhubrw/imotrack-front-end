@@ -131,7 +131,7 @@ function EditVehicleModal({
     try {
       await onUpdate(vehicle.vehicle_id, form);
       onClose();
-    } catch (error) {
+    } catch {
       toast.error('Failed to update vehicle');
     }
   };
@@ -463,7 +463,12 @@ export default function VehiclesPage() {
   const createVehicle = useCreateVehicle();
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {
     try {
-      await createVehicle.mutateAsync(formData);
+      await createVehicle.mutateAsync({
+        ...formData,
+        vehicle_type: formData.vehicle_type as VehicleTypeEnum,
+        transmission_mode: formData.transmission_mode as TransmissionModeEnum,
+        vehicle_photo: formData.vehicle_photo ?? undefined,
+      });
       setShowCreateModal(false);
     } catch {
       // handled by mutation
@@ -672,7 +677,7 @@ export default function VehiclesPage() {
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Vehicles</h1>
                 <p className="text-sm text-gray-600">
-                  Manage your organization's vehicle fleet ({vehicles.length} vehicles)
+                  Manage your organization&apos;s vehicle fleet ({vehicles.length} vehicles)
                 </p>
               </div>
             </div>
@@ -832,40 +837,58 @@ export default function VehiclesPage() {
         />
         {/* Delete Confirmation Modal */}
         {vehicleToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Delete Vehicle
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete the vehicle with plate number&apos;
-                <span className="font-medium">{vehicleToDelete.plate_number}</span>? This action cannot be undone.
-              </p>
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setVehicleToDelete(null)}
-                  disabled={deleteVehicle.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteVehicle}
-                  disabled={deleteVehicle.isPending}
-                >
-                  {deleteVehicle.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete'
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+         <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-fade-in">
+           {/* Close Button */}
+           <button
+             onClick={() => setVehicleToDelete(null)}
+             className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
+             aria-label="Close modal"
+           >
+             <X className="w-5 h-5" />
+           </button>
+   
+           {/* Title */}
+           <h3 className="text-xl font-semibold text-red-600 mb-2">
+             Delete Vehicle
+           </h3>
+   
+           {/* Description */}
+           <p className="text-gray-700 text-sm leading-relaxed mb-6">
+             Are you sure you want to delete the vehicle with plate number{" "}
+             <span className="font-semibold text-gray-900">
+               {vehicleToDelete.plate_number}
+             </span>
+             ? <br />
+             <span className="text-red-500">This action cannot be undone.</span>
+           </p>
+   
+           {/* Action Buttons */}
+           <div className="flex justify-end gap-3">
+             <Button
+               variant="outline"
+               onClick={() => setVehicleToDelete(null)}
+               disabled={deleteVehicle.isPending}
+             >
+               Cancel
+             </Button>
+             <Button
+               variant="destructive"
+               onClick={handleDeleteVehicle}
+               disabled={deleteVehicle.isPending}
+             >
+               {deleteVehicle.isPending ? (
+                 <>
+                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                   Deleting...
+                 </>
+               ) : (
+                 "Delete"
+               )}
+             </Button>
+           </div>
+         </div>
+       </div>
         )}
       </div>
     </div>

@@ -305,7 +305,9 @@ export default function OrganizationsPage() {
       header: "Logo",
       cell: ({ row }) => (
         row.original.organization_logo ? (
-          <img
+          <Image
+          width={40}
+          height={40}
             src={row.original.organization_logo}
             alt={row.original.organization_name + ' logo'}
             className="w-10 h-10 rounded object-contain bg-gray-100 border border-gray-200"
