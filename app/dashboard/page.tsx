@@ -144,7 +144,7 @@ export default function MainDashboard() {
     "Organizations": "/dashboard/shared_pages/organizations",
     "Units": "/dashboard/shared_pages/units",
     "Positions": "/dashboard/shared_pages/positions",
-    "Fleet Vehicles": "/dashboard/shared_pages/vehicles-info",
+    "Fleet Vehicles": "/dashboard/shared_pages/vehicles",
     "Vehicle Models": "/dashboard/shared_pages/vehicle-model",
   };
 

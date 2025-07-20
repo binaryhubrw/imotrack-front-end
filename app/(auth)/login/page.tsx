@@ -75,9 +75,8 @@ function PositionSelectionModal({
               <div className="flex items-center justify-between">
                 <div className="text-left">
                   <div className="font-semibold text-gray-900 group-hover:text-[#0872b3] transition-colors flex items-center gap-2">
-                    <span className="text-xs text-gray-500 font-medium mr-1">Role:</span>
-                    {position.position_name}
-                    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-[#0872b3]/10 text-[#0872b3] font-semibold">Role</span>
+                   <span className="text-xs text-gray-500 font-medium">Role:</span>
+                    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-[#0872b3]/10 text-[#0872b3] font-semibold">{position.position_name}</span>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2 items-center">
                     <span className="text-xs text-gray-500 font-medium">Unit:</span>
