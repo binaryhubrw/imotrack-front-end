@@ -21,3 +21,10 @@ export enum TransmissionMode {
   AUTOMATIC = "AUTOMATIC",
   SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
 }
+
+export enum OrganizationStatusEnum {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  DELETED = 'DELETED',
+}

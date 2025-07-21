@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Loader2, Edit3, Trash2, X } from 'lucide-react';
-import { useOrganization, useDeleteOrganization, useOrganizationUnits, useUpdateOrganization } from '@/lib/queries';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Loader2, Edit3, X, Ban } from 'lucide-react';
+import { useOrganization, useDeleteOrganization, useOrganizationUnitsByOrgId, useUpdateOrganization } from '@/lib/queries';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { SkeletonEntityDetails } from '@/components/ui/skeleton';
@@ -17,7 +17,7 @@ export default function OrganizationIdPage() {
   // Prepare delete, update, and units hooks
   const deleteOrganization = useDeleteOrganization();
   const updateOrganization = useUpdateOrganization();
-  const { data: units, isLoading: unitsLoading } = useOrganizationUnits();
+  const { data: units, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(id);
   
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -156,10 +156,10 @@ export default function OrganizationIdPage() {
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
             >
-              <Trash2 className="w-4 h-4" />
-              Delete
+              <Ban className="w-4 h-4" />
+              DisActivate
             </button>
           </div>
         </div>
@@ -173,7 +173,6 @@ export default function OrganizationIdPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{org.organization_name}</h2>
-                <div className="text-sm text-gray-500 font-mono">ID: {org.organization_id}</div>
               </div>
             </div>
             
@@ -235,19 +234,20 @@ export default function OrganizationIdPage() {
                 <div>
                   <div className="text-sm font-medium text-gray-500">Logo</div>
                   <div className="mt-2">
-                    {org.organization_logo ? (
-                      <Image 
-                        width={48} 
-                        height={48} 
-                        src={org.organization_logo} 
-                        alt="Logo" 
-                        className="h-12 w-12 object-contain bg-white rounded-lg border border-gray-200" 
-                      />
-                    ) : (
-                      <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-6 h-6 text-gray-400" />
-                      </div>
-                    )}
+                    {(org.organization_logo && (org.organization_logo.startsWith('http') || org.organization_logo.startsWith('/')))
+                      ? (
+                        <Image
+                          width={48}
+                          height={48}
+                          src={org.organization_logo}
+                          alt="Logo"
+                          className="h-12 w-12 object-contain bg-white rounded-lg border border-gray-200"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <Building2 className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
@@ -340,19 +340,6 @@ export default function OrganizationIdPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Logo URL
-                  </label>
-                  <input
-                    type="url"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={editForm.organization_logo}
-                    onChange={e => setEditForm(f => ({ ...f, organization_logo: e.target.value }))}
-                    disabled={submitting}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Street Address
                   </label>
                   <input
@@ -400,12 +387,12 @@ export default function OrganizationIdPage() {
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-red-100 rounded-lg">
-                    <Trash2 className="w-6 h-6 text-red-600" />
+                    <Ban className="w-6 h-6 text-cyan-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Delete Organization</h2>
+                  <h2 className="text-xl font-bold text-gray-900">DisActivate Organization</h2>
                 </div>
                 <p className="text-gray-600 mb-6">
-                  Are you sure you want to delete <strong>{org.organization_name}</strong>? 
+                  Are you sure you want to DisActivate <strong>{org.organization_name}</strong>? 
                   This action cannot be undone.
                 </p>
                 {deleteError && (
@@ -421,16 +408,16 @@ export default function OrganizationIdPage() {
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                    className="flex-1 py-2 px-4 bg-cyan-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
                     disabled={deleting}
                   >
                     {deleting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Deleting...
+                        DisActivating...
                       </>
                     ) : (
-                      'Delete'
+                      'DisActivate'
                     )}
                   </button>
                 </div>

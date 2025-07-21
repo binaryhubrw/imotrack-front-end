@@ -426,7 +426,6 @@ export default function UserProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <p className="font-medium text-gray-900">{user.organization.organization_name}</p>
-                      <p className="text-sm text-gray-600">ID: {user.organization.organization_id}</p>
                       <p className="text-sm text-gray-600">{user.organization.organization_email}</p>
                     </div>
                   </CardContent>
@@ -440,7 +439,6 @@ export default function UserProfilePage() {
                     </div>
                     <div className="space-y-2">
                       <p className="font-medium text-gray-900">{user.unit.unit_name}</p>
-                      <p className="text-sm text-gray-600">ID: {user.unit.unit_id}</p>
                     </div>
                   </CardContent>
                 </Card>

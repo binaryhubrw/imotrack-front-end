@@ -3,18 +3,14 @@ import React, { useState, useEffect } from "react";
 import {
   Plus,
   Edit,
-  Trash2,
   AlertCircle,
   Info,
   X,
-  AlertTriangle,
 } from "lucide-react";
 import {
   useUnitPositions,
   useCreatePosition,
-  useDeletePosition,
   useOrganizationUnits,
-  useUpdatePosition,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +18,6 @@ import { SkeletonPositionsCards } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { position_accesses } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 
 // Default permissions structure
@@ -402,18 +397,6 @@ export default function PositionsPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
   const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
-  const updatePosition = useUpdatePosition();
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [positionToEdit, setPositionToEdit] = useState<Position | null>(null);
-  const [editForm, setEditForm] = useState({
-    position_name: '',
-    position_description: '',
-    position_status: '',
-  });
 
   // Fetch organization units
   const { data: organizationUnits, isLoading: unitsLoading } =
@@ -427,15 +410,12 @@ export default function PositionsPage() {
   } = useUnitPositions(selectedUnitId);
 
   const createPosition = useCreatePosition();
-  const deletePosition = useDeletePosition();
 
   // Check if user has access to view positions
   const canViewPositions =
     user?.position?.position_access?.positions?.view || false;
   const canCreatePositions =
     user?.position?.position_access?.positions?.create || false;
-  const canDeletePositions =
-    user?.position?.position_access?.positions?.delete || false;
 
   // Set available units and default selection
   useEffect(() => {
@@ -462,65 +442,6 @@ export default function PositionsPage() {
     position_access: position_accesses;
   }) => {
     await createPosition.mutateAsync(positionData);
-  };
-
-  // Delete modal logic
-  const openDeleteModal = (position: Position) => {
-    setPositionToDelete(position);
-    setDeleteModalOpen(true);
-  };
-  const closeDeleteModal = () => {
-    setDeleteModalOpen(false);
-    setPositionToDelete(null);
-    setDeleteLoading(false);
-  };
-  const confirmDelete = async () => {
-    if (!positionToDelete) return;
-    setDeleteLoading(true);
-    try {
-      await deletePosition.mutateAsync({
-        positionId: positionToDelete.position_id,
-        unit_id: selectedUnitId,
-      });
-      closeDeleteModal();
-    } catch {
-      setDeleteLoading(false);
-    }
-  };
-
-  // Open edit modal and prefill form
-  const openEditModal = (position: Position) => {
-    setPositionToEdit(position);
-    setEditForm({
-      position_name: position.position_name || '',
-      position_description: position.position_description || '',
-      position_status: position.position_status || '',
-    });
-    setEditModalOpen(true);
-  };
-  const closeEditModal = () => {
-    setEditModalOpen(false);
-    setPositionToEdit(null);
-    setEditLoading(false);
-  };
-  const confirmEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!positionToEdit) return;
-    setEditLoading(true);
-    try {
-      await updatePosition.mutateAsync({
-        position_id: positionToEdit.position_id,
-        updates: editForm,
-      });
-      closeEditModal();
-      // Refetch positions
-      if (selectedUnitId) {
-        // Use positions query's refetch if available, or reload page
-        window.location.reload(); // fallback if no refetch
-      }
-    } finally {
-      setEditLoading(false);
-    }
   };
 
   // Show loading state
@@ -671,21 +592,12 @@ export default function PositionsPage() {
                       className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openEditModal(pos);
+                        // openEditModal(pos); // This function is removed
                       }}
                       aria-label="Edit position"
                     >
                       <Edit className="w-5 h-5" />
                     </button>
-                    {canDeletePositions && (
-                      <button
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        onClick={() => openDeleteModal(pos)}
-                        aria-label="Delete position"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -752,111 +664,6 @@ export default function PositionsPage() {
           unitId={selectedUnitId}
         />
       )}
-      <Dialog
-  open={deleteModalOpen}
-  onOpenChange={(open) => {
-    if (!open) closeDeleteModal();
-  }}
->
-  <DialogContent className="bg-white border border-gray-200 shadow-2xl rounded-xl max-w-md w-full px-6 py-8">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-red-600">
-        <AlertTriangle className="w-5 h-5" />
-        Delete Position
-      </DialogTitle>
-      <DialogDescription className="mt-2 text-gray-600 text-sm leading-relaxed">
-        Are you sure you want to delete the position{" "}
-        <span className="font-semibold text-gray-900">
-          {positionToDelete?.position_name}
-        </span>
-        ? This action <span className="font-medium">cannot be undone.</span>
-      </DialogDescription>
-    </DialogHeader>
-
-    <div className="mt-6 flex flex-col-reverse sm:flex-row justify-end gap-3">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={closeDeleteModal}
-        disabled={deleteLoading}
-        className="border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-      >
-        Cancel
-      </Button>
-
-      <Button
-        type="button"
-        onClick={confirmDelete}
-        disabled={deleteLoading}
-        className="bg-red-600 hover:bg-red-700 text-white min-w-[120px] flex items-center gap-2 justify-center font-medium transition duration-200"
-      >
-        {deleteLoading ? (
-          <>
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            Deleting...
-          </>
-        ) : (
-          <>
-            <Trash2 className="w-4 h-4" />
-            Delete
-          </>
-        )}
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
-
-{editModalOpen && positionToEdit && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-    <form
-      onSubmit={confirmEdit}
-      className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
-    >
-      <h2 className="text-xl font-bold mb-2">Edit Position</h2>
-      <label className="text-sm font-medium">Position Name
-        <input
-          className="w-full border rounded px-3 py-2 mt-1"
-          value={editForm.position_name}
-          onChange={e => setEditForm(f => ({ ...f, position_name: e.target.value }))}
-          required
-        />
-      </label>
-      <label className="text-sm font-medium">Description
-        <input
-          className="w-full border rounded px-3 py-2 mt-1"
-          value={editForm.position_description}
-          onChange={e => setEditForm(f => ({ ...f, position_description: e.target.value }))}
-          required
-        />
-      </label>
-      <label className="text-sm font-medium">Status
-        <input
-          className="w-full border rounded px-3 py-2 mt-1"
-          value={editForm.position_status}
-          onChange={e => setEditForm(f => ({ ...f, position_status: e.target.value }))}
-          required
-        />
-      </label>
-      <div className="flex gap-3 mt-4">
-        <button
-          type="button"
-          className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-          onClick={closeEditModal}
-          disabled={editLoading}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
-          disabled={editLoading}
-        >
-          {editLoading ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-    </form>
-  </div>
-)}
 
     </div>
   );

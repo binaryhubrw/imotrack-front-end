@@ -22,6 +22,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { VehicleType } from "@/types/enums";
+import { Ban } from "lucide-react";
 
 
 
@@ -155,9 +156,9 @@ export default function VehicleModelDetailPage() {
               <FontAwesomeIcon icon={faEdit} className="mr-2" />
               Edit Model
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              <FontAwesomeIcon icon={faTrash} className="mr-2" />
-              Delete
+            <Button className="bg-cyan-600 hover:bg-red-500" variant="destructive" onClick={handleDelete}>
+              <Ban className="mr-2" />
+              DisActivate
             </Button>
           </div>
         </div>
@@ -243,11 +244,6 @@ export default function VehicleModelDetailPage() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Model ID</div>
-                <div className="font-medium text-gray-900">{id}</div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Model Name</div>
                 <div className="font-medium text-gray-900">{model.vehicle_model_name}</div>
               </div>
@@ -279,7 +275,7 @@ export default function VehicleModelDetailPage() {
               <h2 className="text-lg font-bold mb-4 text-gray-900">Model Information</h2>
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <div className="flex items-start gap-3">
-                  <FontAwesomeIcon icon={faCar} className="text-blue-600 mt-1" />
+                  <Ban className="text-blue-600 mt-1" />
                   <div>
                     <div className="font-semibold text-blue-900">
                       {model.manufacturer_name} {model.vehicle_model_name}
@@ -299,15 +295,15 @@ export default function VehicleModelDetailPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
+            <AlertDialogTitle>DisActivate Vehicle Model</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{model.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
+              Are you sure you want to DisActivate &quot;{model.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              Delete Model
+              DisActivate Model
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

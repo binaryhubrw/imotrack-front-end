@@ -1,5 +1,5 @@
-"use client";
-import React, { useState } from "react";
+"use client"
+import React, { useState } from "react"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,8 +11,8 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
-} from "@tanstack/react-table";
-import { Download, Plus, Edit, Trash2, Search } from "lucide-react";
+} from "@tanstack/react-table"
+import { Download, Plus, Edit, Search } from "lucide-react"
 import {
   Table,
   TableHeader,
@@ -21,19 +21,18 @@ import {
   TableBody,
   TableCell,
   TableFooter,
-} from "@/components/ui/table";
-import { useRouter } from "next/navigation";
+} from "@/components/ui/table"
+import { useRouter } from "next/navigation"
 import {
   useOrganizationUnits,
   useUpdateOrganizationUnit,
-  useOrganizationDeleteUnit,
   useCreateUnit,
-} from "@/lib/queries";
-import type { Unit } from "@/types/next-auth";
-import { CreateUnitDto } from "@/types/next-auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SkeletonOrganizationsTable } from "@/components/ui/skeleton";
+} from "@/lib/queries"
+import type { Unit } from "@/types/next-auth"
+import { CreateUnitDto } from "@/types/next-auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { SkeletonOrganizationsTable } from "@/components/ui/skeleton"
 
 // Status badge for unit status
 const StatusBadge = ({ status }: { status: string }) => {
@@ -51,8 +50,8 @@ const StatusBadge = ({ status }: { status: string }) => {
         className: "bg-yellow-100 text-yellow-700 border-yellow-200",
         dotColor: "bg-yellow-500",
       },
-    };
-  const config = statusConfig[status] || statusConfig.INACTIVE;
+    }
+  const config = statusConfig[status] || statusConfig.INACTIVE
   return (
     <div
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}
@@ -60,8 +59,8 @@ const StatusBadge = ({ status }: { status: string }) => {
       <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
       <span className="capitalize">{status.toLowerCase()}</span>
     </div>
-  );
-};
+  )
+}
 
 // Create Unit Modal
 function CreateUnitModal({
@@ -69,35 +68,35 @@ function CreateUnitModal({
   onClose,
   onCreate,
 }: {
-  open: boolean;
-  onClose: () => void;
-  onCreate: (data: CreateUnitDto) => void;
+  open: boolean
+  onClose: () => void
+  onCreate: (data: CreateUnitDto) => void
 }) {
   const [form, setForm] = useState({
     unit_name: "",
     organization_id: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
+  })
+  const [submitting, setSubmitting] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+    setForm({ ...form, [e.target.name]: e.target.value })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
+    e.preventDefault()
+    setSubmitting(true)
     try {
-      await onCreate(form);
-      setForm({ unit_name: "", organization_id: "" });
-      onClose();
+      await onCreate(form)
+      setForm({ unit_name: "", organization_id: "" })
+      onClose()
     } catch {
       // error handled in mutation
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
-  };
+  }
 
-  if (!open) return null;
+  if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
@@ -105,7 +104,7 @@ function CreateUnitModal({
           className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200"
           onClick={onClose}
         >
-          &times;
+          &times
         </button>
 
         <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
@@ -139,89 +138,76 @@ function CreateUnitModal({
         </form>
       </div>
     </div>
-  );
+  )
 }
 
 
 
 export default function UnitsPage() {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [rowSelection, setRowSelection] = useState({})
+  const [globalFilter, setGlobalFilter] = useState("")
+  const [showCreate, setShowCreate] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
   const [editForm, setEditForm] = useState({
     unit_name: "",
     status: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const router = useRouter();
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const router = useRouter()
+  const [selectedOrg, setSelectedOrg] = useState<string>("")
 
-  const { data, isLoading, isError } = useOrganizationUnits();
-  const updateUnit = useUpdateOrganizationUnit();
-  const deleteUnit = useOrganizationDeleteUnit();
-  const createUnit = useCreateUnit();
+  const { data, isLoading, isError } = useOrganizationUnits()
+  const updateUnit = useUpdateOrganizationUnit()
+  const createUnit = useCreateUnit()
 
-  const units: Unit[] = data || [];
+  const units: Unit[] = data || []
+
+  // Filter units by selected organization
+  const filteredUnits = selectedOrg ? units.filter(u => u.organization_id === selectedOrg) : units
+  // Aggregate all positions for the selected organization
+  const orgPositions = selectedOrg
+    ? filteredUnits.flatMap(unit => unit.positions || [])
+    : []
 
   const handleEdit = (unit: Unit, e: React.MouseEvent) => {
-  e.stopPropagation();
-  setEditingUnit(unit);
+  e.stopPropagation()
+  setEditingUnit(unit)
   setEditForm({
     unit_name: unit.unit_name || '',
     status: unit.status || '',
-  });
-  setShowEdit(true);
-};
+  })
+  setShowEdit(true)
+}
 
 const handleEditSave = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!editingUnit) return;
-  setSubmitting(true);
+  e.preventDefault()
+  if (!editingUnit) return
+  setSubmitting(true)
   try {
     await updateUnit.mutateAsync({
       unit_id: editingUnit.unit_id,
       updates: editForm,
-    });
-    setShowEdit(false);
-    setEditingUnit(null);
+    })
+    setShowEdit(false)
+    setEditingUnit(null)
     // The data will be refetched automatically due to react-query
   } finally {
-    setSubmitting(false);
+    setSubmitting(false)
   }
-};
-
-const handleDelete = (unit: Unit, e: React.MouseEvent) => {
-  e.stopPropagation();
-  setEditingUnit(unit);
-  setShowDeleteConfirm(true);
-};
-
-const handleDeleteConfirm = async () => {
-  if (!editingUnit) return;
-  setDeleting(true);
-  setDeleteError(null);
-  try {
-    await deleteUnit.mutateAsync({ unit_id: editingUnit.unit_id });
-    setShowDeleteConfirm(false);
-    setEditingUnit(null);
-  } catch (error: unknown) {
-    let message = 'Failed to delete unit.';
-    if (typeof error === 'object' && error && 'message' in error) {
-      message = (error as { message?: string }).message || message;
-    }
-    setDeleteError(message);
-    setDeleting(false);
-  }
-};
+}
 
   const columns: ColumnDef<Unit>[] = [
+    {
+      id: "number",
+      header: "#",
+      cell: ({ row }) => (
+        <span className="font-mono text-gray-500">{row.index + 1}</span>
+      ),
+    },
     {
       accessorKey: "unit_name",
       header: "Unit Name",
@@ -250,11 +236,11 @@ const handleDeleteConfirm = async () => {
       header: "Positions",
       cell: ({ row }) => {
         const positions =
-          (row.original.positions as { position_status: string }[]) || [];
-        const positionsCount = positions.length;
+          (row.original.positions as { position_status: string }[]) || []
+        const positionsCount = positions.length
         const activePositions = positions.filter(
           (p) => p.position_status === "ACTIVE"
-        ).length;
+        ).length
         return (
           <div className="flex flex-col">
             <span className="text-sm font-medium text-gray-900">
@@ -264,7 +250,7 @@ const handleDeleteConfirm = async () => {
               {activePositions} active
             </span>
           </div>
-        );
+        )
       },
     },
     {
@@ -273,11 +259,11 @@ const handleDeleteConfirm = async () => {
       cell: ({ row }) => {
         const positions =
           (row.original.positions as {
-            position_id: string;
-            position_name: string;
-          }[]) || [];
+            position_id: string
+            position_name: string
+          }[]) || []
         if (positions.length === 0) {
-          return <span className="text-xs text-gray-400">No positions</span>;
+          return <span className="text-xs text-gray-400">No positions</span>
         }
         return (
           <div className="flex flex-wrap gap-1">
@@ -295,14 +281,14 @@ const handleDeleteConfirm = async () => {
               </span>
             )}
           </div>
-        );
+        )
       },
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           <button
             className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
             onClick={(e) => handleEdit(row.original, e)}
@@ -310,17 +296,10 @@ const handleDeleteConfirm = async () => {
           >
             <Edit className="w-4 h-4" />
           </button>
-          <button
-            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-            onClick={(e) => handleDelete(row.original, e)}
-            aria-label="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
         </div>
       ),
     },
-  ];
+  ]
 
   const table = useReactTable<Unit>({
     data: units,
@@ -341,7 +320,7 @@ const handleDeleteConfirm = async () => {
       rowSelection,
       globalFilter,
     },
-  });
+  })
 
   if (isLoading) {
     return (
@@ -420,14 +399,14 @@ const handleDeleteConfirm = async () => {
           )}
         </div>
       </>
-    );
+    )
   }
   if (isError) {
     return (
       <div className="p-8 text-center text-red-500">
         Failed to load units. Please try again.
       </div>
-    );
+    )
   }
 
   return (
@@ -440,7 +419,7 @@ const handleDeleteConfirm = async () => {
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Units</h1>
                 <p className="text-sm text-gray-600">
-                  Manage your Units records ({units.length} units)
+                  Manage Units records ({units.length} units)
                 </p>
               </div>
             </div>
@@ -459,6 +438,23 @@ const handleDeleteConfirm = async () => {
             </div>
           </div>
         </div>
+        {/* Positions in Organization */}
+        {selectedOrg && (
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 my-4">
+            <h2 className="text-lg font-bold mb-2">Positions in Organization</h2>
+            {orgPositions.length === 0 ? (
+              <div className="text-gray-500">No positions found for this organization.</div>
+            ) : (
+              <ul className="list-disc pl-5">
+                {orgPositions.map((pos: Position) => (
+                  <li key={pos.position_id} className="text-gray-800">
+                    {pos.position_name} <span className="text-xs text-gray-500">({pos.position_status})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Table Content */}
         <div className="flex-1 overflow-auto p-4">
@@ -577,7 +573,7 @@ const handleDeleteConfirm = async () => {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreate={async (data) => {
-          await createUnit.mutateAsync(data);
+          await createUnit.mutateAsync(data)
         }}
       />
       {/* Edit Modal */}
@@ -616,51 +612,6 @@ const handleDeleteConfirm = async () => {
     </form>
   </div>
 )}
-
-{/* Delete Confirmation Modal */}
-{showDeleteConfirm && editingUnit && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-    <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100">
-      <div className="p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-red-100 rounded-lg">
-            <Trash2 className="w-6 h-6 text-red-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900">Delete Unit</h2>
-        </div>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to delete <strong>{editingUnit.unit_name}</strong>? This action cannot be undone.
-        </p>
-        {deleteError && (
-          <div className="mb-4 text-red-600 text-sm">{deleteError}</div>
-        )}
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowDeleteConfirm(false)}
-            className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            disabled={deleting}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleDeleteConfirm}
-            className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-            disabled={deleting}
-          >
-            {deleting ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"></span>
-                Deleting...
-              </>
-            ) : (
-              'Delete'
-            )}
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
-)}
-    </div>
-  );
+  )
 }

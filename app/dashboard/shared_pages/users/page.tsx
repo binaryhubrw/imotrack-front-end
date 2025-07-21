@@ -15,7 +15,6 @@ import {
 import { 
   Plus,
   Edit,
-  Trash2,
   Search,
   X,
   ChevronLeft,
@@ -422,7 +421,6 @@ export default function UsersPage() {
       cell: ({  }) => (
         <div className="flex items-center gap-0">
           <button className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" onClick={e => { e.stopPropagation(); }} aria-label="Edit"><Edit className="w-4 h-4" /></button>
-          <button className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" onClick={e => { e.stopPropagation(); }} aria-label="Delete"><Trash2 className="w-4 h-4" /></button>
         </div>
       ),
     },

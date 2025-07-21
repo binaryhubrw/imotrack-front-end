@@ -444,7 +444,7 @@ export const useDeleteOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success('Organization deleted successfully!');
+      toast.success('Organization disabled successfully!');
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
@@ -461,7 +461,7 @@ export const useDeleteOrganization = () => {
       ) {
         apiMsg = (error.response.data as { message?: string }).message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete organization.'));
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to disable organization.'));
     },
   });
 };
@@ -479,6 +479,19 @@ export const useOrganizationUnits = () => {
         status: unit.status || 'ACTIVE',
       }));
     },
+  });
+};
+
+// --- GET /v2/organizations/{organization_id}/units ---
+export const useOrganizationUnitsByOrgId = (organization_id: string) => {
+  return useQuery<Unit[], Error>({
+    queryKey: ['organization-units', organization_id],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Unit[]>>(`/v2/organizations/${organization_id}/units`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!organization_id,
   });
 };
 

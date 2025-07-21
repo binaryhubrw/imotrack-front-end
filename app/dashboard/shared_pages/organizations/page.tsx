@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import {
   ColumnDef,
   flexRender,
@@ -14,13 +14,12 @@ import {
 import { 
   Download,
   Plus,
-  Trash2,
   Search,
-  Clipboard,
+  Edit3,
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
-import { useOrganizations, useCreateOrganization, useDeleteOrganization } from '@/lib/queries';
+import { useOrganizations, useCreateOrganization, useUpdateOrganization } from '@/lib/queries';
 import { Organization } from '@/types/next-auth';
 
 import { toast } from 'sonner';
@@ -81,8 +80,8 @@ function CreateOrganizationModal({
     
     try {
       // Validation
-      if (!form.organization_name || !form.organization_email || !form.organization_phone || !form.organization_logo || !form.street_address) {
-        setError('All fields are required.');
+      if (!form.organization_name || !form.organization_email || !form.organization_phone || !form.organization_logo) {
+        setError('All fields except address are required.');
         return;
       }
       
@@ -102,7 +101,9 @@ function CreateOrganizationModal({
       formData.append('organization_email', form.organization_email);
       formData.append('organization_phone', form.organization_phone);
       formData.append('organization_logo', form.organization_logo);
-      formData.append('street_address', form.street_address);
+      if (form.street_address) {
+        formData.append('street_address', form.street_address);
+      }
       
       await onCreate(formData);
       
@@ -176,12 +177,11 @@ function CreateOrganizationModal({
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
               <input 
                 name="street_address" 
                 value={form.street_address} 
                 onChange={handleChange} 
-                required 
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                 placeholder="1234 Main St" 
               />
@@ -243,78 +243,55 @@ export default function OrganizationsPage() {
   const [rowSelection, setRowSelection] = useState({})
   const [globalFilter, setGlobalFilter] = useState("")
   const [showCreate, setShowCreate] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteOrgId, setDeleteOrgId] = useState<string | null>(null);
-  const [deleteOrgName, setDeleteOrgName] = useState<string>('');
-  const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
+  const [showUpdate, setShowUpdate] = useState(false);
+  const [updateOrg, setUpdateOrg] = useState<Organization | null>(null);
   const limit = 10;
   const router = useRouter();
 
   const { data, isLoading, isError } = useOrganizations(page, limit);
   const createOrg = useCreateOrganization();
-  const deleteOrg = useDeleteOrganization();
+  const updateOrgMutation = useUpdateOrganization();
 
   const organizations = data?.organizations || [];
   const pagination = data?.pagination;
 
-  // Delete handlers
-  const handleDeleteClick = (orgId: string, orgName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDeleteOrgId(orgId);
-    setDeleteOrgName(orgName);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteOrgId) return;
-    setDeleting(true);
-    try {
-      await deleteOrg.mutateAsync({ organization_id: deleteOrgId });
-      setShowDeleteConfirm(false);
-      setDeleteOrgId(null);
-      setDeleteOrgName('');
-      toast.success('Organization deleted successfully!');
-    } catch (error) {
-      toast.error('Failed to delete organization');
-      console.error('Delete error:', error);
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  // Escape key handler for delete modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showDeleteConfirm) {
-        setShowDeleteConfirm(false);
-        setDeleteOrgId(null);
-        setDeleteOrgName('');
-      }
-    };
-
-    if (showDeleteConfirm) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }
-  }, [showDeleteConfirm]);
 
   const columns: ColumnDef<Organization>[] = [
     {
+      id: "number",
+      header: "#",
+      cell: ({ row }) => {
+        // Calculate the row number based on pagination
+        return (
+          <span className="font-mono text-gray-500">{(pagination ? (pagination.page - 1) * pagination.limit : 0) + row.index + 1}</span>
+        );
+      },
+    },
+    {
       accessorKey: "organization_logo",
       header: "Logo",
-      cell: ({ row }) => (
-        row.original.organization_logo ? (
+      cell: ({ row }) => {
+        const logo = row.original.organization_logo;
+        const isValidLogo = logo && (logo.startsWith('http') || logo.startsWith('/'));
+        return isValidLogo ? (
           <Image
-          width={40}
-          height={40}
-            src={row.original.organization_logo}
+            width={40}
+            height={40}
+            src={logo}
             alt={row.original.organization_name + ' logo'}
             className="w-10 h-10 rounded object-contain bg-gray-100 border border-gray-200"
           />
         ) : (
           <div className="w-10 h-10 rounded bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400 text-xs">N/A</div>
-        )
+        );
+      },
+    },
+    {
+      accessorKey: "organization_customId",
+      header: "Custom ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-gray-700">{row.original.organization_customId || 'N/A'}</span>
       ),
     },
     {
@@ -339,26 +316,19 @@ export default function OrganizationsPage() {
     // Removed organization_phone and created_at columns
     {
       id: "actions",
-      header: "Actions",
+      header: "Edit",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <button
-            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
             onClick={e => {
               e.stopPropagation();
-              navigator.clipboard.writeText(row.original.organization_id);
-              toast.success('Organization ID copied!');
+              setUpdateOrg(row.original);
+              setShowUpdate(true);
             }}
-            aria-label="Copy ID"
+            aria-label="Update"
           >
-            <Clipboard className="w-6 h-6" />
-          </button>
-          <button
-            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-            onClick={e => handleDeleteClick(row.original.organization_id, row.original.organization_name, e)}
-            aria-label="Delete"
-          >
-            <Trash2 className="w-6 h-6" />
+            <Edit3 className="w-6 h-6" />
           </button>
         </div>
       ),
@@ -542,52 +512,151 @@ export default function OrganizationsPage() {
         onCreate={handleCreateOrganization}
       />
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <Trash2 className="w-6 h-6 text-red-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Delete Organization</h2>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete <strong>{deleteOrgName}</strong>? 
-                This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    setDeleteOrgId(null);
-                    setDeleteOrgName('');
-                  }}
-                  className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  disabled={deleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
-                  disabled={deleting}
-                >
-                  {deleting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    'Delete'
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+     
+
+      {/* Update Organization Modal */}
+      {showUpdate && updateOrg && (
+        <UpdateOrganizationModal
+          open={showUpdate}
+          onClose={() => setShowUpdate(false)}
+          organization={updateOrg}
+          onUpdate={async (updates) => {
+            await updateOrgMutation.mutateAsync({ organization_id: updateOrg.organization_id, updates });
+            setShowUpdate(false);
+            setUpdateOrg(null);
+            toast.success('Organization updated successfully!');
+          }}
+        />
       )}
     </div>
   )
+}
+
+type UpdateOrganizationModalProps = {
+  open: boolean;
+  onClose: () => void;
+  organization: Organization;
+  onUpdate: (updates: Partial<Organization>) => Promise<void>;
+};
+
+function UpdateOrganizationModal({ open, onClose, organization, onUpdate }: UpdateOrganizationModalProps) {
+  const [form, setForm] = useState({
+    organization_name: organization.organization_name || '',
+    organization_email: organization.organization_email || '',
+    organization_phone: organization.organization_phone || '',
+    organization_logo: organization.organization_logo || '',
+    street_address: organization.street_address || '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (!form.organization_name || !form.organization_email || !form.organization_phone) {
+        setError('Name, email, and phone are required.');
+        setSubmitting(false);
+        return;
+      }
+      await onUpdate(form);
+      onClose();
+    } catch {
+      setError('Failed to update organization.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Update Organization</h2>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={submitting}
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Organization Name *</label>
+            <input
+              type="text"
+              name="organization_name"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={form.organization_name}
+              onChange={handleChange}
+              required
+              disabled={submitting}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+            <input
+              type="email"
+              name="organization_email"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={form.organization_email}
+              onChange={handleChange}
+              required
+              disabled={submitting}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+            <input
+              type="tel"
+              name="organization_phone"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={form.organization_phone}
+              onChange={handleChange}
+              required
+              disabled={submitting}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+            <input
+              type="text"
+              name="street_address"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={form.street_address}
+              onChange={handleChange}
+              disabled={submitting}
+            />
+          </div>
+          {error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={submitting}
+            >
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
