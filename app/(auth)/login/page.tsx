@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -119,7 +120,7 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  const router = useRouter();
   const {
     login,
     selectPosition,
@@ -128,18 +129,38 @@ function LoginForm() {
     showPositionSelector,
     cancelPositionSelection,
   } = useAuth();
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
       const credentials: LoginCredentials = { email, password };
-      await login(credentials);
+      const positionsResult = await login(credentials);
 
-      toast.success("Login successful! Please select your position.", {
-        description: "Choose the position you want to access",
-        duration: 3000,
-      });
+      // Automatic redirect logic
+      if (positionsResult && positionsResult.length === 1) {
+        // Only one position, select it automatically
+        const pos = positionsResult[0];
+        await selectPosition(pos.position_id, positionsResult);
+        toast.success("Login successful! Redirecting to dashboard...", {
+          description: `Welcome as ${pos.position_name}`,
+          duration: 3000,
+        });
+        // router.push('/dashboard'); // selectPosition already redirects
+      } else if (positionsResult && positionsResult.length === 0) {
+        // No positions, redirect to dashboard (or handle as needed)
+        toast.success("Login successful! Redirecting to dashboard...", {
+          description: `No positions found, redirecting...`,
+          duration: 3000,
+        });
+        router.push('/dashboard');
+      } else {
+        toast.success("Login successful! Please select your position.", {
+          description: "Choose the position you want to access",
+          duration: 3000,
+        });
+      }
     } catch (err: unknown) {
       console.error("Login error:", err);
       let errorMessage = "Invalid email or password";
@@ -316,7 +337,7 @@ function LoginForm() {
       </div>
 
       {/* Position Selection Modal */}
-      {showPositionSelector && (
+      {showPositionSelector && positions.length > 1 && (
         <PositionSelectionModal
           positions={positions}
           onSelectPosition={handlePositionSelect}
