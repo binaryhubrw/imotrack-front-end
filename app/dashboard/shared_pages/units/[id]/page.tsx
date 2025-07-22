@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -78,7 +78,7 @@ export default function UnitDetailPage() {
   };
 
   if (isLoading) {
-    return <SkeletonEntityDetails />
+    return <SkeletonEntityDetails />;
   }
   if (isError || !unit) {
     return (
@@ -110,7 +110,7 @@ export default function UnitDetailPage() {
               Edit Unit
             </Button>
             <Button
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-cyan-900 text-white hover:bg-red-700"
               onClick={() => setShowDisActivateConfirm(true)}
             >
               <Ban className="mr-2" />
@@ -151,7 +151,7 @@ export default function UnitDetailPage() {
                   </button>
                   <button
                     onClick={handleDisActivate}
-                    className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
+                    className="flex-1 py-2 px-4 bg-cyan-900 text-white rounded-lg hover:bg-red-700 flex items-center justify-center gap-2"
                     disabled={deleting}
                   >
                     {deleting ? (
@@ -240,55 +240,58 @@ export default function UnitDetailPage() {
                 </div>
               </div>
             </div>
-            {/* Positions List */}
-            <div className="mt-8">
-              {/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */}
-              {/* <h2 className="text-lg font-bold mb-2">Positions</h2> */}
-              {unit.positions && unit.positions.length > 0 ? (
-                <ul className="list-disc pl-5">
-                  {(unit.positions as Position[]).map((pos) => (
-                    <li key={pos.position_id} className="text-gray-800">
-                      {pos.position_name}{" "}
-                      <span className="text-xs text-gray-500">
-                        ({pos.position_status})
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                <p></p>
-                // <div className="text-gray-500">No positions found for this unit.</div>
-              )}
-            </div>
-            {/* Organizations List for this Unit */}
-            <div className="mt-10 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <Building2 className="w-6 h-6 text-indigo-600" />
-                Positions in this Unit
-              </h2>
-              {unit.positions && unit.positions.length > 0 ? (
-                <ol className="list-decimal pl-6 space-y-3">
-                  {unit.positions.map((pos) => (
-                    <li
+          </div>
+          {/* Organizations List for this Unit */}
+          <div className="mt-10 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+              <Building2 className="w-6 h-6 text-indigo-600" />
+              Positions in this Unit
+            </h2>
+
+            {unit.positions && unit.positions.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {unit.positions.map((pos) => {
+                  // determine color classes based on status
+                  let cardColor = "bg-gray-50 border-gray-200";
+                  if (pos.position_status === "ACTIVE") {
+                    cardColor = "bg-green-50 border-green-300";
+                  } else if (pos.position_status === "DISACTIVATED") {
+                    cardColor = "bg-yellow-50 border-yellow-300";
+                  } else if (pos.position_status === "INACTIVE") {
+                    cardColor = "bg-red-50 border-red-300";
+                  }
+
+                  return (
+                    <div
                       key={pos.position_id}
-                      className="flex items-center gap-3 text-gray-700 text-base"
+                      className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 ${cardColor}`}
                     >
-                      <span className="font-bold text-gray-900">
+                      <h3 className="text-lg font-bold text-gray-900">
                         {pos.position_name}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        ({pos.position_status})
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <div className="text-gray-500 italic text-sm">
-                  No positions found for this unit.
-                </div>
-              )}
-            </div>
+                      </h3>
+                      <p className="mt-2 text-sm">
+                        Status:{" "}
+                        <span
+                          className={`font-medium ${
+                            pos.position_status === "ACTIVE"
+                              ? "text-green-700"
+                              : pos.position_status === "INACTIVE"
+                              ? "text-yellow-700"
+                              : "text-red-700"
+                          }`}
+                        >
+                          {pos.position_status}
+                        </span>
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-gray-500 italic text-sm">
+                No positions found for this unit.
+              </div>
+            )}
           </div>
         </div>
       </div>

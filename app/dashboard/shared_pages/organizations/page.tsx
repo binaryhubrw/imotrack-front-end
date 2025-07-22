@@ -16,11 +16,13 @@ import {
   Plus,
   Search,
   Edit3,
+  Filter,
 } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableFooter } from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
 import { useOrganizations, useCreateOrganization, useUpdateOrganization } from '@/lib/queries';
 import { Organization } from '@/types/next-auth';
+import { OrganizationStatusEnum } from '@/types/enums';
 
 import { toast } from 'sonner';
 import { SkeletonOrganizationsTable } from '@/components/ui/skeleton';
@@ -244,10 +246,11 @@ export default function OrganizationsPage() {
   const [globalFilter, setGlobalFilter] = useState("")
   const [showCreate, setShowCreate] = useState(false);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [showUpdate, setShowUpdate] = useState(false);
   const [updateOrg, setUpdateOrg] = useState<Organization | null>(null);
-  const limit = 10;
   const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data, isLoading, isError } = useOrganizations(page, limit);
   const createOrg = useCreateOrganization();
@@ -355,10 +358,13 @@ export default function OrganizationsPage() {
   });
 
   // Filtered data for search
-  const filteredRows = organizations.filter(org =>
-    org.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
-    org.organization_email.toLowerCase().includes(globalFilter.toLowerCase())
-  );
+  const filteredRows = organizations.filter(org => {
+    const matchesSearch =
+      org.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
+      org.organization_email.toLowerCase().includes(globalFilter.toLowerCase());
+    const matchesStatus = statusFilter ? org.organization_status === statusFilter : true;
+    return matchesSearch && matchesStatus;
+  });
 
   // Handle organization creation
   const handleCreateOrganization = async (formData: FormData) => {
@@ -409,6 +415,20 @@ export default function OrganizationsPage() {
                     className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-48"
                   />
                 </div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 cursor-pointer transition">
+            <Filter className="text-gray-600" />
+            <p className="m-0">Filter By</p>
+          </span>
+                <select
+                  className="border rounded px-2 py-2 text-sm text-gray-700"
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  {Object.entries(OrganizationStatusEnum).map(([key, value]) => (
+                    <option key={key} value={value}>{value.charAt(0) + value.slice(1).toLowerCase()}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -443,10 +463,13 @@ export default function OrganizationsPage() {
                   </TableHeader>
                   <TableBody>
                     {table.getRowModel().rows
-                      .filter(row =>
-                        row.original.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
-                        row.original.organization_email.toLowerCase().includes(globalFilter.toLowerCase())
-                      )
+                      .filter(row => {
+                        const matchesSearch =
+                          row.original.organization_name.toLowerCase().includes(globalFilter.toLowerCase()) ||
+                          row.original.organization_email.toLowerCase().includes(globalFilter.toLowerCase());
+                        const matchesStatus = statusFilter ? row.original.organization_status === statusFilter : true;
+                        return matchesSearch && matchesStatus;
+                      })
                       .map((row) => (
                         <TableRow
                           key={row.original.organization_id}
@@ -468,7 +491,7 @@ export default function OrganizationsPage() {
                       <TableCell colSpan={columns.length} className="text-right text-sm text-gray-500 px-4 py-3">
                         {pagination && (
                           <>
-                            Showing page {pagination.page} of {pagination.pages} ({pagination.total} total)
+                            Showing page {pagination.page} of {pagination.pages} ({filteredRows.length} shown, {pagination.total} total)
                           </>
                         )}
                       </TableCell>
@@ -480,26 +503,68 @@ export default function OrganizationsPage() {
 
             {/* Pagination */}
             {pagination && (
-              <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Page {pagination.page} of {pagination.pages}
-                </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={pagination.page === 1}
+                    className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {"<<"}
+                  </button>
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={pagination.page === 1}
-                    className="px-4 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
                     disabled={pagination.page === pagination.pages}
-                    className="px-4 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
+                  <button
+                    onClick={() => setPage(pagination.pages)}
+                    disabled={pagination.page === pagination.pages}
+                    className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {">>"}
+                  </button>
                 </div>
+                <span className="text-sm text-gray-600">
+                  Page <strong>{pagination.page} of {pagination.pages}</strong>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Go to page: {" "}
+                  <input
+                    type="number"
+                    min={1}
+                    max={pagination.pages}
+                    defaultValue={pagination.page}
+                    onChange={e => {
+                      const page = e.target.value ? Number(e.target.value) : 1;
+                      setPage(Math.max(1, Math.min(pagination.pages, page)));
+                    }}
+                    className="w-16 border rounded px-2 py-1 text-sm"
+                  />
+                </span>
+                <select
+                  className="border rounded px-2 py-1 text-sm"
+                  value={limit}
+                  onChange={e => {
+                    setPage(1);
+                    setLimit(Number(e.target.value));
+                  }}
+                >
+                  {[10, 20, 30, 40, 50].map(pageSize => (
+                    <option key={pageSize} value={pageSize}>
+                      Show {pageSize}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </div>

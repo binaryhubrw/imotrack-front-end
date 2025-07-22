@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Loader2, Edit3, X, Ban } from 'lucide-react';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Loader2, Edit3, X, Ban, Home } from 'lucide-react';
 import { useOrganization, useDeleteOrganization, useOrganizationUnitsByOrgId, useUpdateOrganization } from '@/lib/queries';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
@@ -254,30 +254,39 @@ export default function OrganizationIdPage() {
             </div>
           </div>
 
-          {/* Units List */}
           <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#0872B3]" />
-              Units
-            </h3>
-            {unitsLoading ? (
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Loading units...
+      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
+        <Building2 className="w-5 h-5 text-[#0872B3]" />
+        Units
+      </h3>
+
+      {unitsLoading ? (
+        <div className="flex items-center gap-2 text-gray-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading units...
+        </div>
+      ) : units && units.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {units.map((unit) => (
+            <div
+              key={unit.unit_id}
+              className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-[#E6F4FF] p-2 rounded-full">
+                  <Home className="w-5 h-5 text-[#0872B3]" />
+                </div>
+                <div className="text-gray-900 font-medium text-base">
+                  {unit.unit_name}
+                </div>
               </div>
-            ) : units && units.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {units.map(unit => (
-                  <div key={unit.unit_id} className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <div className="font-medium text-gray-900">{unit.unit_name}</div>
-                    <div className="text-sm text-gray-500">ID: {unit.unit_id}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-gray-500 italic">No units found for this organization.</div>
-            )}
-          </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-gray-500 italic">No units found for this organization.</div>
+      )}
+    </div>
         </div>
 
         {/* Edit Modal */}

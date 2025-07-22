@@ -1,5 +1,5 @@
-"use client"
-import React, { useState } from "react"
+"use client";
+import React, { useState } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -11,8 +11,8 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
-} from "@tanstack/react-table"
-import { Download, Plus, Edit, Search } from "lucide-react"
+} from "@tanstack/react-table";
+import { Download, Plus, Edit, Search, Filter } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -21,18 +21,22 @@ import {
   TableBody,
   TableCell,
   TableFooter,
-} from "@/components/ui/table"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/table";
+import { useRouter } from "next/navigation";
 import {
   useOrganizationUnits,
   useUpdateOrganizationUnit,
   useCreateUnit,
-} from "@/lib/queries"
-import type { Unit } from "@/types/next-auth"
-import { CreateUnitDto } from "@/types/next-auth"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { SkeletonOrganizationsTable } from "@/components/ui/skeleton"
+  useOrganizationUnitsByOrgId,
+} from "@/lib/queries";
+import type { Unit } from "@/types/next-auth";
+import { CreateUnitDto } from "@/types/next-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SkeletonOrganizationsTable } from "@/components/ui/skeleton";
+import { OrganizationStatusEnum } from "@/types/enums";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrganizations } from "@/lib/queries";
 
 // Status badge for unit status
 const StatusBadge = ({ status }: { status: string }) => {
@@ -50,8 +54,8 @@ const StatusBadge = ({ status }: { status: string }) => {
         className: "bg-yellow-100 text-yellow-700 border-yellow-200",
         dotColor: "bg-yellow-500",
       },
-    }
-  const config = statusConfig[status] || statusConfig.INACTIVE
+    };
+  const config = statusConfig[status] || statusConfig.INACTIVE;
   return (
     <div
       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}
@@ -59,44 +63,48 @@ const StatusBadge = ({ status }: { status: string }) => {
       <div className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
       <span className="capitalize">{status.toLowerCase()}</span>
     </div>
-  )
-}
+  );
+};
 
 // Create Unit Modal
 function CreateUnitModal({
   open,
   onClose,
   onCreate,
+  organizations,
 }: {
-  open: boolean
-  onClose: () => void
-  onCreate: (data: CreateUnitDto) => void
+  open: boolean;
+  onClose: () => void;
+  onCreate: (data: CreateUnitDto) => void;
+  organizations: Array<{ organization_id: string; organization_name: string }>;
 }) {
   const [form, setForm] = useState({
     unit_name: "",
     organization_id: "",
-  })
-  const [submitting, setSubmitting] = useState(false)
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
+    e.preventDefault();
+    setSubmitting(true);
     try {
-      await onCreate(form)
-      setForm({ unit_name: "", organization_id: "" })
-      onClose()
+      await onCreate(form);
+      setForm({ unit_name: "", organization_id: "" });
+      onClose();
     } catch {
       // error handled in mutation
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
@@ -104,7 +112,7 @@ function CreateUnitModal({
           className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200"
           onClick={onClose}
         >
-          &times
+          &times;
         </button>
 
         <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
@@ -118,15 +126,22 @@ function CreateUnitModal({
             required
             className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
           />
+        
 
-          <Input
+          <select
             name="organization_id"
-            placeholder="Organization ID"
             value={form.organization_id}
             onChange={handleChange}
             required
-            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-          />
+            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] rounded w-full"
+          >
+            <option value="">Select Organization</option>
+            {organizations.map((org) => (
+              <option key={org.organization_id} value={org.organization_id}>
+                {org.organization_name}
+              </option>
+            ))}
+          </select>
 
           <Button
             type="submit"
@@ -138,67 +153,77 @@ function CreateUnitModal({
         </form>
       </div>
     </div>
-  )
+  );
 }
 
-
-
 export default function UnitsPage() {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState("")
-  const [showCreate, setShowCreate] = useState(false)
-  const [showEdit, setShowEdit] = useState(false)
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [editForm, setEditForm] = useState({
     unit_name: "",
     status: "",
-  })
-  const [submitting, setSubmitting] = useState(false)
-  const router = useRouter()
-  const [selectedOrg, setSelectedOrg] = useState<string>("")
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
+  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const { user } = useAuth();
+  const canViewOrganizations =
+    !!user?.position?.position_access?.organizations?.view;
+  const { data: orgData } = useOrganizations(1, 100);
+  const organizations = orgData?.organizations || [];
 
-  const { data, isLoading, isError } = useOrganizationUnits()
-  const updateUnit = useUpdateOrganizationUnit()
-  const createUnit = useCreateUnit()
+  const { data: allUnits, isLoading: isLoadingAll, isError: isErrorAll } = useOrganizationUnits();
+  const { data: orgUnits, isLoading: isLoadingOrg, isError: isErrorOrg } = useOrganizationUnitsByOrgId(selectedOrg);
+  const isLoading = selectedOrg ? isLoadingOrg : isLoadingAll;
+  const isError = selectedOrg ? isErrorOrg : isErrorAll;
+  const data = selectedOrg ? orgUnits : allUnits;
+  const updateUnit = useUpdateOrganizationUnit();
+  const createUnit = useCreateUnit();
 
-  const units: Unit[] = data || []
+  const units: Unit[] = data || [];
 
   // Filter units by selected organization
-  const filteredUnits = selectedOrg ? units.filter(u => u.organization_id === selectedOrg) : units
-  // Aggregate all positions for the selected organization
-  const orgPositions = selectedOrg
-    ? filteredUnits.flatMap(unit => unit.positions || [])
-    : []
+  const filteredUnits = selectedOrg
+    ? units.filter((u) => u.organization_id === selectedOrg)
+    : units;
+  // Filter by status
+  const statusFilteredUnits = statusFilter
+    ? filteredUnits.filter((u) => u.status === statusFilter)
+    : filteredUnits;
 
   const handleEdit = (unit: Unit, e: React.MouseEvent) => {
-  e.stopPropagation()
-  setEditingUnit(unit)
-  setEditForm({
-    unit_name: unit.unit_name || '',
-    status: unit.status || '',
-  })
-  setShowEdit(true)
-}
+    e.stopPropagation();
+    setEditingUnit(unit);
+    setEditForm({
+      unit_name: unit.unit_name || "",
+      status: unit.status || "",
+    });
+    setShowEdit(true);
+  };
 
-const handleEditSave = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!editingUnit) return
-  setSubmitting(true)
-  try {
-    await updateUnit.mutateAsync({
-      unit_id: editingUnit.unit_id,
-      updates: editForm,
-    })
-    setShowEdit(false)
-    setEditingUnit(null)
-    // The data will be refetched automatically due to react-query
-  } finally {
-    setSubmitting(false)
-  }
-}
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUnit) return;
+    setSubmitting(true);
+    try {
+      await updateUnit.mutateAsync({
+        unit_id: editingUnit.unit_id,
+        updates: editForm,
+      });
+      setShowEdit(false);
+      setEditingUnit(null);
+      // The data will be refetched automatically due to react-query
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const columns: ColumnDef<Unit>[] = [
     {
@@ -236,11 +261,11 @@ const handleEditSave = async (e: React.FormEvent) => {
       header: "Positions",
       cell: ({ row }) => {
         const positions =
-          (row.original.positions as { position_status: string }[]) || []
-        const positionsCount = positions.length
+          (row.original.positions as { position_status: string }[]) || [];
+        const positionsCount = positions.length;
         const activePositions = positions.filter(
           (p) => p.position_status === "ACTIVE"
-        ).length
+        ).length;
         return (
           <div className="flex flex-col">
             <span className="text-sm font-medium text-gray-900">
@@ -250,7 +275,7 @@ const handleEditSave = async (e: React.FormEvent) => {
               {activePositions} active
             </span>
           </div>
-        )
+        );
       },
     },
     {
@@ -259,11 +284,11 @@ const handleEditSave = async (e: React.FormEvent) => {
       cell: ({ row }) => {
         const positions =
           (row.original.positions as {
-            position_id: string
-            position_name: string
-          }[]) || []
+            position_id: string;
+            position_name: string;
+          }[]) || [];
         if (positions.length === 0) {
-          return <span className="text-xs text-gray-400">No positions</span>
+          return <span className="text-xs text-gray-400">No positions</span>;
         }
         return (
           <div className="flex flex-wrap gap-1">
@@ -281,7 +306,7 @@ const handleEditSave = async (e: React.FormEvent) => {
               </span>
             )}
           </div>
-        )
+        );
       },
     },
     {
@@ -299,7 +324,7 @@ const handleEditSave = async (e: React.FormEvent) => {
         </div>
       ),
     },
-  ]
+  ];
 
   const table = useReactTable<Unit>({
     data: units,
@@ -312,7 +337,7 @@ const handleEditSave = async (e: React.FormEvent) => {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    globalFilterFn: 'includesString',
+    globalFilterFn: "includesString",
     state: {
       sorting,
       columnFilters,
@@ -320,7 +345,7 @@ const handleEditSave = async (e: React.FormEvent) => {
       rowSelection,
       globalFilter,
     },
-  })
+  });
 
   if (isLoading) {
     return (
@@ -390,8 +415,7 @@ const handleEditSave = async (e: React.FormEvent) => {
                     colSpan={columns.length}
                     className="text-right text-sm text-gray-500 px-4 py-3"
                   >
-                    Showing {units.length} of {units.length}{" "}
-                    organizations
+                    Showing {units.length} of {units.length} organizations
                   </TableCell>
                 </TableRow>
               </TableFooter>
@@ -399,14 +423,14 @@ const handleEditSave = async (e: React.FormEvent) => {
           )}
         </div>
       </>
-    )
+    );
   }
   if (isError) {
     return (
       <div className="p-8 text-center text-red-500">
         Failed to load units. Please try again.
       </div>
-    )
+    );
   }
 
   return (
@@ -438,23 +462,6 @@ const handleEditSave = async (e: React.FormEvent) => {
             </div>
           </div>
         </div>
-        {/* Positions in Organization */}
-        {selectedOrg && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 my-4">
-            <h2 className="text-lg font-bold mb-2">Positions in Organization</h2>
-            {orgPositions.length === 0 ? (
-              <div className="text-gray-500">No positions found for this organization.</div>
-            ) : (
-              <ul className="list-disc pl-5">
-                {orgPositions.map((pos: Position) => (
-                  <li key={pos.position_id} className="text-gray-800">
-                    {pos.position_name} <span className="text-xs text-gray-500">({pos.position_status})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
 
         {/* Table Content */}
         <div className="flex-1 overflow-auto p-4">
@@ -472,9 +479,45 @@ const handleEditSave = async (e: React.FormEvent) => {
                     className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
                   />
                 </div>
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 cursor-pointer transition">
+            <Filter className="text-gray-600" />
+            <p className="m-0">Filter By</p>
+          </span>
+                {canViewOrganizations && (
+                  <select
+                    className="border rounded px-2 py-2 text-sm text-gray-700"
+                    value={selectedOrg}
+                    onChange={(e) => setSelectedOrg(e.target.value)}
+                  >
+                    <option value="">All Organizations</option>
+                    {organizations.map((org) => (
+                      <option
+                        key={org.organization_id}
+                        value={org.organization_id}
+                      >
+                        {org.organization_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <select
+                  className="border rounded px-2 py-2 text-sm text-gray-700"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All Statuses</option>
+                  {Object.entries(OrganizationStatusEnum).map(
+                    ([key, value]) => (
+                      <option key={key} value={value}>
+                        {value.charAt(0) + value.slice(1).toLowerCase()}
+                      </option>
+                    )
+                  )}
+                </select>
                 {globalFilter && (
                   <span className="text-sm text-gray-500">
-                    {table.getFilteredRowModel().rows.length} of {units.length} units
+                    {table.getFilteredRowModel().rows.length} of{" "}
+                    {statusFilteredUnits.length} units
                   </span>
                 )}
               </div>
@@ -525,31 +568,38 @@ const handleEditSave = async (e: React.FormEvent) => {
                     ))}
                   </TableHeader>
                   <TableBody>
-                    {table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.original.unit_id}
-                        className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
-                        onClick={() =>
-                          router.push(
-                            `/dashboard/shared_pages/units/${row.original.unit_id}`
-                          )
-                        }
-                        tabIndex={0}
-                        aria-label={`View details for unit ${row.original.unit_name}`}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className="px-4 py-4 whitespace-nowrap text-sm"
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                    {table
+                      .getRowModel()
+                      .rows.filter((row) =>
+                        statusFilter
+                          ? row.original.status === statusFilter
+                          : true
+                      )
+                      .map((row) => (
+                        <TableRow
+                          key={row.original.unit_id}
+                          className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/shared_pages/units/${row.original.unit_id}`
+                            )
+                          }
+                          tabIndex={0}
+                          aria-label={`View details for unit ${row.original.unit_name}`}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell
+                              key={cell.id}
+                              className="px-4 py-4 whitespace-nowrap text-sm"
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
                   </TableBody>
                   <TableFooter>
                     <TableRow>
@@ -558,14 +608,97 @@ const handleEditSave = async (e: React.FormEvent) => {
                         className="text-right text-sm text-gray-500 px-4 py-3"
                       >
                         Showing{" "}
-                        {globalFilter ? table.getFilteredRowModel().rows.length : units.length} of{" "}
-                        {units.length} units
+                        {globalFilter
+                          ? table
+                              .getFilteredRowModel()
+                              .rows.filter((row) =>
+                                statusFilter
+                                  ? row.original.status === statusFilter
+                                  : true
+                              ).length
+                          : statusFilteredUnits.length}{" "}
+                        of {statusFilteredUnits.length} units
                       </TableCell>
                     </TableRow>
                   </TableFooter>
                 </Table>
               )}
             </div>
+            {/* Pagination Controls */}
+            {units.length > 10 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    {"<<"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    {">>"}
+                  </Button>
+                </div>
+                <span className="text-sm text-gray-600">
+                  Page{" "}
+                  <strong>
+                    {table.getState().pagination.pageIndex + 1} of{" "}
+                    {table.getPageCount()}
+                  </strong>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Go to page:{" "}
+                  <input
+                    type="number"
+                    min={1}
+                    max={table.getPageCount()}
+                    defaultValue={table.getState().pagination.pageIndex + 1}
+                    onChange={(e) => {
+                      const page = e.target.value
+                        ? Number(e.target.value) - 1
+                        : 0;
+                      table.setPageIndex(page);
+                    }}
+                    className="w-16 border rounded px-2 py-1 text-sm"
+                  />
+                </span>
+                <select
+                  className="border rounded px-2 py-1 text-sm"
+                  value={table.getState().pagination.pageSize}
+                  onChange={(e) => {
+                    table.setPageSize(Number(e.target.value));
+                  }}
+                >
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <option key={pageSize} value={pageSize}>
+                      Show {pageSize}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -573,45 +706,49 @@ const handleEditSave = async (e: React.FormEvent) => {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreate={async (data) => {
-          await createUnit.mutateAsync(data)
+          await createUnit.mutateAsync(data);
         }}
+        organizations={organizations}
       />
       {/* Edit Modal */}
-{showEdit && editingUnit && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-    <form
-      onSubmit={handleEditSave}
-      className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
-    >
-      <h2 className="text-xl font-bold mb-2">Edit Unit</h2>
-      <label className="text-sm font-medium">Unit Name
-        <input
-          className="w-full border rounded px-3 py-2 mt-1"
-          value={editForm.unit_name}
-          onChange={e => setEditForm(f => ({ ...f, unit_name: e.target.value }))}
-          required
-        />
-      </label>
-      <div className="flex gap-3 mt-4">
-        <button
-          type="button"
-          className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-          onClick={() => setShowEdit(false)}
-          disabled={submitting}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
-          disabled={submitting}
-        >
-          {submitting ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-    </form>
-  </div>
-)}
+      {showEdit && editingUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <form
+            onSubmit={handleEditSave}
+            className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+          >
+            <h2 className="text-xl font-bold mb-2">Edit Unit</h2>
+            <label className="text-sm font-medium">
+              Unit Name
+              <input
+                className="w-full border rounded px-3 py-2 mt-1"
+                value={editForm.unit_name}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, unit_name: e.target.value }))
+                }
+                required
+              />
+            </label>
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowEdit(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={submitting}
+              >
+                {submitting ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
-  )
+  );
 }
