@@ -8,6 +8,7 @@ import {
   useUsers,
   useVehicles,
   useVehicleModels,
+  useReservations,
 } from "@/lib/queries";
 import { position_accesses } from "@/types/next-auth";
 
@@ -18,6 +19,7 @@ export interface DashboardStats {
   totalUnits: number;
   totalPositions: number;
   totalVehicles: number;
+  totalReservations: number;
   totalVehicleModels: number;
   activeVehicles: number;
   inactiveVehicles: number;
@@ -68,6 +70,7 @@ const defaultContext: DashboardContextType = {
     totalOrganizations: 0,
     totalUnits: 0,
     totalPositions: 0,
+    totalReservations: 0,
     totalVehicles: 0,
     totalVehicleModels: 0,
     activeVehicles: 0,
@@ -128,6 +131,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     refetch: refetchVehicleModels,
   } = useVehicleModels();
 
+  const {
+    data: reservations,
+    isLoading: reservationsLoading,
+    error: reservationsError,
+    refetch: refetchReservations,
+  } = useReservations();
+
   // Debug logs for API data
   useEffect(() => {
     console.log("[DashboardContext] organizations:", organizations);
@@ -135,7 +145,8 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log("[DashboardContext] users:", users);
     console.log("[DashboardContext] vehicles:", vehicles);
     console.log("[DashboardContext] vehicleModels:", vehicleModels);
-  }, [organizations, units, users, vehicles, vehicleModels]);
+    console.log("[DashboardContext] reservations:", reservations);
+  }, [organizations, units, users, vehicles, vehicleModels,reservations]);
 
   // Calculate dashboard stats (robust to data shape)
   const calculateStats = (): DashboardStats => {
@@ -197,7 +208,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     const totalVehicleModels = vehicleModelArr.length;
     console.log('[DashboardContext] totalVehicleModels:', totalVehicleModels, vehicleModelArr);
 
+    // Reservations: should be array
+    const reservationArr = Array.isArray(reservations) ? reservations : [];
+    const totalReservations = reservationArr.length;
+    console.log('[DashboardContext] totalReservations:', totalReservations, reservationArr);
+
     return {
+      
       totalUsers,
       totalOrganizations,
       totalUnits,
@@ -205,6 +222,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       totalVehicles,
       totalVehicleModels,
       activeVehicles,
+      totalReservations,
       inactiveVehicles,
       pendingRequests: 0, // This would need to come from a reservations/requests API
     };
@@ -353,6 +371,19 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
         action: "create",
       });
     }
+     // Vehicle Models
+    if (permissions.reservations?.create) {
+      actions.push({
+        id: "create_reservation",
+        title: "Create Reservation",
+        description: "Create a Reservation",
+        icon: "Reservation",
+        href: "/dashboard/shared_pages/reservations",
+        color: "bg-teal-100 text-teal-800",
+        permission: "reservations",
+        action: "create",
+      });
+    }
 
     // View actions for modules user can access
     if (permissions.organizations?.view && !permissions.organizations?.create) {
@@ -391,6 +422,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     refetchUsers();
     refetchVehicles();
     refetchVehicleModels();
+    refetchReservations();
   };
 
   // Update loading state
@@ -400,6 +432,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       orgsLoading ||
       unitsLoading ||
       usersLoading ||
+      reservationsLoading||
       vehiclesLoading ||
       vehicleModelsLoading;
     setIsLoading(loading);
@@ -408,6 +441,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     orgsLoading,
     unitsLoading,
     usersLoading,
+    reservationsLoading,
     vehiclesLoading,
     vehicleModelsLoading,
   ]);
@@ -431,13 +465,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       unitsError,
       usersError,
       vehiclesError,
+      reservationsError,
       vehicleModelsError,
     ]
       .filter(filter403)
       .map((err) => err?.message || 'Unknown error');
     // Only set error if there are non-403/404 errors
     setError(errors.length > 0 ? errors.join(', ') : null);
-  }, [orgsError, unitsError, usersError, vehiclesError, vehicleModelsError]);
+  }, [orgsError, unitsError, usersError, vehiclesError, vehicleModelsError,reservationsError]);
 
   // Context value
   const contextValue: DashboardContextType = {

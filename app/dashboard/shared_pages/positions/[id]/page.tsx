@@ -168,17 +168,15 @@ export default function PositionDetailPage() {
               </label>
               <label className="text-sm font-medium">
                 Status
-                <input
+                <select
                   className="w-full border rounded px-3 py-2 mt-1"
                   value={editForm.position_status}
-                  onChange={(e) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      position_status: e.target.value,
-                    }))
-                  }
+                  onChange={e => setEditForm(f => ({ ...f, position_status: e.target.value }))}
                   required
-                />
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="INACTIVE">INACTIVE</option>
+                </select>
               </label>
               <div className="flex gap-3 mt-4">
                 <button

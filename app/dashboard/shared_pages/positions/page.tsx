@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus,
-  Edit,
   AlertCircle,
   Info,
   X,
@@ -10,7 +9,8 @@ import {
 import {
   useUnitPositions,
   useCreatePosition,
-  useOrganizationUnits,
+  useOrganizations,
+  useOrganizationUnitsByOrgId,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { SkeletonPositionsCards } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { position_accesses } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useRouter } from 'next/navigation';
+import Link from "next/link";
 
 // Default permissions structure
 const defaultPermissions: position_accesses = {
@@ -82,13 +82,6 @@ interface Position {
       email: string;
     };
   };
-}
-
-interface Unit {
-  unit_id: string;
-  unit_name: string;
-  organization_id: string;
-  status: string; // Fix: match backend/type definition
 }
 
 // Create Position Modal
@@ -393,47 +386,36 @@ function AccessDenied({ message }: { message: string }) {
 
 export default function PositionsPage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
-  const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
 
-  // Fetch organization units
-  const { data: organizationUnits, isLoading: unitsLoading } =
-    useOrganizationUnits();
+  // Fetch organizations
+  const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
+  const organizations = orgData?.organizations || [];
 
+  // Fetch units for selected org
+  const { data: orgUnits, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(selectedOrgId);
   // Fetch positions for selected unit
-  const {
-    data: positions,
-    isLoading: positionsLoading,
-    isError,
-  } = useUnitPositions(selectedUnitId);
-
+  const { data: positions, isLoading: positionsLoading, isError } = useUnitPositions(selectedUnitId);
   const createPosition = useCreatePosition();
 
   // Check if user has access to view positions
-  const canViewPositions =
-    user?.position?.position_access?.positions?.view || false;
-  const canCreatePositions =
-    user?.position?.position_access?.positions?.create || false;
+  const canViewPositions = user?.position?.position_access?.positions?.view || false;
+  const canCreatePositions = user?.position?.position_access?.positions?.create || false;
 
-  // Set available units and default selection
+  // Set default org and unit if only one org or unit
   useEffect(() => {
-    if (organizationUnits && organizationUnits.length > 0) {
-      setAvailableUnits(organizationUnits);
-      // Only set default if not already selected (do not override user choice)
-      if (!selectedUnitId) {
-        // Prefer user's unit, else first unit
-        const userUnit = organizationUnits.find(
-          (unit) => unit.unit_id === user?.unit?.unit_id
-        );
-        setSelectedUnitId((userUnit || organizationUnits[0]).unit_id);
-      }
+    if (organizations.length === 1 && !selectedOrgId) {
+      setSelectedOrgId(organizations[0].organization_id);
     }
-    // Only run this effect when organizationUnits or user.unit.unit_id changes
-    // Do NOT depend on selectedUnitId, so we don't override user selection
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationUnits, user?.unit?.unit_id]);
+  }, [organizations, selectedOrgId]);
+
+  useEffect(() => {
+    if (orgUnits && orgUnits.length > 0 && !selectedUnitId) {
+      setSelectedUnitId(orgUnits[0].unit_id);
+    }
+  }, [orgUnits, selectedUnitId]);
 
   const handleCreatePosition = async (positionData: {
     position_name: string;
@@ -445,7 +427,7 @@ export default function PositionsPage() {
   };
 
   // Show loading state
-  if (unitsLoading || positionsLoading) {
+  if (orgsLoading || unitsLoading || positionsLoading) {
     return (
       <div className="flex flex-col h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200 px-4 py-3">
@@ -472,53 +454,68 @@ export default function PositionsPage() {
     );
   }
 
-  // Show error if no units available
-  if (!availableUnits || availableUnits.length === 0) {
+  // Show error if no orgs available
+  if (!organizations || organizations.length === 0) {
     return (
       <div className="flex flex-col h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200 px-4 py-3">
           <h1 className="text-xl font-semibold text-gray-900">Positions</h1>
         </div>
         <div className="flex-1 overflow-auto p-4">
-          <AccessDenied message="No units available in your organization. Please contact your administrator." />
+          <AccessDenied message="No organizations available. Please contact your administrator." />
+        </div>
+      </div>
+    );
+  }
+  // Show error if no units for selected org
+  if (selectedOrgId && (!orgUnits || orgUnits.length === 0)) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <h1 className="text-xl font-semibold text-gray-900">Positions</h1>
+        </div>
+        <div className="flex-1 overflow-auto p-4">
+          <AccessDenied message="No units available in this organization. Please contact your administrator." />
         </div>
       </div>
     );
   }
 
-  const selectedUnit = availableUnits.find(
-    (unit) => unit.unit_id === selectedUnitId
-  );
+  const selectedUnit = orgUnits?.find((unit) => unit.unit_id === selectedUnitId);
   const isSelectedUnitActive = selectedUnit?.status === "ACTIVE";
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header with Unit Selector */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
+      {/* Header with Org & Unit Selector */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">
-            Organization:
-          </span>
-          <span className="text-sm text-gray-900">
-            {user?.organization?.organization_name}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Unit:</label>
+          <label className="text-sm font-medium text-gray-700">Organization:</label>
           <select
-            value={selectedUnitId}
-            onChange={(e) => setSelectedUnitId(e.target.value)}
+            value={selectedOrgId}
+            onChange={e => { setSelectedOrgId(e.target.value); setSelectedUnitId(""); }}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Select a unit</option>
-            {availableUnits.map((unit) => (
-              <option key={unit.unit_id} value={unit.unit_id}>
-                {unit.unit_name}
-              </option>
+            <option value="">Select an organization</option>
+            {organizations.map(org => (
+              <option key={org.organization_id} value={org.organization_id}>{org.organization_name}</option>
             ))}
           </select>
         </div>
+        {selectedOrgId && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Unit:</label>
+            <select
+              value={selectedUnitId}
+              onChange={e => setSelectedUnitId(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a unit</option>
+              {orgUnits?.map(unit => (
+                <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {canCreatePositions && selectedUnitId && isSelectedUnitActive && (
           <Button
@@ -545,15 +542,15 @@ export default function PositionsPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        {!selectedUnitId ? (
+        {!selectedOrgId || !selectedUnitId ? (
           <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-gray-200">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Select a Unit
+                Select an Organization and Unit
               </h3>
               <p className="text-gray-600">
-                Please select a unit to view its positions.
+                Please select an organization and unit to view its positions.
               </p>
             </div>
           </div>
@@ -578,26 +575,11 @@ export default function PositionsPage() {
                     </div>
                   </div>
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
-                    <button
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
-                      aria-label="View position"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12C2.25 12 5.25 5.25 12 5.25c6.75 0 9.75 6.75 9.75 6.75s-3 6.75-9.75 6.75S2.25 12 2.25 12z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </button>
-                    <button
-                      className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // openEditModal(pos); // This function is removed
-                      }}
-                      aria-label="Edit position"
-                    >
-                      <Edit className="w-5 h-5" />
-                    </button>
+                    <Link href={`/dashboard/shared_pages/positions/${pos.position_id}`} passHref legacyBehavior>
+                      <a className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-100" aria-label="View position">
+                        View
+                      </a>
+                    </Link>
                   </div>
                 </div>
 

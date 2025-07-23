@@ -1336,6 +1336,9 @@ export const useVehicleReservationAssignment = () => {
   });
 };
 
+export const useReservedVehicleStartProps=()=>{
+  
+}
 export const useStartReservation = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { reservedVehicleId: string; dto: StartReservationDto }>({
@@ -1480,6 +1483,38 @@ export const useDeleteReservation = () => {
         apiMsg = (error.response.data as { message?: string }).message;
       }
       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete reservation.'));
+    },
+  });
+};
+
+// --- Update starting odometer and fuel provided for a reserved vehicle ---
+export const useReservationOdometerFuel = () => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    unknown,
+    Error,
+    { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
+  >({
+    mutationFn: async ({ reservedVehicleId, dto }) => {
+      try {
+        const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.data) throw new Error('No data');
+        toast.success('Odometer and fuel updated!');
+        return response.data;
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error !== null && 'response' in error) {
+          // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
+          toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
+        } else {
+          toast.error((error as Error).message || 'Failed to update odometer/fuel');
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
     },
   });
 };

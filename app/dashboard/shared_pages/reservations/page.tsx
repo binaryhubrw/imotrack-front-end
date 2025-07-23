@@ -1,9 +1,9 @@
 'use client'
 import React, { useState, useMemo } from 'react';
 import {
-  Plus, Trash2, Search, Car, CheckCircle, XCircle, Play, Square
+  Plus, Search, Car, CheckCircle, XCircle, Play, Square
 } from 'lucide-react';
-import { useReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useVehicleReservationAssignment, useStartReservation, useCompleteReservation, useDeleteReservation, useVehicles } from '@/lib/queries';
+import { useReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useVehicleReservationAssignment, useStartReservation, useCompleteReservation, useVehicles, useReservationOdometerFuel } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -272,6 +272,51 @@ function CancelReservationModal({ open, onClose, reservation, onCancel, isLoadin
   );
 }
 
+function OdometerFuelModal({ open, onClose, onSubmit, isLoading }: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (odometer: number, fuel: number) => void;
+  isLoading: boolean;
+}) {
+  const [odometer, setOdometer] = useState('');
+  const [fuel, setFuel] = useState('');
+  const [touched, setTouched] = useState(false);
+  const odometerNum = Number(odometer);
+  const fuelNum = Number(fuel);
+  const valid = !isNaN(odometerNum) && !isNaN(fuelNum) && odometerNum > 0 && fuelNum >= 0;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched(true);
+    if (!valid) return;
+    onSubmit(odometerNum, fuelNum);
+    setOdometer('');
+    setFuel('');
+    setTouched(false);
+  };
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
+        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
+        <h2 className="text-xl font-bold mb-4">Enter Odometer & Fuel</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Starting Odometer</label>
+            <Input type="number" min={0} value={odometer} onChange={e => setOdometer(e.target.value)} className="w-full" required />
+            {touched && (isNaN(odometerNum) || odometerNum <= 0) && <span className="text-xs text-red-500">Enter a valid odometer value</span>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Fuel Provided (liters)</label>
+            <Input type="number" min={0} value={fuel} onChange={e => setFuel(e.target.value)} className="w-full" required />
+            {touched && (isNaN(fuelNum) || fuelNum < 0) && <span className="text-xs text-red-500">Enter a valid fuel value</span>}
+          </div>
+          <Button type="submit" className="w-full bg-[#0872b3] text-white" disabled={isLoading || !valid}>{isLoading ? 'Saving...' : 'Save & Start'}</Button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function ReservationsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showAssignVehicle, setShowAssignVehicle] = useState(false);
@@ -279,13 +324,13 @@ export default function ReservationsPage() {
   const [showCompleteReservation, setShowCompleteReservation] = useState(false);
   const [showCancelReservation, setShowCancelReservation] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showOdometerModal, setShowOdometerModal] = useState(false);
+  const [odometerVehicleId, setOdometerVehicleId] = useState<string | null>(null);
+  const odometerFuelMutation = useReservationOdometerFuel();
 
   const { data: reservations, isLoading, isError } = useReservations();
   const createReservation = useCreateReservation();
-  const deleteReservation = useDeleteReservation();
   const assignVehicle = useVehicleReservationAssignment();
   const startReservation = useStartReservation();
   const completeReservation = useCompleteReservation();
@@ -319,22 +364,6 @@ export default function ReservationsPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await deleteReservation.mutateAsync({ id: deleteId });
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    } catch {
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    }
-  };
 
   const handleAssignVehicle = async (vehicleId: string) => {
     if (!selectedReservation) return;
@@ -350,17 +379,24 @@ export default function ReservationsPage() {
 
   const handleStartReservation = async () => {
     if (!selectedReservation) return;
+    const reservedVehicleId = selectedReservation.reserved_vehicles && selectedReservation.reserved_vehicles.length > 0
+      ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
+      : undefined;
+    if (!reservedVehicleId) {
+      // error handled by mutation
+      return;
+    }
+    setOdometerVehicleId(reservedVehicleId);
+    setShowOdometerModal(true);
+  };
+
+  const handleOdometerFuelSubmit = async (odometer: number, fuel: number) => {
+    if (!odometerVehicleId) return;
     try {
-      const reservedVehicleId = selectedReservation.reserved_vehicles && selectedReservation.reserved_vehicles.length > 0
-        ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
-        : undefined;
-      if (!reservedVehicleId) {
-        throw new Error('No reserved vehicle found for this reservation.');
-      }
-      await startReservation.mutateAsync({ 
-        reservedVehicleId,
-        dto: { starting_odometer: 0, fuel_provided: 0 } 
-      });
+      await odometerFuelMutation.mutateAsync({ reservedVehicleId: odometerVehicleId, dto: { starting_odometer: odometer, fuel_provided: fuel } });
+      setShowOdometerModal(false);
+      setOdometerVehicleId(null);
+      // Optionally, you can call startReservation.mutateAsync here if needed for further workflow
     } catch {
       // error handled by mutation
     }
@@ -553,16 +589,6 @@ export default function ReservationsPage() {
                       Complete
                     </Button>
                   )}
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={(e) => { e.stopPropagation(); handleDelete(reservation.reservation_id); }}
-                  >
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    Delete
-                  </Button>
                 </div>
               </div>
             ))}
@@ -593,6 +619,12 @@ export default function ReservationsPage() {
         onStart={handleStartReservation}
         isLoading={startReservation.isPending}
       />
+      <OdometerFuelModal
+        open={showOdometerModal}
+        onClose={() => { setShowOdometerModal(false); setOdometerVehicleId(null); }}
+        onSubmit={handleOdometerFuelSubmit}
+        isLoading={odometerFuelMutation.isPending}
+      />
 
       <CompleteReservationModal
         open={showCompleteReservation}
@@ -609,32 +641,6 @@ export default function ReservationsPage() {
         onCancel={handleCancelReservation}
         isLoading={cancelReservation.isPending}
       />
-
-      {/* Delete Confirmation Dialog */}
-      {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4">
-            <h2 className="text-xl font-bold mb-2">Delete Reservation</h2>
-            <p>Are you sure you want to delete this reservation? This action cannot be undone.</p>
-            <div className="flex gap-3 mt-4">
-              <button
-                type="button"
-                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowDeleteDialog(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="flex-1 py-2 px-4 bg-red-600 text-white rounded hover:bg-red-700"
-                onClick={confirmDelete}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

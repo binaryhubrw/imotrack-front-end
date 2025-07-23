@@ -8,7 +8,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faArrowLeft,
   faEdit,
-  faTrash,
   faCar,
 } from '@fortawesome/free-solid-svg-icons';
 import {

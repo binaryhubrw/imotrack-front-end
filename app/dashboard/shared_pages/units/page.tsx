@@ -540,9 +540,9 @@ export default function UnitsPage() {
                   </div>
                   <Button
                     onClick={() => setShowCreate(true)}
-                    className="bg-[#0872b3] hover:bg-blue-700"
+                    className=" text-white bg-[#0872b3] hover:bg-blue-700"
                   >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="  w-4 h-4 mr-2" />
                     Create Unit
                   </Button>
                 </div>

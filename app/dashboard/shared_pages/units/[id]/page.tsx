@@ -10,7 +10,6 @@ import {
   useUpdateOrganizationUnit,
 } from "@/lib/queries";
 import { useState } from "react";
-import { Position } from "@/types/next-auth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Ban, Building2 } from "lucide-react";
