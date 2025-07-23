@@ -139,14 +139,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useReservations();
 
   // Debug logs for API data
-  useEffect(() => {
-    console.log("[DashboardContext] organizations:", organizations);
-    console.log("[DashboardContext] units:", units);
-    console.log("[DashboardContext] users:", users);
-    console.log("[DashboardContext] vehicles:", vehicles);
-    console.log("[DashboardContext] vehicleModels:", vehicleModels);
-    console.log("[DashboardContext] reservations:", reservations);
-  }, [organizations, units, users, vehicles, vehicleModels,reservations]);
+  // useEffect(() => {
+  //   console.log("[DashboardContext] organizations:", organizations);
+  //   console.log("[DashboardContext] units:", units);
+  //   console.log("[DashboardContext] users:", users);
+  //   console.log("[DashboardContext] vehicles:", vehicles);
+  //   console.log("[DashboardContext] vehicleModels:", vehicleModels);
+  //   console.log("[DashboardContext] reservations:", reservations);
+  // }, [organizations, units, users, vehicles, vehicleModels,reservations]);
 
   // Calculate dashboard stats (robust to data shape)
   const calculateStats = (): DashboardStats => {
@@ -163,12 +163,12 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       orgArr = (organizations as { organizations: Organization[] }).organizations;
     }
     const totalOrganizations = orgArr.length;
-    console.log('[DashboardContext] totalOrganizations:', totalOrganizations, orgArr);
+    // console.log('[DashboardContext] totalOrganizations:', totalOrganizations, orgArr);
 
     // Units: should be array
     const unitArr = Array.isArray(units) ? units : [];
     const totalUnits = unitArr.length;
-    console.log('[DashboardContext] totalUnits:', totalUnits, unitArr);
+    // console.log('[DashboardContext] totalUnits:', totalUnits, unitArr);
 
     // Users: can be array of units with .users[]
     let totalUsers = 0;
@@ -180,7 +180,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
         return total;
       }, 0);
     }
-    console.log('[DashboardContext] totalUsers:', totalUsers, users);
+    // console.log('[DashboardContext] totalUsers:', totalUsers, users);
 
     // Positions: sum all positions in all units
     let totalPositions = 0;
@@ -192,29 +192,28 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
         return total;
       }, 0);
     }
-    console.log('[DashboardContext] totalPositions:', totalPositions, units);
+    // console.log('[DashboardContext] totalPositions:', totalPositions, units);
 
     // Vehicles: should be array
     const vehicleArr = Array.isArray(vehicles) ? vehicles : [];
     const totalVehicles = vehicleArr.length;
     const activeVehicles = vehicleArr.filter((v) => v.vehicle_status === "ACTIVE").length;
     const inactiveVehicles = vehicleArr.filter((v) => v.vehicle_status === "INACTIVE").length;
-    console.log('[DashboardContext] totalVehicles:', totalVehicles, vehicleArr);
-    console.log('[DashboardContext] activeVehicles:', activeVehicles);
-    console.log('[DashboardContext] inactiveVehicles:', inactiveVehicles);
+    // console.log('[DashboardContext] totalVehicles:', totalVehicles, vehicleArr);
+    // console.log('[DashboardContext] activeVehicles:', activeVehicles);
+    // console.log('[DashboardContext] inactiveVehicles:', inactiveVehicles);
 
     // Vehicle Models: should be array
     const vehicleModelArr = Array.isArray(vehicleModels) ? vehicleModels : [];
     const totalVehicleModels = vehicleModelArr.length;
-    console.log('[DashboardContext] totalVehicleModels:', totalVehicleModels, vehicleModelArr);
+    // console.log('[DashboardContext] totalVehicleModels:', totalVehicleModels, vehicleModelArr);
 
     // Reservations: should be array
     const reservationArr = Array.isArray(reservations) ? reservations : [];
     const totalReservations = reservationArr.length;
-    console.log('[DashboardContext] totalReservations:', totalReservations, reservationArr);
+    // console.log('[DashboardContext] totalReservations:', totalReservations, reservationArr);
 
     return {
-      
       totalUsers,
       totalOrganizations,
       totalUnits,

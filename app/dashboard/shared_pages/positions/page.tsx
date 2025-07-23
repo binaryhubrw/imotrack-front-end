@@ -392,15 +392,27 @@ export default function PositionsPage() {
 
   // Fetch organizations
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
-  const organizations = orgData?.organizations || [];
+  const allOrganizations = orgData?.organizations || [];
+
+  // Determine if user is super admin (organizations.view on current position)
+  const isSuperAdmin = !!user?.position?.position_access?.organizations?.view;
+  let organizations = allOrganizations;
+  if (!isSuperAdmin && user?.organization && user.organization.organization_id) {
+    organizations = allOrganizations.filter(org => org.organization_id === user.organization.organization_id);
+  }
 
   // Fetch units for selected org
-  const { data: orgUnits, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(selectedOrgId);
+  const { data: orgUnitsRaw, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(selectedOrgId);
+  let orgUnits = orgUnitsRaw || [];
+  if (!isSuperAdmin && user?.unit && user.unit.unit_id && user?.organization && user.organization.organization_id === selectedOrgId) {
+    orgUnits = orgUnits.filter(unit => unit.unit_id === user.unit.unit_id);
+  }
+
   // Fetch positions for selected unit
   const { data: positions, isLoading: positionsLoading, isError } = useUnitPositions(selectedUnitId);
   const createPosition = useCreatePosition();
 
-  // Check if user has access to view positions
+  // Check if user has access to view positions (from current position)
   const canViewPositions = user?.position?.position_access?.positions?.view || false;
   const canCreatePositions = user?.position?.position_access?.positions?.create || false;
 
@@ -425,6 +437,9 @@ export default function PositionsPage() {
   }) => {
     await createPosition.mutateAsync(positionData);
   };
+
+  // Show friendly empty state if no units for selected org, but keep dropdowns visible
+  const showNoUnitsState = selectedOrgId && (!orgUnits || orgUnits.length === 0);
 
   // Show loading state
   if (orgsLoading || unitsLoading || positionsLoading) {
@@ -467,19 +482,6 @@ export default function PositionsPage() {
       </div>
     );
   }
-  // Show error if no units for selected org
-  if (selectedOrgId && (!orgUnits || orgUnits.length === 0)) {
-    return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <h1 className="text-xl font-semibold text-gray-900">Positions</h1>
-        </div>
-        <div className="flex-1 overflow-auto p-4">
-          <AccessDenied message="No units available in this organization. Please contact your administrator." />
-        </div>
-      </div>
-    );
-  }
 
   const selectedUnit = orgUnits?.find((unit) => unit.unit_id === selectedUnitId);
   const isSelectedUnitActive = selectedUnit?.status === "ACTIVE";
@@ -501,7 +503,7 @@ export default function PositionsPage() {
             ))}
           </select>
         </div>
-        {selectedOrgId && (
+        {selectedOrgId && orgUnits && orgUnits.length > 0 && (
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">Unit:</label>
             <select
@@ -542,16 +544,18 @@ export default function PositionsPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        {!selectedOrgId || !selectedUnitId ? (
-          <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-gray-200">
+        {showNoUnitsState ? (
+          <div className="flex items-center justify-center h-32 bg-white rounded-lg border border-gray-200">
             <div className="text-center">
-              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Select an Organization and Unit
+                No Units Found
               </h3>
-              <p className="text-gray-600">
-                Please select an organization and unit to view its positions.
+              <p className="text-gray-600 mb-4">
+                This organization does not have any units yet. You can add a unit to get started.
               </p>
+              <Link href="/dashboard/shared_pages/units" passHref legacyBehavior>
+                <a className="inline-block px-5 py-2 bg-[#0872b3] text-white rounded hover:bg-blue-700 transition-colors">Go to Units</a>
+              </Link>
             </div>
           </div>
         ) : isError ? (

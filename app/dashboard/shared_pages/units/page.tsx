@@ -347,6 +347,8 @@ export default function UnitsPage() {
     },
   });
 
+  // Check if user has organizations.view access
+  const canViewAllOrganizations = !!user?.position?.position_access?.organizations?.view;
   if (isLoading) {
     return (
       <>
@@ -358,9 +360,15 @@ export default function UnitsPage() {
               Failed to load organizations.
             </div>
           ) : units.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No organizations found.
-            </div>
+            canViewAllOrganizations ? (
+              <div className="p-8 text-center text-gray-500">
+                No units found for this organization.
+              </div>
+            ) : (
+              <div className="p-8 text-center text-red-500">
+                Access Denied<br />No units available in this organization. Please contact your administrator.
+              </div>
+            )
           ) : (
             <Table>
               <TableHeader>
@@ -415,7 +423,8 @@ export default function UnitsPage() {
                     colSpan={columns.length}
                     className="text-right text-sm text-gray-500 px-4 py-3"
                   >
-                    Showing {units.length} of {units.length} organizations
+                    Showing {units.length} of {units.length}{" "}
+                    organizations
                   </TableCell>
                 </TableRow>
               </TableFooter>
@@ -423,7 +432,7 @@ export default function UnitsPage() {
           )}
         </div>
       </>
-    );
+    )
   }
   if (isError) {
     return (

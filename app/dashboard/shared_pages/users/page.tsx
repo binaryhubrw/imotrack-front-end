@@ -359,22 +359,57 @@ export default function UsersPage() {
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [unitFilter, setUnitFilter] = useState<string>("");
+  const [positionFilter, setPositionFilter] = useState<string>("");
   const { user } = useAuth();
   const unitId = user?.unit?.unit_id;
+  const canViewAll = !!user?.position?.position_access?.organizations?.view;
   const { data: unitsWithUsers, isLoading, isError } = useUsers();
   const createUser = useCreateUser();
 
-  // Flatten users for table with memoization
+  // Get all units and positions for dropdowns
+  const allUnits = useMemo(() => {
+    if (!unitsWithUsers) return [];
+    return unitsWithUsers.map(unit => ({ unit_id: unit.unit_id, unit_name: unit.unit_name }));
+  }, [unitsWithUsers]);
+
+  const allPositions = useMemo(() => {
+    if (!unitsWithUsers) return [];
+    const positionsSet = new Set<string>();
+    const positions: { position_id: string; position_name: string }[] = [];
+    unitsWithUsers.forEach(unit => {
+      unit.users.forEach(user => {
+        if (user.position_id && !positionsSet.has(user.position_id)) {
+          positionsSet.add(user.position_id);
+          positions.push({ position_id: user.position_id, position_name: user.position_name });
+        }
+      });
+    });
+    return positions;
+  }, [unitsWithUsers]);
+
+  // Filter users based on access, unit, and position
   const users = useMemo(() => {
     if (!unitsWithUsers) return [];
-    return unitsWithUsers.flatMap(unit =>
+    let filteredUnits = unitsWithUsers;
+    if (!canViewAll && unitId) {
+      filteredUnits = unitsWithUsers.filter(unit => unit.unit_id === unitId);
+    }
+    if (unitFilter) {
+      filteredUnits = filteredUnits.filter(unit => unit.unit_id === unitFilter);
+    }
+    let flatUsers = filteredUnits.flatMap(unit =>
       unit.users.map(user => ({
         ...user,
         unit_name: unit.unit_name,
         unit_id: unit.unit_id,
       }))
     );
-  }, [unitsWithUsers]);
+    if (positionFilter) {
+      flatUsers = flatUsers.filter(user => user.position_id === positionFilter);
+    }
+    return flatUsers;
+  }, [unitsWithUsers, canViewAll, unitId, unitFilter, positionFilter]);
 
   type UserRow = typeof users[number];
 
@@ -501,12 +536,32 @@ export default function UsersPage() {
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
           {/* Search and Filters */}
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input type="text" placeholder="Search users..." value={globalFilter ?? ""} onChange={e => setGlobalFilter(e.target.value)} className="pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64" />
             </div>
             <div className="flex items-center gap-2">
+              <select
+                className="border rounded px-2 py-2 text-xs text-gray-700"
+                value={unitFilter}
+                onChange={e => setUnitFilter(e.target.value)}
+              >
+                <option value="">All Units</option>
+                {allUnits.map(unit => (
+                  <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
+                ))}
+              </select>
+              <select
+                className="border rounded px-2 py-2 text-xs text-gray-700"
+                value={positionFilter}
+                onChange={e => setPositionFilter(e.target.value)}
+              >
+                <option value="">All Positions</option>
+                {allPositions.map(pos => (
+                  <option key={pos.position_id} value={pos.position_id}>{pos.position_name}</option>
+                ))}
+              </select>
               <span className="text-xs text-gray-500">{table.getFilteredRowModel().rows.length} of {users.length} users</span>
             </div>
           </div>
