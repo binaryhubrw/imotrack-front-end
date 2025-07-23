@@ -415,6 +415,17 @@ export default function UsersPage() {
 
   const columns: ColumnDef<UserRow>[] = useMemo(() => [
     {
+      id: "number",
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider">#</span>,
+      cell: ({ row }) => {
+        // Calculate the row number based on pagination
+        const pageIndex = table.getState().pagination.pageIndex;
+        const pageSize = table.getState().pagination.pageSize;
+        return <span className="text-xs text-gray-700 font-semibold">{pageIndex * pageSize + row.index + 1}</span>;
+      },
+      size: 30,
+    },
+    {
       id: "name",
       header: () => <span className="text-xs font-semibold uppercase tracking-wider">Name</span>,
       cell: ({ row }) => <span className="text-xs text-gray-900 font-medium">{row.original.first_name} {row.original.last_name}</span>,
