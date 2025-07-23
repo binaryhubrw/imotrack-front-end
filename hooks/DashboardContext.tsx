@@ -11,6 +11,7 @@ import {
   useReservations,
 } from "@/lib/queries";
 import { position_accesses } from "@/types/next-auth";
+import type { UserWithPositions } from '@/types/next-auth';
 
 // Dashboard stats interface
 export interface DashboardStats {
@@ -95,48 +96,52 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch data based on user permissions
-  const {
-    data: organizations,
-    isLoading: orgsLoading,
-    error: orgsError,
-    refetch: refetchOrgs,
-  } = useOrganizations(1, 100);
+  // Always call hooks at the top level
+  const orgsHook = useOrganizations(1, 100);
+  const unitsHook = useOrganizationUnits();
+  const usersHook = useUsers();
+  const vehiclesHook = useVehicles();
+  const vehicleModelsHook = useVehicleModels();
+  const reservationsHook = useReservations();
 
-  const {
-    data: units,
-    isLoading: unitsLoading,
-    error: unitsError,
-    refetch: refetchUnits,
-  } = useOrganizationUnits();
+  // Permission checks
+  const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
+  const canViewUnits = !!user?.position?.position_access?.units?.view;
+  const canViewUsers = !!user?.position?.position_access?.users?.view;
+  const canViewVehicles = !!user?.position?.position_access?.vehicles?.view;
+  const canViewVehicleModels = !!user?.position?.position_access?.vehicleModels?.view;
+  const canViewReservations = !!user?.position?.position_access?.reservations?.view;
 
-  const {
-    data: users,
-    isLoading: usersLoading,
-    error: usersError,
-    refetch: refetchUsers,
-  } = useUsers();
+  // Mask data based on permissions
+  const organizations = canViewOrganizations ? orgsHook.data : undefined;
+  const orgsLoading = canViewOrganizations ? orgsHook.isLoading : false;
+  const orgsError = canViewOrganizations ? orgsHook.error : null;
+  const refetchOrgs = canViewOrganizations ? orgsHook.refetch : () => {};
 
-  const {
-    data: vehicles,
-    isLoading: vehiclesLoading,
-    error: vehiclesError,
-    refetch: refetchVehicles,
-  } = useVehicles();
+  const units = canViewUnits ? unitsHook.data : undefined;
+  const unitsLoading = canViewUnits ? unitsHook.isLoading : false;
+  const unitsError = canViewUnits ? unitsHook.error : null;
+  const refetchUnits = canViewUnits ? unitsHook.refetch : () => {};
 
-  const {
-    data: vehicleModels,
-    isLoading: vehicleModelsLoading,
-    error: vehicleModelsError,
-    refetch: refetchVehicleModels,
-  } = useVehicleModels();
+  const users = canViewUsers ? usersHook.data : undefined;
+  const usersLoading = canViewUsers ? usersHook.isLoading : false;
+  const usersError = canViewUsers ? usersHook.error : null;
+  const refetchUsers = canViewUsers ? usersHook.refetch : () => {};
 
-  const {
-    data: reservations,
-    isLoading: reservationsLoading,
-    error: reservationsError,
-    refetch: refetchReservations,
-  } = useReservations();
+  const vehicles = canViewVehicles ? vehiclesHook.data : undefined;
+  const vehiclesLoading = canViewVehicles ? vehiclesHook.isLoading : false;
+  const vehiclesError = canViewVehicles ? vehiclesHook.error : null;
+  const refetchVehicles = canViewVehicles ? vehiclesHook.refetch : () => {};
+
+  const vehicleModels = canViewVehicleModels ? vehicleModelsHook.data : undefined;
+  const vehicleModelsLoading = canViewVehicleModels ? vehicleModelsHook.isLoading : false;
+  const vehicleModelsError = canViewVehicleModels ? vehicleModelsHook.error : null;
+  const refetchVehicleModels = canViewVehicleModels ? vehicleModelsHook.refetch : () => {};
+
+  const reservations = canViewReservations ? reservationsHook.data : undefined;
+  const reservationsLoading = canViewReservations ? reservationsHook.isLoading : false;
+  const reservationsError = canViewReservations ? reservationsHook.error : null;
+  const refetchReservations = canViewReservations ? reservationsHook.refetch : () => {};
 
   // Debug logs for API data
   // useEffect(() => {
@@ -163,55 +168,39 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       orgArr = (organizations as { organizations: Organization[] }).organizations;
     }
     const totalOrganizations = orgArr.length;
-    // console.log('[DashboardContext] totalOrganizations:', totalOrganizations, orgArr);
 
     // Units: should be array
     const unitArr = Array.isArray(units) ? units : [];
     const totalUnits = unitArr.length;
-    // console.log('[DashboardContext] totalUnits:', totalUnits, unitArr);
 
-    // Users: can be array of units with .users[]
-    let totalUsers = 0;
-    if (Array.isArray(users)) {
-      totalUsers = users.reduce((total, unit) => {
-        if (Array.isArray(unit.users)) {
-          return total + unit.users.length;
-        }
-        return total;
-      }, 0);
-    }
-    // console.log('[DashboardContext] totalUsers:', totalUsers, users);
+    // Users: flat array
+    const totalUsers = Array.isArray(users) ? users.length : 0;
 
-    // Positions: sum all positions in all units
+    // Positions: sum all positions in all users
     let totalPositions = 0;
-    if (Array.isArray(units)) {
-      totalPositions = units.reduce((total, unit) => {
-        if (Array.isArray(unit.positions)) {
-          return total + unit.positions.length;
+    if (Array.isArray(users)) {
+      totalPositions = (users as unknown as UserWithPositions[]).reduce((total, user) => {
+        if (Array.isArray(user.positions)) {
+          return total + user.positions.length;
         }
         return total;
       }, 0);
     }
-    // console.log('[DashboardContext] totalPositions:', totalPositions, units);
+  
 
     // Vehicles: should be array
     const vehicleArr = Array.isArray(vehicles) ? vehicles : [];
     const totalVehicles = vehicleArr.length;
     const activeVehicles = vehicleArr.filter((v) => v.vehicle_status === "ACTIVE").length;
     const inactiveVehicles = vehicleArr.filter((v) => v.vehicle_status === "INACTIVE").length;
-    // console.log('[DashboardContext] totalVehicles:', totalVehicles, vehicleArr);
-    // console.log('[DashboardContext] activeVehicles:', activeVehicles);
-    // console.log('[DashboardContext] inactiveVehicles:', inactiveVehicles);
 
     // Vehicle Models: should be array
     const vehicleModelArr = Array.isArray(vehicleModels) ? vehicleModels : [];
     const totalVehicleModels = vehicleModelArr.length;
-    // console.log('[DashboardContext] totalVehicleModels:', totalVehicleModels, vehicleModelArr);
 
     // Reservations: should be array
     const reservationArr = Array.isArray(reservations) ? reservations : [];
     const totalReservations = reservationArr.length;
-    // console.log('[DashboardContext] totalReservations:', totalReservations, reservationArr);
 
     return {
       totalUsers,
@@ -232,23 +221,21 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     const activities: RecentActivity[] = [];
 
     // Add recent users (last 5)
-    if (users) {
-      users.forEach((unit) => {
-        unit.users.slice(-3).forEach((user) => {
-          activities.push({
-            id: `user_${user.user_id}`,
-            type: "user_created",
-            message: `New user ${user.first_name} ${user.last_name} added to ${unit.unit_name}`,
-            timestamp: new Date().toISOString(), // In real app, this would come from API
-            userId: user.user_id,
-            userName: `${user.first_name} ${user.last_name}`,
-          });
+    if (Array.isArray(users)) {
+      (users as unknown as UserWithPositions[]).slice(-5).forEach((user) => {
+        activities.push({
+          id: `user_${user.user_id}`,
+          type: "user_created",
+          message: `New user ${user.first_name} ${user.last_name} added`,
+          timestamp: new Date().toISOString(), // In real app, this would come from API
+          userId: user.user_id,
+          userName: `${user.first_name} ${user.last_name}`,
         });
       });
     }
 
     // Add recent vehicles (last 3)
-    if (vehicles) {
+    if (Array.isArray(vehicles)) {
       vehicles.slice(-3).forEach((vehicle) => {
         activities.push({
           id: `vehicle_${vehicle.vehicle_id}`,
@@ -260,7 +247,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     // Add recent units (last 2)
-    if (units) {
+    if (Array.isArray(units)) {
       units.slice(-2).forEach((unit) => {
         activities.push({
           id: `unit_${unit.unit_id}`,

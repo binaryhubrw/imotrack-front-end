@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
 
 // Define the type for CreateUserDto
-import type { CreateUserDto } from '@/types/next-auth';
+import type { CreateUserDto, PositionWithUnitOrg, UserRow, UserWithPositions } from '@/types/next-auth';
 import { SkeletonUsersTable } from "@/components/ui/skeleton";
 
 function CreateUserModal({ open, onClose, onCreate, isLoading, unitId }: {
@@ -456,6 +456,8 @@ function CreateUserModal({ open, onClose, onCreate, isLoading, unitId }: {
   );
 }
 
+
+
 export default function UsersPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -465,67 +467,129 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [unitFilter, setUnitFilter] = useState<string>("");
   const [positionFilter, setPositionFilter] = useState<string>("");
+  const [organizationFilter, setOrganizationFilter] = useState<string>("");
   const { user } = useAuth();
   const unitId = user?.unit?.unit_id;
   const canViewAll = !!user?.position?.position_access?.organizations?.view;
-  const { data: unitsWithUsers, isLoading, isError } = useUsers();
+  const { data: usersData, isLoading, isError } = useUsers() as { data: UserWithPositions[] | undefined, isLoading: boolean, isError: boolean };
   const createUser = useCreateUser();
 
-  // Get all units and positions for dropdowns
-  const allUnits = useMemo(() => {
-    if (!unitsWithUsers) return [];
-    return unitsWithUsers.map(unit => ({ unit_id: unit.unit_id, unit_name: unit.unit_name }));
-  }, [unitsWithUsers]);
-
-  const allPositions = useMemo(() => {
-    if (!unitsWithUsers) return [];
-    const positionsSet = new Set<string>();
-    const positions: { position_id: string; position_name: string }[] = [];
-    unitsWithUsers.forEach(unit => {
-      unit.users.forEach(user => {
-        if (user.position_id && !positionsSet.has(user.position_id)) {
-          positionsSet.add(user.position_id);
-          positions.push({ position_id: user.position_id, position_name: user.position_name });
-        }
+  // Flatten users: one row per user-position
+  const users: UserRow[] = useMemo(() => {
+    if (!usersData) return [];
+    const rows: UserRow[] = [];
+    usersData.forEach((user: UserWithPositions) => {
+      (user.positions || []).forEach((position: PositionWithUnitOrg) => {
+        rows.push({
+          user_id: user.user_id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          user_gender: user.user_gender,
+          user_phone: user.user_phone,
+          position_id: position.position_id,
+          position_name: position.position_name,
+          unit_id: position.unit?.unit_id,
+          unit_name: position.unit?.unit_name,
+          organization_id: position.unit?.organization?.organization_id,
+          organization_name: position.unit?.organization?.organization_name,
+        });
       });
     });
-    return positions;
-  }, [unitsWithUsers]);
+    return rows;
+  }, [usersData]);
 
-  // Filter users based on access, unit, and position
-  const users = useMemo(() => {
-    if (!unitsWithUsers) return [];
-    let filteredUnits = unitsWithUsers;
-    if (!canViewAll && unitId) {
-      filteredUnits = unitsWithUsers.filter(unit => unit.unit_id === unitId);
+  // For dropdowns
+  const allUnits = useMemo(() => {
+    const map = new Map<string, string>();
+    users.forEach((u: UserRow) => {
+      if (u.unit_id && u.unit_name && !map.has(u.unit_id)) {
+        map.set(u.unit_id, u.unit_name);
+      }
+    });
+    return Array.from(map, ([unit_id, unit_name]: [string, string]) => ({ unit_id, unit_name }));
+  }, [users]);
+
+  const allPositions = useMemo(() => {
+    const map = new Map<string, string>();
+    users.forEach((u: UserRow) => {
+      if (u.position_id && u.position_name && !map.has(u.position_id)) {
+        map.set(u.position_id, u.position_name);
+      }
+    });
+    return Array.from(map, ([position_id, position_name]: [string, string]) => ({ position_id, position_name }));
+  }, [users]);
+
+  // Compute all organizations from users
+  const allOrganizations = useMemo(() => {
+    const map = new Map<string, string>();
+    users.forEach((u: UserRow) => {
+      if (u.organization_id && u.organization_name && !map.has(u.organization_id)) {
+        map.set(u.organization_id, u.organization_name);
+      }
+    });
+    return Array.from(map, ([organization_id, organization_name]: [string, string]) => ({ organization_id, organization_name }));
+  }, [users]);
+
+  // Filter units by selected organization
+  const filteredUnits = useMemo(() => {
+    if (!organizationFilter) return allUnits;
+    return users
+      .filter((u: UserRow) => u.organization_id === organizationFilter)
+      .reduce((acc: { unit_id: string; unit_name: string }[], u: UserRow) => {
+        if (u.unit_id && u.unit_name && !acc.some((unit: { unit_id: string }) => unit.unit_id === u.unit_id)) {
+          acc.push({ unit_id: u.unit_id, unit_name: u.unit_name });
+        }
+        return acc;
+      }, []);
+  }, [users, allUnits, organizationFilter]);
+
+  // Filter positions by selected unit
+  const filteredPositions = useMemo(() => {
+    if (!unitFilter) return allPositions;
+    return users
+      .filter((u: UserRow) => u.unit_id === unitFilter)
+      .reduce((acc: { position_id: string; position_name: string }[], u: UserRow) => {
+        if (u.position_id && u.position_name && !acc.some((pos: { position_id: string }) => pos.position_id === u.position_id)) {
+          acc.push({ position_id: u.position_id, position_name: u.position_name });
+        }
+        return acc;
+      }, []);
+  }, [users, allPositions, unitFilter]);
+
+  // Filtering
+  const filteredUsers = useMemo(() => {
+    let filtered = users;
+    if (!canViewAll && user?.organization?.organization_id) {
+      filtered = filtered.filter((u: UserRow) => u.organization_id === user.organization.organization_id);
+    }
+    if (organizationFilter) {
+      filtered = filtered.filter((u: UserRow) => u.organization_id === organizationFilter);
     }
     if (unitFilter) {
-      filteredUnits = filteredUnits.filter(unit => unit.unit_id === unitFilter);
+      filtered = filtered.filter((u: UserRow) => u.unit_id === unitFilter);
     }
-    let flatUsers = filteredUnits.flatMap(unit =>
-      unit.users.map(user => ({
-        ...user,
-        unit_name: unit.unit_name,
-        unit_id: unit.unit_id,
-      }))
-    );
     if (positionFilter) {
-      flatUsers = flatUsers.filter(user => user.position_id === positionFilter);
+      filtered = filtered.filter((u: UserRow) => u.position_id === positionFilter);
     }
-    return flatUsers;
-  }, [unitsWithUsers, canViewAll, unitId, unitFilter, positionFilter]);
-
-  type UserRow = typeof users[number];
+    if (globalFilter) {
+      const search = globalFilter.toLowerCase();
+      filtered = filtered.filter((u: UserRow) =>
+        (u.first_name + ' ' + u.last_name + ' ' + u.email + ' ' + (u.unit_name || '') + ' ' + (u.position_name || '') + ' ' + (u.organization_name || '')).toLowerCase().includes(search)
+      );
+    }
+    return filtered;
+  }, [users, canViewAll, user, organizationFilter, unitFilter, positionFilter, globalFilter]);
 
   const columns: ColumnDef<UserRow>[] = useMemo(() => [
     {
       id: "number",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">#</span>,
+      header: () => <span className="text-xs font-semibold uppercase tracking-wider px-3">#</span>,
       cell: ({ row }) => {
         // Calculate the row number based on pagination
         const pageIndex = table.getState().pagination.pageIndex;
         const pageSize = table.getState().pagination.pageSize;
-        return <span className="text-xs text-gray-700 font-semibold">{pageIndex * pageSize + row.index + 1}</span>;
+        return <span className="text-xs text-gray-700 font-semibold px-3">{pageIndex * pageSize + row.index + 1}</span>;
       },
       size: 30,
     },
@@ -577,7 +641,7 @@ export default function UsersPage() {
   ], []);
 
   const table = useReactTable<UserRow>({
-    data: users,
+    data: filteredUsers,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -656,14 +720,34 @@ export default function UsersPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input type="text" placeholder="Search users..." value={globalFilter ?? ""} onChange={e => setGlobalFilter(e.target.value)} className="pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64" />
             </div>
-            <div className="flex items-center gap-2">
+            {/* Filters */}
+            <div className="flex items-center gap-2 mb-2">
+              {canViewAll && (
+                <select
+                  className="border rounded px-2 py-2 text-xs text-gray-700"
+                  value={organizationFilter}
+                  onChange={e => {
+                    setOrganizationFilter(e.target.value);
+                    setUnitFilter("");
+                    setPositionFilter("");
+                  }}
+                >
+                  <option value="">All Organizations</option>
+                  {allOrganizations.map(org => (
+                    <option key={org.organization_id} value={org.organization_id}>{org.organization_name}</option>
+                  ))}
+                </select>
+              )}
               <select
                 className="border rounded px-2 py-2 text-xs text-gray-700"
                 value={unitFilter}
-                onChange={e => setUnitFilter(e.target.value)}
+                onChange={e => {
+                  setUnitFilter(e.target.value);
+                  setPositionFilter("");
+                }}
               >
                 <option value="">All Units</option>
-                {allUnits.map(unit => (
+                {filteredUnits.map(unit => (
                   <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
                 ))}
               </select>
@@ -673,11 +757,11 @@ export default function UsersPage() {
                 onChange={e => setPositionFilter(e.target.value)}
               >
                 <option value="">All Positions</option>
-                {allPositions.map(pos => (
+                {filteredPositions.map(pos => (
                   <option key={pos.position_id} value={pos.position_id}>{pos.position_name}</option>
                 ))}
               </select>
-              <span className="text-xs text-gray-500">{table.getFilteredRowModel().rows.length} of {users.length} users</span>
+              <span className="text-xs text-gray-500">{table.getFilteredRowModel().rows.length} of {filteredUsers.length} users</span>
             </div>
           </div>
           {/* Table */}

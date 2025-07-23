@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import { Request } from "express";
 
 export interface position_accesses {
   organizations: {
@@ -45,6 +45,12 @@ export interface position_accesses {
     update: boolean;
     delete: boolean;
   };
+  vehicleIssues: {
+    create: boolean;
+    view: boolean;
+    update: boolean;
+    delete: boolean;
+  };
 }
 
 export interface AuthenticatedUser {
@@ -71,19 +77,18 @@ export type Unit = {
     position_description: string;
     position_access: position_accesses;
     created_at: string;
-    user_id: string | null; 
+    user_id: string | null;
     unit_id: string;
     position_status: string;
   }>;
 };
 
-
-export interface Pagination{
+export interface Pagination {
   page: number;
   limit: number;
   total: number;
   pages: number;
-};
+}
 
 // Generic API response type for all backend responses
 export type ApiResponse<T = unknown> = {
@@ -115,7 +120,7 @@ export type AuthenticatedUser = {
     unit_name: string;
     organisation_id: string;
     organization_name: string;
-  }>; 
+  }>;
 };
 
 // Type for position authentication request
@@ -206,8 +211,6 @@ export type AuthResponse = {
   user: AuthenticatedUser;
 };
 
-
-
 // Forgot password request type
 export type ForgotPasswordRequest = {
   email: string;
@@ -227,7 +230,7 @@ export type UpdatePasswordRequest = {
 };
 
 // Organization Types (NEW API)
-export type OrganizationStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
+export type OrganizationStatus = "ACTIVE" | "INACTIVE" | "PENDING";
 
 export type Organization = {
   organization_id: string;
@@ -279,7 +282,7 @@ export type CreateUnitDto = {
 };
 
 // User Types
-export type UserStatus = 'active' | 'inactive' | 'suspended';
+export type UserStatus = "active" | "inactive" | "suspended";
 
 // For users list response (GET /api/users)
 export type UserListItem = {
@@ -318,8 +321,6 @@ export type CreatePositionDto = {
   position_access: position_accesses;
 };
 
-
-
 // --- User Types for new API ---
 export interface User {
   user_id: string;
@@ -330,6 +331,49 @@ export interface User {
   user_phone: string;
   position_id: string;
   position_name: string;
+}
+
+// Define UserRow type for flattened user-position rows
+export interface UserRow {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  user_gender: string;
+  user_phone: string;
+  position_id: string;
+  position_name: string;
+  unit_id?: string;
+  unit_name?: string;
+  organization_id?: string;
+  organization_name?: string;
+}
+
+// Inline type for position with nested unit/org
+export interface PositionWithUnitOrg {
+  position_id: string;
+  position_name: string;
+  position_description?: string;
+  position_status: string;
+  unit?: {
+    unit_id: string;
+    unit_name: string;
+    organization?: {
+      organization_id: string;
+      organization_name: string;
+    };
+  };
+}
+
+// Extend User type locally to include positions
+export interface UserWithPositions {
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  user_gender: string;
+  user_phone: string;
+  positions: PositionWithUnitOrg[];
 }
 
 export interface UnitWithUsers {
@@ -350,8 +394,6 @@ export interface CreateUserDto {
   email: string;
 }
 
-
-
 // --- Vehicle Model Types ---
 export type VehicleModel = {
   vehicle_model_id: string;
@@ -366,9 +408,6 @@ export type CreateVehicleModelDto = {
   vehicle_type: VehicleType;
   manufacturer_name: string;
 };
-
-
-
 
 // --- Vehicle Types ---
 export type Vehicle = {
@@ -433,12 +472,12 @@ export type UpdateVehicleDto = {
 
 // --- Reservation Types ---
 export type ReservationStatus =
-  | 'UNDER_REVIEW'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'CANCELLED'
-  | 'IN_PROGRESS'
-  | 'COMPLETED';
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED"
+  | "IN_PROGRESS"
+  | "COMPLETED";
 
 export interface ReservationUser {
   user_id: string;
@@ -510,5 +549,3 @@ export interface StartReservationDto {
 export interface CompleteReservationDto {
   returned_odometer: number;
 }
-
-

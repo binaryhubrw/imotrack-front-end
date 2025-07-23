@@ -15,7 +15,6 @@ import {
   Pagination,
   Unit,
   Position,
-  UnitWithUsers,
   CreateUserDto,
   User,
   VehicleModel,
@@ -766,10 +765,10 @@ export const useUpdatePosition = () => {
 
 // --- GET all users grouped by unit ---
 export const useUsers = () => {
-  return useQuery<UnitWithUsers[], Error>({
+  return useQuery<User[], Error>({
     queryKey: ['users'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: UnitWithUsers[] }>('/v2/users');
+      const { data } = await api.get<{ data: User[] }>('/v2/users');
       if (!data.data) throw new Error('No data');
       return data.data;
     },
