@@ -19,55 +19,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { position_accesses } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
-
-// Default permissions structure
-const defaultPermissions: position_accesses = {
-  organizations: {
-    create: false,
-    view: false,
-    update: false,
-    delete: false,
-  },
-  units: {
-    create: false,
-    view: false,
-    update: false,
-    delete: false,
-  },
-  positions: {
-    create: false,
-    view: false,
-    update: false,
-    delete: false,
-  },
-  users: {
-    create: false,
-    view: false,
-    update: false,
-    delete: false,
-  },
-  vehicleModels: {
-    create: false,
-    view: false,
-    viewSingle: false,
-    update: false,
-    delete: false,
-  },
-  vehicles: {
-    create: false,
-    view: false,
-    viewSingle: false,
-    update: false,
-    delete: false,
-  },
-  reservations: {
-    create: false,
-    view: false,
-    update: false,
-    delete: false,
-  },
-};
-
 interface Position {
   position_id: string;
   position_name: string;
@@ -83,6 +34,18 @@ interface Position {
     };
   };
 }
+
+// Define defaultPermissions at the top of the file
+const defaultPermissions: position_accesses = {
+  organizations: { create: false, view: false, update: false, delete: false },
+  units: { create: false, view: false, update: false, delete: false },
+  positions: { create: false, view: false, update: false, delete: false },
+  users: { create: false, view: false, update: false, delete: false },
+  vehicleModels: { create: false, view: false, viewSingle: false, update: false, delete: false },
+  vehicles: { create: false, view: false, viewSingle: false, update: false, delete: false },
+  reservations: { create: false, view: false, update: false, delete: false, cancel: false, approve: false, assignVehicle: false, odometerFuel: false, start: false, complete: false, viewOwn: false },
+  vehicleIssues: { report: false, view: false, update: false, delete: false },
+};
 
 // Create Position Modal
 function CreatePositionModal({
@@ -112,20 +75,19 @@ function CreatePositionModal({
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Update handleAccessChange to use string for module and index with as keyof position_accesses
   const handleAccessChange = (module: string, perm: string) => {
-    setForm((prev) => ({
-      ...prev,
-      position_access: {
-        ...prev.position_access,
-        [module]: {
-          ...prev.position_access[module as keyof position_accesses],
-          [perm]:
-            !prev.position_access[module as keyof position_accesses]?.[
-              perm as keyof typeof prev.position_access.organizations
-            ],
+    setForm((prev) => {
+      const perms = { ...((prev.position_access as Record<string, Record<string, boolean>>)[module]) };
+      perms[perm] = !perms[perm];
+      return {
+        ...prev,
+        position_access: {
+          ...prev.position_access,
+          [module]: perms,
         },
-      },
-    }));
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,18 +198,19 @@ return (
 
             <div className="space-y-4">
               {Object.entries(form.position_access).map(
-                ([module, permissions]) => (
-                  <div
-                    key={module}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow duration-200"
-                  >
-                    <h4 className="font-semibold mb-3 capitalize text-[#0872b3] flex items-center gap-2">
-                      <div className="w-2 h-2 bg-[#0872b3] rounded-full"></div>
-                      {module}
-                    </h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      {Object.entries(permissions).map(
-                        ([perm, isChecked]) => (
+                ([module, permissions]) => {
+                  const perms = permissions as Record<string, boolean>;
+                  return (
+                    <div
+                      key={String(module)}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow duration-200"
+                    >
+                      <h4 className="font-semibold mb-3 capitalize text-[#0872b3] flex items-center gap-2">
+                        <div className="w-2 h-2 bg-[#0872b3] rounded-full"></div>
+                        {String(module)}
+                      </h4>
+                      <div className="grid grid-cols-1 gap-3">
+                        {Object.entries(perms).map(([perm, isChecked]: [string, boolean]) => (
                           <label
                             key={perm}
                             className="flex items-center space-x-3 text-sm cursor-pointer group"
@@ -255,10 +218,8 @@ return (
                             <div className="relative">
                               <input
                                 type="checkbox"
-                                checked={isChecked}
-                                onChange={() =>
-                                  handleAccessChange(module, perm)
-                                }
+                                checked={!!isChecked}
+                                onChange={() => handleAccessChange(module, perm)}
                                 className="sr-only"
                               />
                               <div
@@ -293,11 +254,11 @@ return (
                               {perm}
                             </span>
                           </label>
-                        )
-                      )}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )
+                  );
+                }
               )}
             </div>
           </div>

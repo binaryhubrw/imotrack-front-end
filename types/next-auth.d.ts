@@ -44,9 +44,16 @@ export interface position_accesses {
     view: boolean;
     update: boolean;
     delete: boolean;
+    cancel: boolean;
+    approve: boolean;
+    assignVehicle: boolean;
+    odometerFuel: boolean;
+    start: boolean;
+    complete: boolean;
+    viewOwn: boolean;
   };
   vehicleIssues: {
-    create: boolean;
+    report: boolean;
     view: boolean;
     update: boolean;
     delete: boolean;
