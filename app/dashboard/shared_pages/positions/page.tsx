@@ -11,12 +11,13 @@ import {
   useCreatePosition,
   useOrganizations,
   useOrganizationUnitsByOrgId,
+  useOrganizationUnits,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonPositionsCards } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import { position_accesses } from "@/types/next-auth";
+import type { position_accesses, Unit } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 interface Position {
@@ -351,44 +352,85 @@ export default function PositionsPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
 
-  // Fetch organizations
+  // Permission flags
+  const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
+  const canViewPositions = !!user?.position?.position_access?.positions?.view;
+  const canCreatePositions = !!user?.position?.position_access?.positions?.create;
+
+  // Fetch all organizations (for dropdown) but only use if canViewOrganizations
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
   const allOrganizations = orgData?.organizations || [];
 
-  // Determine if user is super admin (organizations.view on current position)
-  const isSuperAdmin = !!user?.position?.position_access?.organizations?.view;
-  let organizations = allOrganizations;
-  if (!isSuperAdmin && user?.organization && user.organization.organization_id) {
-    organizations = allOrganizations.filter(org => org.organization_id === user.organization.organization_id);
-  }
+  // Determine which org to use
+  const orgId = canViewOrganizations ? selectedOrgId : user?.organization?.organization_id;
+  const organizations = canViewOrganizations ? allOrganizations : (user?.organization ? [user.organization] : []);
 
-  // Fetch units for selected org
-  const { data: orgUnitsRaw, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(selectedOrgId);
-  let orgUnits = orgUnitsRaw || [];
-  if (!isSuperAdmin && user?.unit && user.unit.unit_id && user?.organization && user.organization.organization_id === selectedOrgId) {
-    orgUnits = orgUnits.filter(unit => unit.unit_id === user.unit.unit_id);
-  }
-
-  // Fetch positions for selected unit
-  const { data: positions, isLoading: positionsLoading, isError } = useUnitPositions(selectedUnitId);
-  const createPosition = useCreatePosition();
-
-  // Check if user has access to view positions (from current position)
-  const canViewPositions = user?.position?.position_access?.positions?.view || false;
-  const canCreatePositions = user?.position?.position_access?.positions?.create || false;
-
-  // Set default org and unit if only one org or unit
+  // Set default org if only one (for org dropdown)
   useEffect(() => {
-    if (organizations.length === 1 && !selectedOrgId) {
+    if (canViewOrganizations && organizations.length === 1 && !selectedOrgId) {
       setSelectedOrgId(organizations[0].organization_id);
     }
-  }, [organizations, selectedOrgId]);
+  }, [canViewOrganizations, organizations, selectedOrgId]);
 
+  // Always call both unit hooks
+  const orgUnitsByOrgIdHook = useOrganizationUnitsByOrgId(orgId || "");
+  const allUnitsHook = useOrganizationUnits();
+  let orgUnits: Unit[] = [];
+  let unitsLoading = false;
+  if (canViewOrganizations) {
+    orgUnits = (orgUnitsByOrgIdHook.data || []).map(unit => ({ ...unit, status: unit.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE' }));
+    unitsLoading = orgUnitsByOrgIdHook.isLoading;
+  } else {
+    orgUnits = (allUnitsHook.data || [])
+      .filter(unit => user && unit.organization_id === user.organization.organization_id)
+      .map(unit => ({ ...unit, status: unit.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE' }));
+    unitsLoading = allUnitsHook.isLoading;
+  }
+
+  // Set default unit if only one
   useEffect(() => {
     if (orgUnits && orgUnits.length > 0 && !selectedUnitId) {
       setSelectedUnitId(orgUnits[0].unit_id);
     }
   }, [orgUnits, selectedUnitId]);
+
+  // Always call the hook at the top
+  const unitPositionsHook = useUnitPositions(selectedUnitId);
+
+  let positions: Position[] = [];
+  let positionsLoading = false;
+  let positionsError = false;
+  if (canViewOrganizations) {
+    positions = (unitPositionsHook.data || []).map(pos => ({
+      ...pos,
+      position_description: pos.position_description || '',
+      position_status: pos.position_status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+      position_access: pos.position_access || {},
+      created_at: pos.created_at || '',
+    }));
+    positionsLoading = unitPositionsHook.isLoading;
+    positionsError = unitPositionsHook.isError;
+  } else {
+    const selectedUnit = orgUnits.find(unit => unit.unit_id === selectedUnitId);
+    positions = (selectedUnit && Array.isArray(selectedUnit.positions)
+      ? selectedUnit.positions.map(pos => ({
+          ...pos,
+          position_description: pos.position_description || '',
+          position_status: pos.position_status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+          position_access: pos.position_access || {},
+          created_at: pos.created_at || '',
+        }))
+      : []);
+    positionsLoading = false;
+    positionsError = false;
+  }
+  const createPosition = useCreatePosition();
+
+  // Guard: if user has no organization, show error
+  const showOrgError = !user?.organization?.organization_id;
+  if (showOrgError) {
+    return <div className="p-4 text-red-500">Your organization is not set. Please contact your administrator.</div>;
+  }
 
   const handleCreatePosition = async (positionData: {
     position_name: string;
@@ -398,9 +440,6 @@ export default function PositionsPage() {
   }) => {
     await createPosition.mutateAsync(positionData);
   };
-
-  // Show friendly empty state if no units for selected org, but keep dropdowns visible
-  const showNoUnitsState = selectedOrgId && (!orgUnits || orgUnits.length === 0);
 
   // Show loading state
   if (orgsLoading || unitsLoading || positionsLoading) {
@@ -430,20 +469,6 @@ export default function PositionsPage() {
     );
   }
 
-  // Show error if no orgs available
-  if (!organizations || organizations.length === 0) {
-    return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <h1 className="text-xl font-semibold text-gray-900">Positions</h1>
-        </div>
-        <div className="flex-1 overflow-auto p-4">
-          <AccessDenied message="No organizations available. Please contact your administrator." />
-        </div>
-      </div>
-    );
-  }
-
   const selectedUnit = orgUnits?.find((unit) => unit.unit_id === selectedUnitId);
   const isSelectedUnitActive = selectedUnit?.status === "ACTIVE";
 
@@ -451,20 +476,23 @@ export default function PositionsPage() {
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Org & Unit Selector */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Organization:</label>
-          <select
-            value={selectedOrgId}
-            onChange={e => { setSelectedOrgId(e.target.value); setSelectedUnitId(""); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select an organization</option>
-            {organizations.map(org => (
-              <option key={org.organization_id} value={org.organization_id}>{org.organization_name}</option>
-            ))}
-          </select>
-        </div>
-        {selectedOrgId && orgUnits && orgUnits.length > 0 && (
+        {canViewOrganizations && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Organization:</label>
+            <select
+              value={selectedOrgId}
+              onChange={e => { setSelectedOrgId(e.target.value); setSelectedUnitId(""); }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select an organization</option>
+              {organizations.map(org => (
+                <option key={org.organization_id} value={org.organization_id}>{org.organization_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {/* Always show unit dropdown for all units in org */}
+        {orgUnits && orgUnits.length > 0 && (
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">Unit:</label>
             <select
@@ -473,13 +501,12 @@ export default function PositionsPage() {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select a unit</option>
-              {orgUnits?.map(unit => (
+              {orgUnits.map(unit => (
                 <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
               ))}
             </select>
           </div>
         )}
-
         {canCreatePositions && selectedUnitId && isSelectedUnitActive && (
           <Button
             onClick={() => setShowCreate(true)}
@@ -505,7 +532,7 @@ export default function PositionsPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        {showNoUnitsState ? (
+        {orgUnits && orgUnits.length === 0 ? (
           <div className="flex items-center justify-center h-32 bg-white rounded-lg border border-gray-200">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -519,7 +546,7 @@ export default function PositionsPage() {
               </Link>
             </div>
           </div>
-        ) : isError ? (
+        ) : positionsError ? (
           <div className="p-8 text-center text-red-500">
             Failed to load positions. Please try again.
           </div>
@@ -583,7 +610,6 @@ export default function PositionsPage() {
                 />
               </div>
             ))}
-
             {positions && positions.length === 0 && (
               <div className="col-span-full flex items-center justify-center h-32 bg-white rounded-lg border border-gray-200">
                 <div className="text-center">

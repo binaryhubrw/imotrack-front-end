@@ -1131,6 +1131,10 @@ export const useReservations = () => {
   });
 };
 
+export const useMyReservations = () => {
+  
+}
+
 export const useCreateReservation = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, CreateReservationDto>({

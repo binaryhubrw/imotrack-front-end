@@ -309,7 +309,7 @@ export default function VehicleDetailPage() {
                       {vehicleModel?.manufacturer_name} {vehicleModel?.vehicle_model_name}
                     </div>
                     <div className="text-blue-700 text-sm">
-                      This is a {getVehicleTypeLabel(vehicle.vehicle_type).toLowerCase()} model manufactured by {vehicleModel?.manufacturer_name}.
+                      This is a {(getVehicleTypeLabel(vehicle.vehicle_type) || vehicle.vehicle_type || 'Unknown').toLowerCase()} model manufactured by {vehicleModel?.manufacturer_name}.
                     </div>
                   </div>
                 </div>
