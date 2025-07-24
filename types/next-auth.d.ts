@@ -321,27 +321,7 @@ export type Position = {
   };
 };
 
-export type CreatePositionDto = {
-  position_name: string;
-  position_description: string;
-  unit_id: string;
-  position_access: position_accesses;
-};
-
-// --- User Types for new API ---
-export interface User {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  user_gender: string;
-  user_phone: string;
-  position_id: string;
-  position_name: string;
-}
-
-// Define UserRow type for flattened user-position rows
-export interface UserRow {
+export type UserRow = {
   user_id: string;
   first_name: string;
   last_name: string;
@@ -354,39 +334,60 @@ export interface UserRow {
   unit_name?: string;
   organization_id?: string;
   organization_name?: string;
-}
+};
 
-// Inline type for position with nested unit/org
+export type CreatePositionDto = {
+  position_name: string;
+  position_description: string;
+  unit_id: string;
+  position_access: position_accesses;
+};
+
+// --- User Types for new API ---
 export interface PositionWithUnitOrg {
   position_id: string;
   position_name: string;
-  position_description?: string;
+  position_description: string;
   position_status: string;
-  unit?: {
+  unit: {
     unit_id: string;
     unit_name: string;
-    organization?: {
+    organization: {
       organization_id: string;
       organization_name: string;
+      organization_email: string;
+      organization_phone: string;
     };
   };
 }
 
-// Extend User type locally to include positions
 export interface UserWithPositions {
+  [x: string]: string;
   user_id: string;
   first_name: string;
   last_name: string;
   email: string;
   user_gender: string;
   user_phone: string;
+  user_dob?: string;
+  street_address?: string;
   positions: PositionWithUnitOrg[];
+}
+
+export interface UpdateUserDto {
+  first_name?: string;
+  last_name?: string;
+  user_nid?: string;
+  user_phone?: string;
+  user_gender?: string;
+  user_dob?: string;
+  street_address?: string;
 }
 
 export interface UnitWithUsers {
   unit_id: string;
   unit_name: string;
-  users: User[];
+  users: UserWithPositions[];
 }
 
 export interface CreateUserDto {
@@ -556,3 +557,53 @@ export interface StartReservationDto {
 export interface CompleteReservationDto {
   returned_odometer: number;
 }
+
+// --- Vehicle Issue Types ---
+export type VehicleIssue = {
+  issue_id: string;
+  issue_title: string;
+  issue_status: 'OPEN' | 'CLOSED' | string;
+  issue_description: string;
+  issue_date: string;
+  created_at: string;
+  reserved_vehicle_id: string;
+  reserved_vehicle?: unknown; // Use unknown instead of any
+};
+
+export type CreateVehicleIssueDto = {
+  issue_title: string;
+  issue_description: string;
+  reserved_vehicle_id: string;
+};
+
+export type UpdateVehicleIssueDto = Partial<CreateVehicleIssueDto> & { issue_status?: 'OPEN' | 'CLOSED' | string };
+
+export type Notification = {
+  notification_id: string;
+  user_id: string;
+  notification_title: string;
+  notification_message: string;
+  created_at: string;
+};
+
+export type AuditLog = {
+  id: string;
+  user_id: string;
+  action: string;
+  table_name?: string;
+  record_id?: string;
+  old_value?: unknown;
+  new_value?: unknown;
+  timestamp: string;
+  ip_address: string;
+  user_agent: string;
+  user?: {
+    user_id: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    organization_name?: string;
+  };
+};
+
+

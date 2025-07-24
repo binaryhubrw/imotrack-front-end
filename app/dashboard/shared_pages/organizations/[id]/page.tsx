@@ -1,11 +1,28 @@
-'use client';
-import React from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Loader2, Edit3, X, Ban, Home } from 'lucide-react';
-import { useOrganization, useDeleteOrganization, useOrganizationUnitsByOrgId, useUpdateOrganization } from '@/lib/queries';
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { SkeletonEntityDetails } from '@/components/ui/skeleton';
+"use client";
+import React from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  Building2,
+  Mail,
+  Phone,
+  MapPin,
+  Loader2,
+  Edit3,
+  X,
+  Ban,
+  Home,
+} from "lucide-react";
+import {
+  useOrganization,
+  useDeleteOrganization,
+  useOrganizationUnitsByOrgId,
+  useUpdateOrganization,
+  useCreateUnit,
+} from "@/lib/queries";
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 
 export default function OrganizationIdPage() {
   const router = useRouter();
@@ -17,30 +34,33 @@ export default function OrganizationIdPage() {
   // Prepare delete, update, and units hooks
   const deleteOrganization = useDeleteOrganization();
   const updateOrganization = useUpdateOrganization();
-  const { data: units, isLoading: unitsLoading } = useOrganizationUnitsByOrgId(id);
-  
+  const { data: units, isLoading: unitsLoading } =
+    useOrganizationUnitsByOrgId(id);
+  const createUnit = useCreateUnit();
+
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editForm, setEditForm] = useState({
-    organization_name: '',
-    organization_email: '',
-    organization_phone: '',
-    organization_logo: '',
-    street_address: '',
+    organization_name: "",
+    organization_email: "",
+    organization_phone: "",
+    organization_logo: "",
+    street_address: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showCreateUnit, setShowCreateUnit] = useState(false);
 
   // Open edit modal and prefill form
   const handleEdit = () => {
     if (!org) return;
     setEditForm({
-      organization_name: org.organization_name || '',
-      organization_email: org.organization_email || '',
-      organization_phone: org.organization_phone || '',
-      organization_logo: org.organization_logo || '',
-      street_address: org.street_address || '',
+      organization_name: org.organization_name || "",
+      organization_email: org.organization_email || "",
+      organization_phone: org.organization_phone || "",
+      organization_logo: org.organization_logo || "",
+      street_address: org.street_address || "",
     });
     setShowEdit(true);
   };
@@ -57,7 +77,7 @@ export default function OrganizationIdPage() {
       setShowEdit(false);
       refetch();
     } catch (error) {
-      console.error('Error updating organization:', error);
+      console.error("Error updating organization:", error);
     } finally {
       setSubmitting(false);
     }
@@ -76,37 +96,44 @@ export default function OrganizationIdPage() {
       if (error instanceof Error) {
         setDeleteError(error.message);
       } else {
-        setDeleteError('Failed to delete organization.');
+        setDeleteError("Failed to delete organization.");
       }
       setDeleting(false);
     }
   };
 
+  const handleCreateUnit = async (data: { unit_name: string; organization_id: string }) => {
+    await createUnit.mutateAsync(data);
+    setShowCreateUnit(false);
+    router.push('/dashboard/shared_pages/units');
+  };
+
   // Handle escape key to close modals
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setShowEdit(false);
         setShowDeleteConfirm(false);
+        setShowCreateUnit(false);
       }
     };
 
-    if (showEdit || showDeleteConfirm) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+    if (showEdit || showDeleteConfirm || showCreateUnit) {
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
     }
-  }, [showEdit, showDeleteConfirm]);
+  }, [showEdit, showDeleteConfirm, showCreateUnit]);
 
   if (isLoading) {
-    return (
-        <SkeletonEntityDetails/>
-    )
+    return <SkeletonEntityDetails />;
   }
 
   if (isError) {
     return (
       <main className="min-h-[60vh] flex flex-col items-center justify-center text-red-600">
-        <p className="text-lg">Error loading organization: {error?.message || 'Unknown error'}</p>
+        <p className="text-lg">
+          Error loading organization: {error?.message || "Unknown error"}
+        </p>
         <button
           onClick={() => router.back()}
           className="mt-4 px-4 py-2 bg-[#0872B3] text-white rounded hover:bg-blue-700 flex items-center gap-2"
@@ -172,31 +199,45 @@ export default function OrganizationIdPage() {
                 <Building2 className="w-8 h-8 text-[#0872B3]" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{org.organization_name}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {org.organization_name}
+                </h2>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Custom ID</div>
-                <div className="font-medium text-gray-900">{org.organization_customId || 'N/A'}</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider">
+                  Custom ID
+                </div>
+                <div className="font-medium text-gray-900">
+                  {org.organization_customId || "N/A"}
+                </div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Status</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider">
+                  Status
+                </div>
                 <div className="font-medium text-gray-900">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    String(org.organization_status) === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      String(org.organization_status) === "active"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
                     {org.organization_status}
                   </span>
                 </div>
               </div>
               <div className="bg-gray-50 p-3 rounded-lg col-span-2">
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Created</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wider">
+                  Created
+                </div>
                 <div className="font-medium text-gray-900">
-                  {org.created_at ? new Date(org.created_at).toLocaleDateString() : 'N/A'}
+                  {org.created_at
+                    ? new Date(org.created_at).toLocaleDateString()
+                    : "N/A"}
                 </div>
               </div>
             </div>
@@ -208,14 +249,18 @@ export default function OrganizationIdPage() {
                 <Mail className="w-5 h-5 text-[#0872B3] mt-0.5" />
                 <div>
                   <div className="text-sm font-medium text-gray-500">Email</div>
-                  <div className="text-gray-900">{org.organization_email || 'N/A'}</div>
+                  <div className="text-gray-900">
+                    {org.organization_email || "N/A"}
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                 <Phone className="w-5 h-5 text-[#0872B3] mt-0.5" />
                 <div>
                   <div className="text-sm font-medium text-gray-500">Phone</div>
-                  <div className="text-gray-900">{org.organization_phone || 'N/A'}</div>
+                  <div className="text-gray-900">
+                    {org.organization_phone || "N/A"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -223,8 +268,12 @@ export default function OrganizationIdPage() {
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
                 <MapPin className="w-5 h-5 text-[#0872B3] mt-0.5" />
                 <div>
-                  <div className="text-sm font-medium text-gray-500">Address</div>
-                  <div className="text-gray-900">{org.street_address || 'N/A'}</div>
+                  <div className="text-sm font-medium text-gray-500">
+                    Address
+                  </div>
+                  <div className="text-gray-900">
+                    {org.street_address || "N/A"}
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg">
@@ -234,20 +283,21 @@ export default function OrganizationIdPage() {
                 <div>
                   <div className="text-sm font-medium text-gray-500">Logo</div>
                   <div className="mt-2">
-                    {(org.organization_logo && (org.organization_logo.startsWith('http') || org.organization_logo.startsWith('/')))
-                      ? (
-                        <Image
-                          width={48}
-                          height={48}
-                          src={org.organization_logo}
-                          alt="Logo"
-                          className="h-12 w-12 object-contain bg-white rounded-lg border border-gray-200"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <Building2 className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
+                    {org.organization_logo &&
+                    (org.organization_logo.startsWith("http") ||
+                      org.organization_logo.startsWith("/")) ? (
+                      <Image
+                        width={48}
+                        height={48}
+                        src={org.organization_logo}
+                        alt="Logo"
+                        className="h-12 w-12 object-contain bg-white rounded-lg border border-gray-200"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -255,38 +305,51 @@ export default function OrganizationIdPage() {
           </div>
 
           <div className="border-t border-gray-200 pt-6">
-      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-800">
-        <Building2 className="w-5 h-5 text-[#0872B3]" />
-        Units
-      </h3>
-
-      {unitsLoading ? (
-        <div className="flex items-center gap-2 text-gray-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading units...
-        </div>
-      ) : units && units.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {units.map((unit) => (
-            <div
-              key={unit.unit_id}
-              className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-3">
-                <div className="bg-[#E6F4FF] p-2 rounded-full">
-                  <Home className="w-5 h-5 text-[#0872B3]" />
-                </div>
-                <div className="text-gray-900 font-medium text-base">
-                  {unit.unit_name}
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-800">
+                <Building2 className="w-5 h-5 text-[#0872B3]" />
+                Units
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  className="inline-block px-5 cursor-pointer py-3 bg-[#0872B3] text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  onClick={() => setShowCreateUnit(true)}
+                >
+                  New Unit
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-gray-500 italic">No units found for this organization.</div>
-      )}
-    </div>
+
+            {unitsLoading ? (
+              <div className="flex items-center gap-2 text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading units...
+              </div>
+            ) : units && units.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {units.map((unit) => (
+                  <div
+                    key={unit.unit_id}
+                    className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => router.push(`/dashboard/shared_pages/units/${unit.unit_id}`)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-[#E6F4FF] p-2 rounded-full">
+                        <Home className="w-5 h-5 text-[#0872B3]" />
+                      </div>
+                      <div className="text-gray-900 font-medium text-base">
+                        {unit.unit_name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-gray-500 italic">
+                No units found for this organization.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Edit Modal */}
@@ -294,7 +357,9 @@ export default function OrganizationIdPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900">Edit Organization</h2>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Edit Organization
+                </h2>
                 <button
                   onClick={() => setShowEdit(false)}
                   className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -303,7 +368,7 @@ export default function OrganizationIdPage() {
                   <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
-              
+
               <form onSubmit={handleEditSave} className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -313,7 +378,12 @@ export default function OrganizationIdPage() {
                     type="text"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={editForm.organization_name}
-                    onChange={e => setEditForm(f => ({ ...f, organization_name: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        organization_name: e.target.value,
+                      }))
+                    }
                     required
                     disabled={submitting}
                   />
@@ -327,7 +397,12 @@ export default function OrganizationIdPage() {
                     type="email"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={editForm.organization_email}
-                    onChange={e => setEditForm(f => ({ ...f, organization_email: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        organization_email: e.target.value,
+                      }))
+                    }
                     required
                     disabled={submitting}
                   />
@@ -341,7 +416,12 @@ export default function OrganizationIdPage() {
                     type="tel"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={editForm.organization_phone}
-                    onChange={e => setEditForm(f => ({ ...f, organization_phone: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        organization_phone: e.target.value,
+                      }))
+                    }
                     required
                     disabled={submitting}
                   />
@@ -355,7 +435,12 @@ export default function OrganizationIdPage() {
                     type="text"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={editForm.street_address}
-                    onChange={e => setEditForm(f => ({ ...f, street_address: e.target.value }))}
+                    onChange={(e) =>
+                      setEditForm((f) => ({
+                        ...f,
+                        street_address: e.target.value,
+                      }))
+                    }
                     disabled={submitting}
                   />
                 </div>
@@ -380,7 +465,7 @@ export default function OrganizationIdPage() {
                         Saving...
                       </>
                     ) : (
-                      'Save Changes'
+                      "Save Changes"
                     )}
                   </button>
                 </div>
@@ -398,11 +483,14 @@ export default function OrganizationIdPage() {
                   <div className="p-2 bg-red-100 rounded-lg">
                     <Ban className="w-6 h-6 text-cyan-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">DisActivate Organization</h2>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    DisActivate Organization
+                  </h2>
                 </div>
                 <p className="text-gray-600 mb-6">
-                  Are you sure you want to DisActivate <strong>{org.organization_name}</strong>? 
-                  This action cannot be undone.
+                  Are you sure you want to DisActivate{" "}
+                  <strong>{org.organization_name}</strong>? This action cannot
+                  be undone.
                 </p>
                 {deleteError && (
                   <div className="mb-4 text-red-600 text-sm">{deleteError}</div>
@@ -426,7 +514,7 @@ export default function OrganizationIdPage() {
                         DisActivating...
                       </>
                     ) : (
-                      'DisActivate'
+                      "DisActivate"
                     )}
                   </button>
                 </div>
@@ -434,7 +522,72 @@ export default function OrganizationIdPage() {
             </div>
           </div>
         )}
+
+        {/* Create Unit Modal */}
+        {showCreateUnit && (
+          <CreateUnitModal
+            open={showCreateUnit}
+            onClose={() => setShowCreateUnit(false)}
+            onCreate={handleCreateUnit}
+            organization={{ organization_id: org.organization_id, organization_name: org.organization_name }}
+          />
+        )}
       </div>
     </main>
+  );
+}
+
+function CreateUnitModal({ open, onClose, onCreate, organization }: { open: boolean; onClose: () => void; onCreate: (data: { unit_name: string; organization_id: string }) => void; organization: { organization_id: string; organization_name: string } }) {
+  const [form, setForm] = useState({ unit_name: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await onCreate({ unit_name: form.unit_name, organization_id: organization.organization_id });
+      setForm({ unit_name: '' });
+      onClose();
+    } catch {
+      // error handled in mutation
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl p-10 w-full max-w-md relative">
+        <button
+          className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200"
+          onClick={onClose}
+        >
+          &times;
+        </button>
+        <h2 className="text-2xl font-bold mb-6 text-[#0872b3]">Create Unit</h2>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <input
+            name="unit_name"
+            placeholder="Unit Name"
+            value={form.unit_name}
+            onChange={handleChange}
+            required
+            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] rounded w-full"
+          />
+          <button
+            type="submit"
+            className="w-full bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200 h-11 text-base rounded"
+            disabled={submitting}
+          >
+            {submitting ? "Creating..." : "Create"}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }

@@ -1,216 +1,241 @@
-import React from 'react'
+"use client";
 
-export default function Uz() {
+import { useParams, useRouter } from "next/navigation";
+import { faArrowLeft, faEdit } from "@fortawesome/free-solid-svg-icons";
+import { Button } from "@/components/ui/button";
+import { useUser, useUpdateUser } from "@/lib/queries";
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { SkeletonEntityDetails } from "@/components/ui/skeleton";
+import { Building2 } from "lucide-react";
+import type { UpdateUserDto } from '@/types/next-auth';
+import { Input } from '@/components/ui/input';
+import { X } from 'lucide-react';
+import React from "react";
+
+function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; onClose: () => void; userId: string | null; onUpdated: () => void }) {
+  const { data: user, isLoading } = useUser(userId || '');
+  const updateUser = useUpdateUser(userId || '');
+  const [form, setForm] = useState<UpdateUserDto>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (user && open) {
+      setForm({
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        user_nid: '',
+        user_phone: user.user_phone || '',
+        user_gender: user.user_gender || '',
+        user_dob: user.user_dob || '',
+        street_address: user.street_address || '',
+      });
+    }
+  }, [user, open]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((f: UpdateUserDto) => ({ ...f, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await updateUser.mutateAsync(form);
+      onClose();
+      onUpdated();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open) return null;
   return (
-    <div>
-      r
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300">
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-6 rounded-t-xl flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-[#0872b3]">Edit User</h2>
+          <button className="text-gray-400 hover:text-[#0872b3] p-1 rounded-full hover:bg-gray-100" onClick={onClose} disabled={submitting}><X className="w-5 h-5" /></button>
+        </div>
+        <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">First Name</label>
+              <Input name="first_name" value={form.first_name || ''} onChange={handleChange} className="w-full" required disabled={isLoading || submitting} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Last Name</label>
+              <Input name="last_name" value={form.last_name || ''} onChange={handleChange} className="w-full" required disabled={isLoading || submitting} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Phone</label>
+              <Input name="user_phone" value={form.user_phone || ''} onChange={handleChange} className="w-full" disabled={isLoading || submitting} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Gender</label>
+              <select name="user_gender" value={form.user_gender || ''} onChange={handleChange} className="w-full border border-gray-300 rounded-md px-3 py-2" disabled={isLoading || submitting}>
+                <option value="">Select gender</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Date of Birth</label>
+              <Input name="user_dob" type="date" value={form.user_dob || ''} onChange={handleChange} className="w-full" disabled={isLoading || submitting} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0872b3] mb-2">Street Address</label>
+              <Input name="street_address" value={form.street_address || ''} onChange={handleChange} className="w-full" disabled={isLoading || submitting} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+            <Button type="submit" className="bg-[#0872b3] text-white min-w-[120px]" disabled={submitting}>{submitting ? 'Saving...' : 'Save'}</Button>
+          </div>
+        </form>
+      </div>
     </div>
-  )
+  );
 }
 
+export default function UserDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+  const { data: user, isLoading, isError, refetch } = useUser(id);
+  const [showEdit, setShowEdit] = useState(false);
 
-// 'use client'
+  if (isLoading) {
+    return <SkeletonEntityDetails />;
+  }
+  if (isError || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">Error loading user details</div>
+      </div>
+    );
+  }
 
-// import { useUserDetails } from '@/lib/queries';
-// import { useParams, useRouter } from 'next/navigation';
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import {
-//   faUser,
-//   faEnvelope,
-//   faPhone,
-//   faBuilding,
-//   faShieldAlt,
-//   faIdCard,
-//   faCalendarAlt,
-//   faVenusMars,
-//   faMapMarkerAlt,
-//   faArrowLeft,
-//   faEdit,
-// } from '@fortawesome/free-solid-svg-icons';
-// import { Button } from '@/components/ui/button';
-// import { motion } from 'framer-motion';
-// import { useState } from 'react';
-// import EditUserForm from '../EditUserForm';
-// import { CheckCircle } from 'lucide-react';
-
-// export default function UserDetailPage() {
-//   const params = useParams();
-//   const router = useRouter();
-//   const { data: user, isLoading, error } = useUserDetails(params.id as string);
-//   const [showEditModal, setShowEditModal] = useState(false);
-//   const [showEditSuccessModal, setShowEditSuccessModal] = useState(false);
-
-//   if (isLoading) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0872b3]"></div>
-//       </div>
-//     );
-//   }
-
-//   if (error || !user) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <div className="text-red-500">Error loading user details</div>
-//       </div>
-//     );
-//   }
-
-//   const formatDate = (dateString: string | null) => {
-//     if (!dateString) return 'N/A';
-//     return new Date(dateString).toLocaleDateString('en-US', {
-//       year: 'numeric',
-//       month: 'long',
-//       day: 'numeric',
-//     });
-//   };
-
-//   const profileItems = [
-//     {
-//       icon: faUser,
-//       label: 'Full Name',
-//       value: `${user.first_name} ${user.last_name}`,
-//     },
-//     {
-//       icon: faEnvelope,
-//       label: 'Email',
-//       value: user.email,
-//     },
-//     {
-//       icon: faPhone,
-//       label: 'Phone',
-//       value: user.phone || 'N/A',
-//     },
-//     {
-//       icon: faBuilding,
-//       label: 'Organization',
-//       value: user.organization_id || 'N/A',
-//     },
-//     {
-//       icon: faShieldAlt,
-//       label: 'Role',
-//       value: user.role_id || 'N/A',
-//     },
-//     {
-//       icon: faCalendarAlt,
-//       label: 'Date of Birth',
-//       value: formatDate(user.dob),
-//     },
-//     {
-//       icon: faIdCard,
-//       label: 'NID',
-//       value: user.nid,
-//     },
-//     {
-//       icon: faVenusMars,
-//       label: 'Gender',
-//       value: user.gender,
-//     },
-//     {
-//       icon: faMapMarkerAlt,
-//       label: 'Address',
-//       value: user.street_address,
-//     },
-    
-//   ];
-
-//   return (
-//     <div className="min-h-screen bg-gray-50 py-8">
-//       <div className="max-w-4xl mx-auto px-4">
-//         {/* Header */}
-//         <div className="flex items-center justify-between mb-8">
-//           <Button
-//             variant="ghost"
-//             className="text-[#0872b3] hover:text-[#065d8f]"
-//             onClick={() => router.back()}
-//           >
-//             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-//             Back
-//           </Button>
-//           <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={() => setShowEditModal(true)}>
-//             <FontAwesomeIcon icon={faEdit} className="mr-2" />
-//             Edit User
-//           </Button>
-//         </div>
-//         {/* Edit User Modal */}
-//         {showEditModal && (
-//           <EditUserForm
-//             userId={user.id}
-//             onClose={() => setShowEditModal(false)}
-//             onSuccess={() => {
-//               setShowEditModal(false);
-//               setShowEditSuccessModal(true);
-//               setTimeout(() => setShowEditSuccessModal(false), 2500);
-//             }}
-//           />
-//         )}
-//         {/* Edit Success Modal */}
-//         {showEditSuccessModal && (
-//           <motion.div
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm"
-//           >
-//             <motion.div
-//               initial={{ scale: 0.95, opacity: 0, y: 20 }}
-//               animate={{ scale: 1, opacity: 1, y: 0 }}
-//               exit={{ scale: 0.95, opacity: 0, y: 20 }}
-//               transition={{ type: 'spring', duration: 0.5 }}
-//               className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border border-gray-100 flex flex-col items-center"
-//             >
-//               <CheckCircle className="w-20 h-20 text-green-500 mb-4" />
-//               <h2 className="text-2xl font-bold mb-2 text-center">User updated successfully!</h2>
-//               <p className="text-gray-600 text-center">The user information has been updated.<br/>Thank you for keeping your records up to date.</p>
-//             </motion.div>
-//           </motion.div>
-//         )}
-
-//         <motion.div
-//           initial={{ opacity: 0, y: 20 }}
-//           animate={{ opacity: 1, y: 0 }}
-//           className="bg-white rounded-xl shadow-lg overflow-hidden"
-//         >
-//           {/* Header */}
-//           <div className="bg-[#0872b3] text-white p-6">
-//             <div className="flex items-center justify-between">
-//               <h1 className="text-2xl font-bold">User Details</h1>
-//               <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-//                 {user.status}
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* Content */}
-//           <div className="p-6">
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//               {profileItems.map((item, index) => (
-//                 <motion.div
-//                   key={item.label}
-//                   initial={{ opacity: 0, y: 20 }}
-//                   animate={{ opacity: 1, y: 0 }}
-//                   transition={{ delay: index * 0.1 }}
-//                   className="bg-gray-50 rounded-lg p-4"
-//                 >
-//                   <div className="flex items-start space-x-4">
-//                     <div className="text-[#0872b3] text-xl">
-//                       <FontAwesomeIcon icon={item.icon} />
-//                     </div>
-//                     <div>
-//                       <h3 className="text-sm font-medium text-gray-500">
-//                         {item.label}
-//                       </h3>
-//                       <p className="mt-1 text-lg text-gray-900">
-//                         {item.value}
-//                       </p>
-//                     </div>
-//                   </div>
-//                 </motion.div>
-//               ))}
-//             </div>
-//           </div>
-//         </motion.div>
-//       </div>
-//     </div>
-//   );
-// }
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="ghost"
+            className="text-[#0872b3] hover:text-[#065d8f]"
+            onClick={() => router.back()}
+          >
+            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+            Back
+          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
+              onClick={() => setShowEdit(true)}
+            >
+              <FontAwesomeIcon icon={faEdit} className="mr-2" />
+              Edit User
+            </Button>
+          </div>
+        </div>
+        {/* Edit Modal */}
+        <EditUserModal open={showEdit} onClose={() => setShowEdit(false)} userId={id} onUpdated={refetch} />
+        {/* Main Content */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-[#0872b3] text-white p-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">User Details</h1>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">First Name</div>
+                <div className="font-medium text-gray-900">{user.first_name}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Last Name</div>
+                <div className="font-medium text-gray-900">{user.last_name}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Email</div>
+                <div className="font-medium text-gray-900">{user.email}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Phone</div>
+                <div className="font-medium text-gray-900">{user.user_phone}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Gender</div>
+                <div className="font-medium text-gray-900">{user.user_gender}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Date of Birth</div>
+                <div className="font-medium text-gray-900">{user.user_dob || 'N/A'}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">Street Address</div>
+                <div className="font-medium text-gray-900">{user.street_address || 'N/A'}</div>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase">NID</div>
+                <div className="font-medium text-gray-900">{user.user_nid || 'N/A'}</div>
+              </div>
+            </div>
+          </div>
+          {/* Positions List for this User */}
+          <div className="mt-10 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <Building2 className="w-6 h-6 text-indigo-600" />
+                Positions
+              </h2>
+            </div>
+            {user.positions && user.positions.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {user.positions.map((pos) => {
+                  // determine color classes based on status
+                  let cardColor = "bg-gray-50 border-gray-200";
+                  if (pos.position_status === "ACTIVE") {
+                    cardColor = "bg-green-50 border-green-300";
+                  } else if (pos.position_status === "DISACTIVATED") {
+                    cardColor = "bg-yellow-50 border-yellow-300";
+                  } else if (pos.position_status === "INACTIVE") {
+                    cardColor = "bg-red-50 border-red-300";
+                  }
+                  return (
+                    <div
+                      key={pos.position_id}
+                      className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${cardColor}`}
+                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
+                    >
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {pos.position_name}
+                      </h3>
+                      <div className="text-sm text-gray-700 mt-1">
+                        {pos.position_description}
+                      </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Unit: {pos.unit.unit_name}<br />
+                        Org: {pos.unit.organization.organization_name}
+                      </div>
+                      <p className="mt-2 text-sm">
+                        Status: <span className="font-medium">{pos.position_status}</span>
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-gray-500 italic text-sm">
+                No positions found for this user.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

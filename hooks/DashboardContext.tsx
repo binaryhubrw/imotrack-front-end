@@ -143,16 +143,6 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   const reservationsError = canViewReservations ? reservationsHook.error : null;
   const refetchReservations = canViewReservations ? reservationsHook.refetch : () => {};
 
-  // Debug logs for API data
-  // useEffect(() => {
-  //   console.log("[DashboardContext] organizations:", organizations);
-  //   console.log("[DashboardContext] units:", units);
-  //   console.log("[DashboardContext] users:", users);
-  //   console.log("[DashboardContext] vehicles:", vehicles);
-  //   console.log("[DashboardContext] vehicleModels:", vehicleModels);
-  //   console.log("[DashboardContext] reservations:", reservations);
-  // }, [organizations, units, users, vehicles, vehicleModels,reservations]);
-
   // Calculate dashboard stats (robust to data shape)
   const calculateStats = (): DashboardStats => {
     // Organizations: can be { organizations: Organization[], ... } or Organization[]

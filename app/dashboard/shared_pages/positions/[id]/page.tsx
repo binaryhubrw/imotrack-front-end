@@ -4,11 +4,12 @@ import { useParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faEdit } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
-import { usePosition, useUpdatePosition } from "@/lib/queries";
+import { usePosition, useUpdatePosition, useUsers } from "@/lib/queries";
 import { useDeletePosition } from "@/lib/queries";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
+import { X } from "lucide-react";
 
 // Helper type guard
 function isUserWithAuth(
@@ -23,6 +24,40 @@ function isUserWithAuth(
   );
 }
 
+const defaultPermissions = {
+  units: { create: false, view: false, update: false, delete: false },
+  positions: { create: false, view: false, update: false, delete: false },
+  users: { create: false, view: false, update: false, delete: false },
+  vehicleModels: {
+    create: false,
+    view: false,
+    viewSingle: false,
+    update: false,
+    delete: false,
+  },
+  vehicles: {
+    create: false,
+    view: false,
+    viewSingle: false,
+    update: false,
+    delete: false,
+  },
+  reservations: {
+    create: false,
+    view: false,
+    update: false,
+    delete: false,
+    cancel: false,
+    approve: false,
+    assignVehicle: false,
+    odometerFuel: false,
+    start: false,
+    complete: false,
+    viewOwn: false,
+  },
+  vehicleIssues: { report: false, view: false, update: false, delete: false },
+};
+
 export default function PositionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -30,11 +65,14 @@ export default function PositionDetailPage() {
   const { data: position, isLoading, isError, refetch } = usePosition(id);
   const updatePosition = useUpdatePosition();
   const deletePosition = useDeletePosition();
+  const { data: users = [] } = useUsers();
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
     position_name: "",
     position_description: "",
     position_status: "",
+    position_access: { ...defaultPermissions },
+    user_id: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [showDisActivateConfirm, setShowDisActivateConfirm] = useState(false);
@@ -48,6 +86,8 @@ export default function PositionDetailPage() {
       position_name: position.position_name || "",
       position_description: position.position_description || "",
       position_status: position.position_status || "",
+      position_access: position.position_access || { ...defaultPermissions },
+      user_id: position.user_id || "",
     });
     setShowEdit(true);
   };
@@ -59,7 +99,13 @@ export default function PositionDetailPage() {
     try {
       await updatePosition.mutateAsync({
         position_id: id,
-        updates: editForm,
+        updates: {
+          position_name: editForm.position_name,
+          position_description: editForm.position_description,
+          position_status: editForm.position_status,
+          position_access: editForm.position_access,
+          user_id: editForm.user_id,
+        },
       });
       setShowEdit(false);
       refetch();
@@ -132,12 +178,20 @@ export default function PositionDetailPage() {
         </div>
         {/* Edit Modal */}
         {showEdit && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <form
               onSubmit={handleEditSave}
-              className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+              className="bg-white rounded-2xl p-10 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-100 flex flex-col gap-6 relative"
             >
-              <h2 className="text-xl font-bold mb-2">Edit Position</h2>
+              <button
+                type="button"
+                className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+                onClick={() => setShowEdit(false)}
+                tabIndex={-1}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold mb-2 text-[#0872b3]">Edit Position</h2>
               <label className="text-sm font-medium">
                 Position Name
                 <input
@@ -166,18 +220,149 @@ export default function PositionDetailPage() {
                   required
                 />
               </label>
-              <label className="text-sm font-medium">
-                Status
+              {/* Single-user selector */}
+              <div>
+                <label className="block text-sm font-medium text-[#0872b3] mb-2">
+                  Assign User
+                </label>
                 <select
-                  className="w-full border rounded px-3 py-2 mt-1"
-                  value={editForm.position_status}
-                  onChange={e => setEditForm(f => ({ ...f, position_status: e.target.value }))}
-                  required
+                  name="user_id"
+                  value={editForm.user_id}
+                  onChange={e => setEditForm(f => ({ ...f, user_id: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
                 >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
+                  <option value="">Unassigned</option>
+                  {users.map(user => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.first_name} {user.last_name} ({user.email})
+                    </option>
+                  ))}
                 </select>
-              </label>
+              </div>
+              {/* Permissions Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#0872b3] border-b border-[#0872b3]/20 pb-2">
+                  Permissions
+                </h3>
+                <div className="space-y-4">
+                  {Object.entries({ ...defaultPermissions, ...editForm.position_access })
+                    .filter(([module]) => module !== 'organizations')
+                    .map(([module]) => {
+                      // Merge default perms for this module with current perms
+                      const defaultPerms: Record<string, boolean> = (defaultPermissions as Record<string, Record<string, boolean>>)[module] || {};
+                      const currentPerms: Record<string, boolean> = (editForm.position_access as Record<string, Record<string, boolean>>)[module] || {};
+                      const mergedPerms = { ...defaultPerms, ...currentPerms };
+                      const allSelected = Object.values(mergedPerms).every(Boolean);
+                      const someSelected = Object.values(mergedPerms).some(Boolean);
+                      return (
+                        <div
+                          key={String(module)}
+                          className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow duration-200"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold capitalize text-[#0872b3] flex items-center gap-2">
+                              <div className="w-2 h-2 bg-[#0872b3] rounded-full"></div>
+                              {String(module)}
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditForm((prev) => {
+                                  const prevModulePerms = { ...mergedPerms };
+                                  const all = Object.values(prevModulePerms).every(Boolean);
+                                  const newPerms = Object.keys(prevModulePerms).reduce((acc, perm) => {
+                                    acc[perm] = !all;
+                                    return acc;
+                                  }, {} as Record<string, boolean>);
+                                  return {
+                                    ...prev,
+                                    position_access: {
+                                      ...prev.position_access,
+                                      [module]: newPerms,
+                                    },
+                                  };
+                                });
+                              }}
+                              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors duration-200 ${
+                                allSelected
+                                  ? 'bg-[#0872b3] text-white hover:bg-[#065a8f]'
+                                  : someSelected
+                                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+                              }`}
+                            >
+                              {allSelected ? 'Deselect All' : 'Select All'}
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {Object.entries(mergedPerms).map(
+                              ([perm, isChecked]: [string, boolean]) => (
+                                <label
+                                  key={perm}
+                                  className="flex items-center space-x-3 text-sm cursor-pointer group"
+                                >
+                                  <div className="relative">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!isChecked}
+                                      onChange={() => {
+                                        setEditForm((prev) => {
+                                          const prevModulePerms = {
+                                            ...(prev.position_access as Record<string, Record<string, boolean>>)[module],
+                                          };
+                                          prevModulePerms[perm] = !prevModulePerms[perm];
+                                          return {
+                                            ...prev,
+                                            position_access: {
+                                              ...prev.position_access,
+                                              [module]: prevModulePerms,
+                                            },
+                                          };
+                                        });
+                                      }}
+                                      className="sr-only"
+                                    />
+                                    <div
+                                      className={`w-5 h-5 rounded border-2 transition-all duration-200 ${
+                                        isChecked
+                                          ? "bg-[#0872b3] border-[#0872b3]"
+                                          : "border-gray-300 group-hover:border-[#0872b3]"
+                                      }`}
+                                    >
+                                      {isChecked && (
+                                        <svg
+                                          className="w-3 h-3 text-white absolute top-0.5 left-0.5"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <span
+                                    className={`capitalize transition-colors duration-200 ${
+                                      isChecked
+                                        ? "text-[#0872b3] font-medium"
+                                        : "text-gray-700 group-hover:text-[#0872b3]"
+                                    }`}
+                                  >
+                                    {perm}
+                                  </span>
+                                </label>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </div>
               <div className="flex gap-3 mt-4">
                 <button
                   type="button"
@@ -189,7 +374,7 @@ export default function PositionDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="flex-1 py-2 px-4 bg-[#0872b3] text-white rounded hover:bg-blue-700"
                   disabled={submitting}
                 >
                   {submitting ? "Saving..." : "Save"}

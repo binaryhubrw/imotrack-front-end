@@ -972,105 +972,6 @@ function SkeletonPositionsCards({
     </div>
   )
 }
-// function SkeletonOrganizationsTable({ 
-//   rows = 6, 
-//   className, 
-//   ...props 
-// }: { 
-//   rows?: number
-//   className?: string
-// }) {
-//   return (
-//     <div className={cn("bg-white rounded-lg border border-gray-200 shadow-sm", className)} {...props}>
-//       {/* Header Controls Skeleton */}
-//       <div className="px-4 py-3 border-b border-gray-200">
-//         <div className="flex items-center gap-3">
-//           <div className="relative">
-//             <Skeleton className="h-10 w-48" />
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Table Header Skeleton */}
-//       <div className="overflow-x-auto">
-//         <div className="min-w-full">
-//           <div className="border-b border-gray-100">
-//             <div className="flex items-center px-4 py-4">
-//               <div className="flex-1">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//               <div className="flex-1">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//               <div className="flex-1">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//               <div className="flex-1">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//               <div className="flex-1">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//               <div className="w-24">
-//                 <Skeleton className="h-4 w-16" />
-//               </div>
-//             </div>
-//           </div>
-          
-//           {/* Table Rows Skeleton */}
-//           <div className="divide-y divide-gray-100">
-//             {Array.from({ length: rows }, (_, rowIndex) => (
-//               <div key={rowIndex} className="flex items-center px-4 py-4 hover:bg-gray-50">
-//                 {/* Name Column */}
-//                 <div className="flex-1">
-//                   <Skeleton className="h-5 w-20" />
-//                 </div>
-                
-//                 {/* Email Column */}
-//                 <div className="flex-1">
-//                   <Skeleton className="h-5 w-36" />
-//                 </div>
-                
-//                 {/* Phone Column */}
-//                 <div className="flex-1">
-//                   <Skeleton className="h-5 w-28" />
-//                 </div>
-                
-//                 {/* Status Column */}
-//                 <div className="flex-1">
-//                   <Skeleton className="h-6 w-16 rounded-full" />
-//                 </div>
-                
-//                 {/* Created Column */}
-//                 <div className="flex-1">
-//                   <Skeleton className="h-4 w-20" />
-//                 </div>
-                
-//                 {/* Actions Column */}
-//                 <div className="w-24 flex items-center gap-2">
-//                   <Skeleton className="h-6 w-6 rounded" />
-//                   <Skeleton className="h-6 w-6 rounded" />
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Footer Skeleton */}
-//       <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-//         <div>
-//           <Skeleton className="h-4 w-32" />
-//         </div>
-//         <div className="flex items-center gap-2">
-//           <Skeleton className="h-9 w-20" />
-//           <Skeleton className="h-9 w-16" />
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-// Generic improved table skeleton
 function SkeletonTable({ 
   rows = 5, 
   columns = 4, 
@@ -1129,6 +1030,39 @@ function SkeletonTable({
       )}
     </div>
   )
+}
+
+function SkeletonVehicleIssueDetails({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("min-h-screen bg-gray-50 py-8", className)} {...props}>
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="animate-pulse">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="bg-gray-200 p-6 h-24 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-6 w-40" />
+              </div>
+              <Skeleton className="h-6 w-24 rounded-full" />
+            </div>
+            <div className="p-6 space-y-4">
+              <SkeletonText lines={2} className="mb-4" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-100 rounded-lg p-4 h-20 flex flex-col gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+                <div className="bg-gray-100 rounded-lg p-4 h-20 flex flex-col gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-6 w-40" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Dashboard Skeleton Component
@@ -1345,5 +1279,6 @@ export {
   SkeletonDashboard,
   SkeletonEntityDetails,
   SkeletonReservationCard,
+  SkeletonVehicleIssueDetails, 
   skeletonVariants 
 }

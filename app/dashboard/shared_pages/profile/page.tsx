@@ -59,8 +59,6 @@ export default function UserProfilePage() {
       } else if (!user) {
         // User is not authenticated, show login prompt instead of redirect
         setShouldShowContent(false);
-        // Optionally show a toast message
-        toast.error('Please log in to access your profile');
       }
     }
   }, [user, isLoading]);

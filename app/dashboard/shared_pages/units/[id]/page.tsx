@@ -13,6 +13,10 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Ban, Building2 } from "lucide-react";
+import { CreatePositionModal } from "../../positions/page";
+import { useCreatePosition } from '@/lib/queries';
+import type { position_accesses } from '@/types/next-auth';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -30,6 +34,12 @@ export default function UnitDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [DisActivateError, setDisActivateError] = useState<string | null>(null);
+  const [showCreatePosition, setShowCreatePosition] = useState(false);
+  const createPosition = useCreatePosition();
+  const { user } = useAuth();
+
+  // Helper: is super admin if has organizations access
+  const isSuperAdmin = !!user?.position?.position_access?.organizations;
 
   // Open edit modal and prefill form
   const handleEdit = () => {
@@ -48,7 +58,10 @@ export default function UnitDetailPage() {
     try {
       await updateUnit.mutateAsync({
         unit_id: id,
-        updates: editForm,
+        updates: {
+          unit_name: editForm.unit_name,
+          status: editForm.status,
+        },
       });
       setShowEdit(false);
       refetch();
@@ -74,6 +87,49 @@ export default function UnitDetailPage() {
       setDisActivateError(message);
       setDeleting(false);
     }
+  };
+
+  const handleCreatePosition = async (data: {
+    position_name: string;
+    position_description: string;
+    unit_id?: string;
+    position_access: position_accesses;
+  }) => {
+    let position_access = data.position_access;
+    // If not super admin, restrict permissions
+    if (!isSuperAdmin) {
+      // Only allow creating positions in own unit, and restrict permissions
+      position_access = {
+        organizations: { create: false, view: false, update: false, delete: false },
+        reservations: {
+          create: false,
+          view: false,
+          update: false,
+          delete: false,
+          cancel: false,
+          approve: false,
+          assignVehicle: false,
+          odometerFuel: false,
+          start: false,
+          complete: false,
+          viewOwn: false,
+        },
+        positions: { create: true, view: false, update: false, delete: false },
+        units: { create: false, view: false, update: false, delete: false },
+        users: { create: false, view: false, update: false, delete: false },
+        vehicleModels: { create: false, view: false, viewSingle: false, update: false, delete: false },
+        vehicles: { create: false, view: false, viewSingle: false, update: false, delete: false },
+        vehicleIssues: { report: false, view: false, update: false, delete: false },
+      };
+    } 
+    await createPosition.mutateAsync({
+      position_name: data.position_name,
+      position_description: data.position_description,
+      unit_id: id, // always use id from params
+      position_access,
+    });
+    setShowCreatePosition(false);
+    router.push('/dashboard/shared_pages/positions');
   };
 
   if (isLoading) {
@@ -115,8 +171,18 @@ export default function UnitDetailPage() {
               <Ban className="mr-2" />
               DisActivate
             </Button>
+           
           </div>
         </div>
+        {/* Create Position Modal */}
+        {showCreatePosition && (
+          <CreatePositionModal
+            open={showCreatePosition}
+            onClose={() => setShowCreatePosition(false)}
+            onCreate={handleCreatePosition}
+            unitId={id}
+          />
+        )}
         {/* DisActivate Confirmation Modal */}
         {showDisActivateConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -186,6 +252,7 @@ export default function UnitDetailPage() {
                   required
                 />
               </label>
+              {/* Remove user selector: not supported by Unit type */}
               <div className="flex gap-3 mt-4">
                 <button
                   type="button"
@@ -197,7 +264,7 @@ export default function UnitDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="flex-1 py-2 px-4 bg-[#0872b3] text-white rounded hover:bg-blue-700"
                   disabled={submitting}
                 >
                   {submitting ? "Saving..." : "Save"}
@@ -242,11 +309,18 @@ export default function UnitDetailPage() {
           </div>
           {/* Organizations List for this Unit */}
           <div className="mt-10 bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-indigo-600" />
-              Positions in this Unit
-            </h2>
-
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <Building2 className="w-6 h-6 text-indigo-600" />
+                Positions in this Unit
+              </h2>
+              <Button
+                className="bg-[#0872b3] text-white hover:bg-[#065a8f]"
+                onClick={() => setShowCreatePosition(true)}
+              >
+                New Position
+              </Button>
+            </div>
             {unit.positions && unit.positions.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {unit.positions.map((pos) => {
@@ -263,7 +337,8 @@ export default function UnitDetailPage() {
                   return (
                     <div
                       key={pos.position_id}
-                      className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 ${cardColor}`}
+                      className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer ${cardColor}`}
+                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
                     >
                       <h3 className="text-lg font-bold text-gray-900">
                         {pos.position_name}

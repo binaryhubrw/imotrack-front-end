@@ -16,7 +16,7 @@ import {
   Unit,
   Position,
   CreateUserDto,
-  User,
+  UserWithPositions,
   VehicleModel,
   CreateVehicleModelDto,
   Vehicle,
@@ -28,9 +28,13 @@ import {
   AssignVehicleDto,
   StartReservationDto,
   CompleteReservationDto,
+  Notification,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { TransmissionMode, VehicleType } from '@/types/enums';
+import type { VehicleIssue, CreateVehicleIssueDto, UpdateVehicleIssueDto } from '@/types/next-auth';
+import type { AuditLog } from '@/types/next-auth';
+import type { UpdateUserDto } from '@/types/next-auth';
 
 // Define Unit type matching API response
 
@@ -728,6 +732,17 @@ export const usePosition = (position_id: string) => {
   });
 };
 
+export const usePositions = () => {
+  return useQuery<Position[], Error>({
+    queryKey: ['all-positions'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Position[]>>('/v2/organizations/positions');
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
 // --- PATCH /v2/organizations/positions/{position_id} ---
 export const useUpdatePosition = () => {
   const queryClient = useQueryClient();
@@ -765,10 +780,10 @@ export const useUpdatePosition = () => {
 
 // --- GET all users grouped by unit ---
 export const useUsers = () => {
-  return useQuery<User[], Error>({
+  return useQuery<UserWithPositions[], Error>({
     queryKey: ['users'],
     queryFn: async () => {
-      const { data } = await api.get<{ data: User[] }>('/v2/users');
+      const { data } = await api.get<{ data: UserWithPositions[] }>('/v2/users');
       if (!data.data) throw new Error('No data');
       return data.data;
     },
@@ -778,9 +793,9 @@ export const useUsers = () => {
 // --- Create user ---
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
-  return useMutation<User, Error, CreateUserDto>({
+  return useMutation<UserWithPositions, Error, CreateUserDto>({
     mutationFn: async (user) => {
-      const { data } = await api.post<{ data: User }>('/v2/users', user, {
+      const { data } = await api.post<{ data: UserWithPositions }>('/v2/users', user, {
         headers: { 'Content-Type': 'application/json' },
       });
       if (!data.data) throw new Error('No data');
@@ -810,6 +825,51 @@ export const useCreateUser = () => {
   });
 };
 
+export const useUser = (user_id: string) => {
+  return useQuery<UserWithPositions, Error>({
+    queryKey: ['user', user_id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: UserWithPositions }>(`/v2/users/${user_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!user_id,
+  });
+};
+export const useUpdateUser = (user_id: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<UserWithPositions, Error, UpdateUserDto>({
+    mutationFn: async (updates) => {
+      const { data } = await api.patch<{ data: UserWithPositions }>(`/v2/users/${user_id}`, updates, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', user_id] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update user.'));
+    },
+  });
+};
 
 
 
@@ -1522,3 +1582,117 @@ export const useReservationOdometerFuel = () => {
   });
 };
 
+
+
+// vehicleIssues
+
+export const useVehicleIssues = () => {
+  return useQuery<VehicleIssue[], Error>({
+    queryKey: ['vehicle-issues'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<VehicleIssue[]>>('/v2/issues');
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+export const useCreateVehicleIssue = () => {
+  return useMutation<VehicleIssue, Error, CreateVehicleIssueDto>({
+    mutationFn: async (vehicleIssue) => {
+      const { data } = await api.post<ApiResponse<VehicleIssue>>('/v2/issues', vehicleIssue);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+export const useVehicleIssue = (issueId: string) => {
+  return useQuery<VehicleIssue, Error>({
+    queryKey: ['vehicle-issue', issueId],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<VehicleIssue>>(`/v2/issues/${issueId}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!issueId,
+  });
+};
+
+export const useUpdateVehicleIssue = () => {
+  return useMutation<VehicleIssue, Error, { issueId: string; updates: UpdateVehicleIssueDto }>({
+    mutationFn: async ({ issueId, updates }) => {
+      const { data } = await api.put<ApiResponse<VehicleIssue>>(`/v2/issues/${issueId}`, updates);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+export const useDeleteVehicleIssue = () => {
+  return useMutation<VehicleIssue, Error, { issueId: string }>({
+    mutationFn: async ({ issueId }) => {
+      const { data } = await api.delete<ApiResponse<VehicleIssue>>(`/v2/issues/${issueId}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+
+
+// Notifications
+
+export const useNotifications = () => {
+  return useQuery<Notification[], Error>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Notification[]>>('/v2/notifications');
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+export const useMarkNotificationAsRead = () => {
+  return useMutation<Notification, Error, { notification_id: string }>({
+    mutationFn: async ({ notification_id }) => {
+      const { data } = await api.delete<ApiResponse<Notification>>(`/v2/notifications/${notification_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};
+
+
+
+
+// audit logs
+
+export const useAuditLogs = (filters: {
+  name?: string;
+  email?: string;
+  organization?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+} = {}) => {
+  return useQuery<AuditLog[], Error>({
+    queryKey: ['audit-logs', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters.name) params.append('name', filters.name);
+      if (filters.email) params.append('email', filters.email);
+      if (filters.organization) params.append('organization', filters.organization);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.page) params.append('page', String(filters.page));
+      if (filters.limit) params.append('limit', String(filters.limit));
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const { data } = await api.get<ApiResponse<AuditLog[]>>(`/v2/audit-logs${query}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
+};

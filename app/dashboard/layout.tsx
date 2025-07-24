@@ -8,15 +8,16 @@ import {
   faCar,
   faUser,
   faUsers,
-  faClipboardQuestion,
   faBell,
   faDashboard,
   faCog,
   faSignOutAlt,
   faMapPin,
-  faStairs,
   faCarRear,
   faCalendarCheck,
+  faFileAlt,
+  faUserTie,
+  faBug,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -42,27 +43,19 @@ const MODULE_NAV = [
     key: "positions",
     label: "Positions",
     href: "/dashboard/shared_pages/positions",
-    icon: <FontAwesomeIcon icon={faStairs} />,
+    icon: <FontAwesomeIcon icon={faUserTie} />,
+  },
+  {
+    key: "users",
+    label: "Users",
+    href: "/dashboard/shared_pages/users",
+    icon: <FontAwesomeIcon icon={faUsers} />,
   },
   {
     key: "vehicleModels",
     label: "VehicleModels",
     href: "/dashboard/shared_pages/vehicle-model",
     icon: <FontAwesomeIcon icon={faCarRear} />,
-  },
-
-    {
-    key: "reservations",
-    label: "Reservations",
-    href: "/dashboard/shared_pages/reservations",
-    icon: <FontAwesomeIcon icon={faCalendarCheck} />,
-  },
-
-  {
-    key: "users",
-    label: "Users",
-    href: "/dashboard/shared_pages/users",
-    icon: <FontAwesomeIcon icon={faUsers} />,
   },
   {
     key: "vehicles",
@@ -71,17 +64,25 @@ const MODULE_NAV = [
     icon: <FontAwesomeIcon icon={faCar} />,
   },
   {
-    key: "vehicleRequests",
-    label: "Vehicle Requests",
-    href: "/dashboard/shared_pages/vehicle-requests",
-    icon: <FontAwesomeIcon icon={faCar} />,
+    key: "reservations",
+    label: "Reservations",
+    href: "/dashboard/shared_pages/reservations",
+    icon: <FontAwesomeIcon icon={faCalendarCheck} />,
   },
   {
-    key: "issues",
-    label: "Issues",
-    href: "/dashboard/shared_pages/issue-management",
-    icon: <FontAwesomeIcon icon={faClipboardQuestion} />,
+    key: "vehicleIssues",
+    label: "Vehicle Issues",
+    href: "/dashboard/shared_pages/vehicle-issues",
+    icon: <FontAwesomeIcon icon={faBug} />,
   },
+
+  {
+    key: "history",
+    label: "History",
+    href: "/dashboard/shared_pages/audit-logs",
+    icon: <FontAwesomeIcon icon={faFileAlt} />,
+  },
+
   {
     key: "notifications",
     label: "Notifications",
@@ -95,18 +96,7 @@ const MODULE_NAV = [
     icon: <FontAwesomeIcon icon={faUser} />,
     always: true,
   },
-  {
-    key: "tripHistory",
-    label: "Trip History",
-    href: "/dashboard/shared_pages/trip-history",
-    icon: <FontAwesomeIcon icon={faUser} />,
-  },
-  {
-    key: "requestVehicle",
-    label: "Request Vehicle",
-    href: "/dashboard/shared_pages/vehicle-request",
-    icon: <FontAwesomeIcon icon={faCar} />,
-  },
+
   // Add more as needed
 ];
 
@@ -370,9 +360,7 @@ export default function DashboardLayout({
         {/* Main content scrollable area */}
         <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 bg-gray-50">
           <div className="max-w-7xl mx-auto w-full">
-            <DashboardProvider>
-              {children}
-            </DashboardProvider>
+            <DashboardProvider>{children}</DashboardProvider>
           </div>
         </main>
       </div>
