@@ -61,28 +61,29 @@ function CreateUserModal({
   onClose,
   onCreate,
   isLoading,
-  unitId,
 }: {
   open: boolean;
   onClose: () => void;
   onCreate: (data: CreateUserDto) => void;
   isLoading: boolean;
-  unitId: string | undefined;
 }) {
   const { user } = useAuth();
   const canViewOrganizations =
     !!user?.position?.position_access?.organizations?.view;
   const userOrganizationId = user?.organization?.organization_id;
+  const userUnitId = user?.unit?.unit_id;
   // For normal users, get all units in their organization
-  const { data: allUnitsInOrg = [], isLoading: loadingAllUnitsInOrg } = useOrganizationUnits();
+  const { data: allUnitsInOrg = [] } = useOrganizationUnits();
   const userOrgUnits = useMemo(() => {
     if (!userOrganizationId) return [];
     return allUnitsInOrg.filter((unit) => unit.organization_id === userOrganizationId);
   }, [allUnitsInOrg, userOrganizationId]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
-    canViewOrganizations ? "" : user?.organization?.organization_id || ""
+    canViewOrganizations ? "" : userOrganizationId || ""
   );
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
+  const [selectedUnitId, setSelectedUnitId] = useState<string>(
+    canViewOrganizations ? "" : userUnitId || ""
+  );
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
 
   // Fetch orgs/units/positions
@@ -106,13 +107,15 @@ function CreateUserModal({
   }, [canViewOrganizations, allOrganizations, selectedOrgId]);
 
   React.useEffect(() => {
-    if (orgUnits.length === 1 && !selectedUnitId) {
+    if (canViewOrganizations && orgUnits.length === 1 && !selectedUnitId) {
       setSelectedUnitId(orgUnits[0].unit_id);
+    } else if (!canViewOrganizations && userOrgUnits.length === 1 && !selectedUnitId) {
+      setSelectedUnitId(userOrgUnits[0].unit_id);
     }
-  }, [orgUnits, selectedUnitId]);
+  }, [canViewOrganizations, orgUnits, userOrgUnits, selectedUnitId]);
 
   React.useEffect(() => {
-    if (positions && positions.length > 0 && !selectedPositionId) {
+    if (positions && positions.length === 1 && !selectedPositionId) {
       setSelectedPositionId(positions[0].position_id);
     }
   }, [positions, selectedPositionId]);
@@ -188,7 +191,6 @@ function CreateUserModal({
       return;
     }
     try {
-      console.log('Submitting user data:', { ...form, position_id: selectedPositionId }); // Debug log
       await onCreate({ ...form, position_id: selectedPositionId });
       setForm({
         first_name: "",
@@ -202,9 +204,11 @@ function CreateUserModal({
         email: "",
       });
       setSelectedOrgId(
-        canViewOrganizations ? "" : user?.organization?.organization_id || ""
+        canViewOrganizations ? "" : userOrganizationId || ""
       );
-      setSelectedUnitId(unitId || "");
+      setSelectedUnitId(
+        canViewOrganizations ? "" : userUnitId || ""
+      );
       setSelectedPositionId("");
       setErrors({});
       setTouched({});
@@ -225,9 +229,11 @@ function CreateUserModal({
       email: "",
     });
     setSelectedOrgId(
-      canViewOrganizations ? "" : user?.organization?.organization_id || ""
+      canViewOrganizations ? "" : userOrganizationId || ""
     );
-    setSelectedUnitId(unitId || "");
+    setSelectedUnitId(
+      canViewOrganizations ? "" : userUnitId || ""
+    );
     setSelectedPositionId("");
     setErrors({});
     setTouched({});
@@ -294,6 +300,19 @@ function CreateUserModal({
                   )}
                 </div>
               )}
+              {!canViewOrganizations && (
+                <div>
+                  <label className="block text-sm font-medium text-[#0872b3] mb-2">
+                    Organization
+                  </label>
+                  <input
+                    type="text"
+                    value={user?.organization?.organization_name || ""}
+                    disabled
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-500"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-2">
                   Unit
@@ -309,7 +328,7 @@ function CreateUserModal({
                     isLoading ||
                     (canViewOrganizations
                       ? unitsLoading || !selectedOrgId || orgUnits.length === 0
-                      : loadingAllUnitsInOrg || userOrgUnits.length === 0)
+                      : true)
                   }
                 >
                   <option value="">Select unit</option>
@@ -835,7 +854,6 @@ export default function UsersPage() {
   const [organizationFilter, setOrganizationFilter] = useState<string>("");
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const { user } = useAuth();
-  const unitId = user?.unit?.unit_id;
   const canViewAll = !!user?.position?.position_access?.organizations?.view;
   const {
     data: usersData,
@@ -1417,7 +1435,6 @@ export default function UsersPage() {
         onClose={() => setShowCreate(false)}
         isLoading={createUser.isPending}
         onCreate={handleCreateUser}
-        unitId={unitId}
       />
       <EditUserModal
         open={!!editUserId}
