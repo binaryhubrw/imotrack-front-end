@@ -113,6 +113,7 @@ const defaultPermissions: position_accesses = {
     viewOwn: false,
   },
   vehicleIssues: { report: false, view: false, update: false, delete: false },
+  history: { view: false },
 };
 
 

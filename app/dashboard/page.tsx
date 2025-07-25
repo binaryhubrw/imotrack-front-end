@@ -14,6 +14,9 @@ import {
   Shield,
   Settings,
   Activity,
+  Plus,
+  Eye,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +36,9 @@ const iconMap = {
   Settings,
   FileText,
   Activity,
+  Plus,
+  Eye,
+  AlertTriangle,
 };
 
 type StatCardProps = {
@@ -96,6 +102,8 @@ const ActivityIcon = ({ type }: { type: string }) => {
       return <Shield className="w-4 h-4" />;
     case 'unit_created':
       return <MapPin className="w-4 h-4" />;
+    case 'vehicle_issue_reported':
+      return <AlertTriangle className="w-4 h-4" />;
     default:
       return <Activity className="w-4 h-4" />;
   }
@@ -113,6 +121,8 @@ const getActivityColor = (type: string) => {
       return 'text-orange-600';
     case 'unit_created':
       return 'text-teal-600';
+    case 'vehicle_issue_reported':
+      return 'text-yellow-600';
     default:
       return 'text-gray-600';
   }
@@ -145,7 +155,9 @@ export default function MainDashboard() {
     "Units": "/dashboard/shared_pages/units",
     "Positions": "/dashboard/shared_pages/positions",
     "Fleet Vehicles": "/dashboard/shared_pages/vehicles",
-    "Vehicle Models": "/dashboard/shared_pages/vehicle-model",
+    "Vehicle Models": "/dashboard/shared_pages/vehicle-models",
+    "Reservations": "/dashboard/shared_pages/reservations",
+    "Vehicle Issues": "/dashboard/shared_pages/vehicle-issues",
   };
 
   if (authLoading || !user) {
@@ -238,10 +250,38 @@ export default function MainDashboard() {
       });
     }
 
+    if (positionAccess.vehicleIssues?.view) {
+      cards.push({
+        icon: AlertCircle,
+        title: "Vehicle Issues",
+        value: stats.totalVehicleIssues,
+        bgColor: "bg-red-600",
+        textColor: "text-red-600",
+        subtitle: "Total issues",
+      });
+    }
+
+    // Reservations
+    if (positionAccess.reservations?.view) {
+      cards.push({
+        icon: FileText,
+        title: "Reservations",
+        value: stats.totalReservations,
+        bgColor: "bg-pink-600",
+        textColor: "text-pink-600",
+        subtitle: "Total reservations",
+      });
+    }
+
     return cards;
   };
 
   const dashboardCards = getDashboardCards();
+
+  // Check if user has any permissions at all
+  const hasAnyPermissions = Object.values(user.position.position_access as Record<string, Record<string, boolean>>).some(
+    (module) => Object.values(module).some(Boolean)
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
@@ -267,7 +307,7 @@ export default function MainDashboard() {
         </div>
 
         {/* Stats Cards */}
-        {dashboardCards.length > 0 && (
+        {dashboardCards.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {dashboardCards.map((card, index) => (
               <StatCard
@@ -280,10 +320,23 @@ export default function MainDashboard() {
               />
             ))}
           </div>
+        ) : (
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <Shield className="w-16 h-16 text-gray-300" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Dashboard Access</h3>
+                <p className="text-gray-600">
+                  You don&apos;t have permission to view any dashboard statistics. 
+                  Contact your administrator to get access to relevant modules.
+                </p>
+              </div>
+            </div>
+          </Card>
         )}
 
         {/* Loading overlay for stats */}
-        {isLoading && (
+        {isLoading && dashboardCards.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
@@ -300,86 +353,88 @@ export default function MainDashboard() {
           </div>
         )}
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {quickActions.length > 0 ? (
-                  quickActions.map((action) => {
-                    const IconComponent = iconMap[action.icon as keyof typeof iconMap] || Activity;
-                    return (
-                      <button
-                        key={action.id}
-                        onClick={() => router.push(action.href)}
-                        className="block w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white"
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${action.color}`}>
-                            <IconComponent className="w-4 h-4" />
+        {/* Main Content Grid - Only show if user has any permissions */}
+        {hasAnyPermissions && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Quick Actions */}
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {quickActions.length > 0 ? (
+                    quickActions.map((action) => {
+                      const IconComponent = iconMap[action.icon as keyof typeof iconMap] || Activity;
+                      return (
+                        <button
+                          key={action.id}
+                          onClick={() => router.push(action.href)}
+                          className="block w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white hover:bg-gray-50"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${action.color}`}>
+                              <IconComponent className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-900">{action.title}</h4>
+                              <p className="text-sm text-gray-500">{action.description}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-medium text-gray-900">{action.title}</h4>
-                            <p className="text-sm text-gray-500">{action.description}</p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No quick actions available</p>
-                    <p className="text-sm">Check your position permissions</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No quick actions available</p>
+                      <p className="text-sm">Check your position permissions</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Recent Activity */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {recentActivity.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentActivity.map((activity) => (
-                      <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                        <div className={`p-2 rounded-lg bg-white ${getActivityColor(activity.type)}`}>
-                          <ActivityIcon type={activity.type} />
+            {/* Recent Activity */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    Recent Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {recentActivity.length > 0 ? (
+                    <div className="space-y-4">
+                      {recentActivity.map((activity) => (
+                        <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                          <div className={`p-2 rounded-lg bg-white ${getActivityColor(activity.type)}`}>
+                            <ActivityIcon type={activity.type} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{activity.message}</p>
+                            <p className="text-xs text-gray-500">{formatTimeAgo(activity.timestamp)}</p>
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                          <p className="text-xs text-gray-500">{formatTimeAgo(activity.timestamp)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>No recent activity</p>
-                    <p className="text-sm">Activity will appear here as changes are made</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No recent activity</p>
+                      <p className="text-sm">Activity will appear here as changes are made</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Position Access Overview */}
         <Card>
@@ -390,34 +445,45 @@ export default function MainDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(user.position.position_access as Record<string, Record<string, boolean>>).map(([module, permissions]) => {
-                const permissionCount = Object.values(permissions).filter(Boolean).length;
-                const totalPermissions = Object.keys(permissions).length;
-                const hasAnyPermission = permissionCount > 0;
-                
-                return (
-                  <div key={module} className={`p-4 rounded-lg border ${hasAnyPermission ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900 capitalize">{module}</h4>
-                      <Badge variant={hasAnyPermission ? "default" : "secondary"}>
-                        {permissionCount}/{totalPermissions}
-                      </Badge>
+            {hasAnyPermissions ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(user.position.position_access as Record<string, Record<string, boolean>>).map(([module, permissions]) => {
+                  const permissionCount = Object.values(permissions).filter(Boolean).length;
+                  const totalPermissions = Object.keys(permissions).length;
+                  const hasAnyPermission = permissionCount > 0;
+                  
+                  return (
+                    <div key={module} className={`p-4 rounded-lg border ${hasAnyPermission ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-gray-900 capitalize">{module}</h4>
+                        <Badge variant={hasAnyPermission ? "default" : "secondary"}>
+                          {permissionCount}/{totalPermissions}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        {Object.entries(permissions).map(([action, hasPermission]) => (
+                          <div key={action} className="flex items-center justify-between text-sm">
+                            <span className={hasPermission ? "text-gray-900" : "text-gray-400"}>
+                              {action}
+                            </span>
+                            <div className={`w-2 h-2 rounded-full ${hasPermission ? "bg-green-500" : "bg-gray-300"}`} />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      {Object.entries(permissions).map(([action, hasPermission]) => (
-                        <div key={action} className="flex items-center justify-between text-sm">
-                          <span className={hasPermission ? "text-gray-900" : "text-gray-400"}>
-                            {action}
-                          </span>
-                          <div className={`w-2 h-2 rounded-full ${hasPermission ? "bg-green-500" : "bg-gray-300"}`} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Shield className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Permissions Assigned</h3>
+                <p className="text-gray-600">
+                  Your position doesn&apos;t have any permissions assigned. 
+                  Contact your administrator to get the appropriate access levels.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

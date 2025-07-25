@@ -56,6 +56,7 @@ const defaultPermissions = {
     viewOwn: false,
   },
   vehicleIssues: { report: false, view: false, update: false, delete: false },
+  history: { view: false },
 };
 
 export default function PositionDetailPage() {

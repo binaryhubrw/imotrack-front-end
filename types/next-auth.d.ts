@@ -608,3 +608,12 @@ export type AuditLog = {
 };
 
 
+
+
+export interface NoPermissionUIProps {
+  resource?: string;
+  onGoBack?: () => void;
+  onGoHome?: () => void;
+  onContactSupport?: () => void;
+  showRefresh?: boolean;
+}
