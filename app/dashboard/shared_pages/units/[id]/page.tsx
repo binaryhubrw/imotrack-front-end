@@ -37,6 +37,12 @@ export default function UnitDetailPage() {
   const [showCreatePosition, setShowCreatePosition] = useState(false);
   const createPosition = useCreatePosition();
   const { user } = useAuth();
+  const [statusFilter, setStatusFilter] = useState("");
+  const filteredPositions = unit ? (
+    statusFilter
+      ? unit.positions.filter((pos) => pos.position_status === statusFilter)
+      : unit.positions
+  ) : [];
 
   // Helper: is super admin if has organizations access
   const isSuperAdmin = !!user?.position?.position_access?.organizations;
@@ -94,6 +100,7 @@ export default function UnitDetailPage() {
     position_description: string;
     unit_id?: string;
     position_access: position_accesses;
+    user_ids: string[];
   }) => {
     let position_access = data.position_access;
     // If not super admin, restrict permissions
@@ -104,6 +111,7 @@ export default function UnitDetailPage() {
         reservations: {
           create: false,
           view: false,
+          updateReason: false,
           update: false,
           delete: false,
           cancel: false,
@@ -126,7 +134,8 @@ export default function UnitDetailPage() {
       position_name: data.position_name,
       position_description: data.position_description,
       unit_id: id, // always use id from params
-      position_access,
+      position_access
+      // user_ids removed
     });
     setShowCreatePosition(false);
     router.push('/dashboard/shared_pages/positions');
@@ -321,9 +330,23 @@ export default function UnitDetailPage() {
                 New Position
               </Button>
             </div>
-            {unit.positions && unit.positions.length > 0 ? (
+            {/* Filter dropdown */}
+            <div className="mb-4">
+              <label className="mr-2 font-medium text-sm">Filter by Status:</label>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="border rounded px-2 py-1"
+              >
+                <option value="">All Statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="DISACTIVATED">Disactivated</option>
+              </select>
+            </div>
+            {filteredPositions && filteredPositions.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {unit.positions.map((pos) => {
+                {filteredPositions.map((pos) => {
                   // determine color classes based on status
                   let cardColor = "bg-gray-50 border-gray-200";
                   if (pos.position_status === "ACTIVE") {

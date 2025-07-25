@@ -226,14 +226,32 @@ export default function DashboardLayout({
         <div className="flex items-center justify-between border-b border-[#0872B3] p-4">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo/logo.png"
+              src={(() => {
+                const logo = user.organization?.organization_logo?.trim();
+                if (!logo) return "/logo/logo.png";
+
+                try {
+                  // Test if it's a valid URL or starts with / for local paths
+                  if (
+                    logo.startsWith("/") ||
+                    logo.startsWith("./") ||
+                    logo.startsWith("../")
+                  ) {
+                    return logo;
+                  }
+                  new URL(logo); // This will throw if invalid URL
+                  return logo;
+                } catch {
+                  return "/logo/logo.png";
+                }
+              })()}
               width={40}
               height={40}
-              alt="logo"
-              className="rounded-sm"
+              alt="Organization Logo"
+              className="rounded-full object-cover shadow-lg ring-4 ring-white"
             />
             <span className="text-lg font-bold capitalize">
-              {user.position.position_name} Panel
+              {user.organization.organization_name}
             </span>
           </div>
           <button
@@ -312,13 +330,24 @@ export default function DashboardLayout({
                 onClick={() => setShowSettings((v) => !v)}
                 className="flex items-center gap-3 hover:bg-gray-100 p-2 rounded-lg"
               >
-                <Image
-                  width={24}
-                  height={24}
-                  src={user.user.avatar || "/default-avatar.png"}
-                  alt={`${user.user.first_name} ${user.user.last_name}`}
-                  className="rounded-full object-cover shadow-lg ring-4 ring-white"
-                />
+                {user.user.avatar ? (
+                  <Image
+                    width={24}
+                    height={24}
+                    src={user.user.avatar}
+                    alt={`${user.user.first_name} ${user.user.last_name}`}
+                    className="rounded-full object-cover shadow-lg ring-4 ring-white"
+                  />
+                ) : (
+                  <div
+                    className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-200 text-blue-800 font-bold text-base shadow-lg ring-4 ring-white"
+                    aria-label={`${user.user.first_name} ${user.user.last_name}`}
+                  >
+                    {`${user.user.first_name?.[0] || ""}${
+                      user.user.last_name?.[0] || ""
+                    }`.toUpperCase()}
+                  </div>
+                )}
 
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-700">

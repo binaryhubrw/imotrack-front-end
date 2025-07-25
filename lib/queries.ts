@@ -485,6 +485,20 @@ export const useOrganizationUnits = () => {
   });
 };
 
+
+// --- Get all positions in a unit ---
+export const useUnitPositions = (unit_id: string) => {
+  return useQuery<Position[], Error>({
+    queryKey: ['unit-positions', unit_id],
+    queryFn: async () => {
+      const { data } = await api.get<ApiResponse<Position[]>>(`/v2/organizations/units/${unit_id}/positions`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!unit_id,
+  });
+};
+
 // --- GET /v2/organizations/{organization_id}/units ---
 export const useOrganizationUnitsByOrgId = (organization_id: string) => {
   return useQuery<Unit[], Error>({
@@ -616,18 +630,6 @@ export const useOrganizationDeleteUnit = () => {
   });
 };
 
-// --- Get all positions in a unit ---
-export const useUnitPositions = (unit_id: string) => {
-  return useQuery<Position[], Error>({
-    queryKey: ['unit-positions', unit_id],
-    queryFn: async () => {
-      const { data } = await api.get<ApiResponse<Position[]>>(`/v2/organizations/units/${unit_id}/positions`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
-    },
-    enabled: !!unit_id,
-  });
-};
 
 // --- Create a new position in a unit ---
 export const useCreatePosition = () => {
@@ -1192,7 +1194,14 @@ export const useReservations = () => {
 };
 
 export const useMyReservations = () => {
-  
+  return useQuery<Reservation, Error>({
+    queryKey: ['myReservations'],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Reservation }>('/v2/reservations/my');
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+  });
 }
 
 export const useCreateReservation = () => {
@@ -1349,6 +1358,38 @@ export const useUpdateReservation = () => {
   });
 };
 
+
+// --- Update starting odometer and fuel provided for a reserved vehicle ---
+export const useReservationOdometerFuel = () => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    unknown,
+    Error,
+    { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
+  >({
+    mutationFn: async ({ reservedVehicleId, dto }) => {
+      try {
+        const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.data) throw new Error('No data');
+        toast.success('Odometer and fuel updated!');
+        return response.data;
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error !== null && 'response' in error) {
+          // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
+          toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
+        } else {
+          toast.error((error as Error).message || 'Failed to update odometer/fuel');
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+    },
+  });
+};
 export const useVehicleReservationAssignment = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { id: string; dto: AssignVehicleDto }>({
@@ -1399,9 +1440,32 @@ export const useVehicleReservationAssignment = () => {
   });
 };
 
-export const useReservedVehicleStartProps=()=>{
-  
-}
+export const useUpdateReservationReason = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; reason: string }>({
+    mutationFn: async ({ id, reason }) => {
+      const { data } = await api.patch<{ message: string; data: Reservation }>(`/v2/reservations/${id}/reason`, { reason });
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      toast.success('Reservation reason updated successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      }
+      toast.error(apiMsg || 'Failed to update reservation reason');
+    },
+  });
+};
 export const useStartReservation = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { reservedVehicleId: string; dto: StartReservationDto }>({
@@ -1550,37 +1614,7 @@ export const useDeleteReservation = () => {
   });
 };
 
-// --- Update starting odometer and fuel provided for a reserved vehicle ---
-export const useReservationOdometerFuel = () => {
-  const queryClient = useQueryClient();
-  return useMutation<
-    unknown,
-    Error,
-    { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
-  >({
-    mutationFn: async ({ reservedVehicleId, dto }) => {
-      try {
-        const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (!response.data) throw new Error('No data');
-        toast.success('Odometer and fuel updated!');
-        return response.data;
-      } catch (error: unknown) {
-        if (typeof error === 'object' && error !== null && 'response' in error) {
-          // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
-          toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
-        } else {
-          toast.error((error as Error).message || 'Failed to update odometer/fuel');
-        }
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-    },
-  });
-};
+
 
 
 

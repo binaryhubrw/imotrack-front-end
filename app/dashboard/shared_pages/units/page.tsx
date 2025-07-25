@@ -72,15 +72,19 @@ function CreateUnitModal({
   onClose,
   onCreate,
   organizations,
+  userOrganizationId,
+  canViewOrganizations,
 }: {
   open: boolean;
   onClose: () => void;
   onCreate: (data: CreateUnitDto) => void;
   organizations: Array<{ organization_id: string; organization_name: string }>;
+  userOrganizationId?: string;
+  canViewOrganizations: boolean;
 }) {
   const [form, setForm] = useState({
     unit_name: "",
-    organization_id: "",
+    organization_id: userOrganizationId || "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -94,8 +98,11 @@ function CreateUnitModal({
     e.preventDefault();
     setSubmitting(true);
     try {
-      await onCreate(form);
-      setForm({ unit_name: "", organization_id: "" });
+      await onCreate({
+        unit_name: form.unit_name,
+        organization_id: canViewOrganizations ? form.organization_id : (userOrganizationId || ""),
+      });
+      setForm({ unit_name: "", organization_id: userOrganizationId || "" });
       onClose();
     } catch {
       // error handled in mutation
@@ -126,23 +133,22 @@ function CreateUnitModal({
             required
             className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
           />
-        
-
-          <select
-            name="organization_id"
-            value={form.organization_id}
-            onChange={handleChange}
-            required
-            className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] rounded w-full"
-          >
-            <option value="">Select Organization</option>
-            {organizations.map((org) => (
-              <option key={org.organization_id} value={org.organization_id}>
-                {org.organization_name}
-              </option>
-            ))}
-          </select>
-
+          {canViewOrganizations ? (
+            <select
+              name="organization_id"
+              value={form.organization_id}
+              onChange={handleChange}
+              required
+              className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] rounded w-full"
+            >
+              <option value="">Select Organization</option>
+              {organizations.map((org) => (
+                <option key={org.organization_id} value={org.organization_id}>
+                  {org.organization_name}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <Button
             type="submit"
             className="w-full bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200 h-11 text-base"
@@ -176,6 +182,7 @@ export default function UnitsPage() {
   const { user } = useAuth();
   const canViewOrganizations =
     !!user?.position?.position_access?.organizations?.view;
+  const userOrganizationId = user?.organization?.organization_id;
   const { data: orgData } = useOrganizations(1, 100);
   const organizations = orgData?.organizations || [];
 
@@ -718,6 +725,8 @@ export default function UnitsPage() {
           await createUnit.mutateAsync(data);
         }}
         organizations={organizations}
+        userOrganizationId={userOrganizationId}
+        canViewOrganizations={canViewOrganizations}
       />
       {/* Edit Modal */}
       {showEdit && editingUnit && (

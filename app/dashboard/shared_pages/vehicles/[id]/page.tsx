@@ -21,13 +21,16 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { TransmissionMode, VehicleType } from "@/types/enums";
-
+import { TransmissionMode } from "@/types/enums";
+import Image from "next/image";
+import { useAuth } from '@/hooks/useAuth';
 
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
+  const vehicleAccess = user?.position?.position_access?.vehicles;
   const { data: vehicle, isLoading, isError, refetch } = useVehicle(id);
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
@@ -35,9 +38,9 @@ export default function VehicleDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Remove vehicle_type from editForm and edit modal
   const [editForm, setEditForm] = useState({
     plate_number: '',
-    vehicle_type: '',
     transmission_mode: '',
     vehicle_model_id: '',
     vehicle_year: 2020,
@@ -53,7 +56,6 @@ export default function VehicleDetailPage() {
     if (vehicle) {
       setEditForm({
         plate_number: vehicle.plate_number || '',
-        vehicle_type: vehicle.vehicle_type || '',
         transmission_mode: vehicle.transmission_mode || '',
         vehicle_model_id: vehicle.vehicle_model_id || '',
         vehicle_year: vehicle.vehicle_year || 2020,
@@ -70,7 +72,6 @@ export default function VehicleDetailPage() {
     if (!vehicle) return;
     setEditForm({
       plate_number: vehicle.plate_number || '',
-      vehicle_type: vehicle.vehicle_type || '',
       transmission_mode: vehicle.transmission_mode || '',
       vehicle_model_id: vehicle.vehicle_model_id || '',
       vehicle_year: vehicle.vehicle_year || 2020,
@@ -91,7 +92,6 @@ export default function VehicleDetailPage() {
         id,
         updates: {
           ...editForm,
-          vehicle_type: editForm.vehicle_type as VehicleType,
           transmission_mode: editForm.transmission_mode as TransmissionMode,
         },
       });
@@ -120,22 +120,7 @@ export default function VehicleDetailPage() {
     }
   };
 
-  // Local enums for select options
-  const VehicleTypeOptions = {
-    AMBULANCE: "AMBULANCE",
-    SEDAN: "SEDAN",
-    SUV: "SUV",
-    TRUCK: "TRUCK",
-    VAN: "VAN",
-    MOTORCYCLE: "MOTORCYCLE",
-    BUS: "BUS",
-    OTHER: "OTHER"
-  };
 
-  const getVehicleTypeLabel = (type: string) => {
-    const options = Object.values(VehicleTypeOptions).map(value => ({ value, label: value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }));
-    return options.find(option => option.value === type)?.label || type;
-  };
 
   if (isLoading) {
     return (
@@ -157,6 +142,13 @@ export default function VehicleDetailPage() {
       </div>
     );
   }
+  if (!vehicleAccess?.view) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-lg font-semibold">You do not have permission to view this vehicle.</div>
+      </div>
+    );
+  }
   if (isError || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -175,14 +167,20 @@ export default function VehicleDetailPage() {
             Back
           </Button>
           <div className="flex gap-2">
-            <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={handleEdit}>
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit Model
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              <FontAwesomeIcon icon={faTrash} className="mr-2" />
-              Delete
-            </Button>
+            {/* Only show Edit if user has update permission */}
+            {vehicleAccess?.update && (
+              <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={handleEdit}>
+                <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                Edit Vehicle
+              </Button>
+            )}
+            {/* Only show Delete if user has delete permission */}
+            {vehicleAccess?.delete && (
+              <Button variant="destructive" onClick={handleDelete}>
+                <FontAwesomeIcon icon={faTrash} className="mr-2" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
 
@@ -193,9 +191,9 @@ export default function VehicleDetailPage() {
               onSubmit={handleEditSave}
               className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
             >
-              <h2 className="text-xl font-bold mb-2">Edit Vehicle Model</h2>
+              <h2 className="text-xl font-bold mb-2">Edit Vehicle</h2>
               
-              <label className="text-sm font-medium">Model Name
+              <label className="text-sm font-medium">Plate Number
                 <input
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
                   value={editForm.plate_number}
@@ -204,18 +202,16 @@ export default function VehicleDetailPage() {
                 />
               </label>
 
-              <label className="text-sm font-medium">Vehicle Type
+              <label className="text-sm font-medium">Transmission Mode
                 <select
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
-                  value={editForm.vehicle_type}
-                  onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value }))}
+                  value={editForm.transmission_mode}
+                  onChange={e => setEditForm(f => ({ ...f, transmission_mode: e.target.value }))}
                   required
                 >
-                  <option value="">Select vehicle type</option>
-                  {Object.values(VehicleTypeOptions).map(value => (
-                    <option key={value} value={value}>
-                      {value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                    </option>
+                  <option value="">Select transmission mode</option>
+                  {Object.values(TransmissionMode).map(mode => (
+                    <option key={mode} value={mode}>{mode.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}</option>
                   ))}
                 </select>
               </label>
@@ -229,6 +225,12 @@ export default function VehicleDetailPage() {
                 />
               </label>
 
+              {/* Show vehicle_status as a badge or text */}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm font-medium">Status:</span>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${vehicle?.vehicle_status === 'AVAILABLE' ? 'bg-green-100 text-green-700' : vehicle?.vehicle_status === 'OCCUPIED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{vehicle?.vehicle_status}</span>
+              </div>
+
               <div className="flex gap-3 mt-4">
                 <button
                   type="button"
@@ -241,7 +243,7 @@ export default function VehicleDetailPage() {
                 <button
                   type="submit"
                   className="flex-1 py-2 px-4 bg-[#0872b3] text-white rounded hover:bg-[#065d8f]"
-                  disabled={submitting}
+                  disabled={submitting || !vehicleAccess?.update}
                 >
                   {submitting ? 'Saving...' : 'Save'}
                 </button>
@@ -256,45 +258,93 @@ export default function VehicleDetailPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FontAwesomeIcon icon={faCar} className="text-2xl" />
-                <h1 className="text-2xl font-bold">Vehicle Model Details</h1>
+                <h1 className="text-2xl font-bold">Vehicle Details</h1>
               </div>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                {getVehicleTypeLabel(vehicle.vehicle_type)}
+              {/* Show vehicle_status as a badge or text */}
+              <div className={`text-sm px-3 py-1 rounded-full ${vehicle.vehicle_status === 'AVAILABLE' ? 'bg-green-100 text-green-700' : vehicle.vehicle_status === 'OCCUPIED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                {vehicle.vehicle_status}
               </div>
             </div>
           </div>
           
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Plate Number */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Model ID</div>
-                <div className="font-medium text-gray-900">{id}</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Plate Number</div>
+                <div className="font-medium text-gray-900">{vehicle.plate_number}</div>
               </div>
-              
+              {/* Transmission Mode */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Model Name</div>
-                <div className="font-medium text-gray-900">{vehicleModel?.vehicle_model_name}</div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Transmission Mode</div>
+                <div className="font-medium text-gray-900">{vehicle.transmission_mode}</div>
               </div>
-              
+              {/* Vehicle Year */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Type</div>
-                <div className="font-medium text-gray-900">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {getVehicleTypeLabel(vehicle.vehicle_type)}
-                  </span>
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Year</div>
+                <div className="font-medium text-gray-900">{vehicle.vehicle_year}</div>
+              </div>
+              {/* Vehicle Capacity */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Capacity</div>
+                <div className="font-medium text-gray-900">{vehicle.vehicle_capacity}</div>
+              </div>
+              {/* Energy Type */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Energy Type</div>
+                <div className="font-medium text-gray-900">{vehicle.energy_type}</div>
+              </div>
+              {/* Last Service Date */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Last Service Date</div>
+                <div className="font-medium text-gray-900">{vehicle.last_service_date ? new Date(vehicle.last_service_date).toLocaleString() : 'N/A'}</div>
+              </div>
+              {/* Vehicle Photo */}
+              {vehicle.vehicle_photo && typeof vehicle.vehicle_photo === 'string' && vehicle.vehicle_photo.trim() !== '' ? (
+                <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Photo</div>
+                  {/* Only render Image if src is a valid URL or path */}
+                  {(() => {
+                    try {
+                      // Try to construct a URL to check validity
+                      // Accepts both absolute and relative URLs
+                      const src = vehicle.vehicle_photo.startsWith('http')
+                        ? vehicle.vehicle_photo
+                        : `/uploads/${vehicle.vehicle_photo}`;
+                      // Throws if invalid
+                      new URL(src, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+                      return (
+                        <Image width={500} height={500} src={src} alt="Vehicle" className="rounded shadow object-cover border" />
+                      );
+                    } catch {
+                      return <div className="text-gray-400 text-xs">Invalid image URL</div>;
+                    }
+                  })()}
                 </div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Manufacturer</div>
-                <div className="font-medium text-gray-900">{vehicleModel?.manufacturer_name}</div>
-              </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Created At</div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.created_at ? new Date(vehicle.created_at).toLocaleString() : 'N/A'}
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Photo</div>
+                  <div className="text-gray-400 text-xs">No photo available</div>
                 </div>
+              )}
+              {/* Organization Name */}
+              {vehicle.organization && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide">Organization</div>
+                  <div className="font-medium text-gray-900">{vehicle.organization.organization_name}</div>
+                </div>
+              )}
+              {/* Model Name and Manufacturer */}
+              {vehicle.vehicle_model && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide">Model</div>
+                  <div className="font-medium text-gray-900">{vehicle.vehicle_model.manufacturer_name} {vehicle.vehicle_model.vehicle_model_name}</div>
+                </div>
+              )}
+              {/* Status (already shown above, but keep for completeness) */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Status</div>
+                <div className={`font-medium text-gray-900 inline-block px-2 py-1 rounded-full text-xs font-semibold ${vehicle.vehicle_status === 'AVAILABLE' ? 'bg-green-100 text-green-700' : vehicle.vehicle_status === 'OCCUPIED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{vehicle.vehicle_status}</div>
               </div>
             </div>
 
@@ -309,7 +359,7 @@ export default function VehicleDetailPage() {
                       {vehicleModel?.manufacturer_name} {vehicleModel?.vehicle_model_name}
                     </div>
                     <div className="text-blue-700 text-sm">
-                      This is a {(getVehicleTypeLabel(vehicle.vehicle_type) || vehicle.vehicle_type || 'Unknown').toLowerCase()} model manufactured by {vehicleModel?.manufacturer_name}.
+                      This Car was manufactured by {vehicleModel?.manufacturer_name}.
                     </div>
                   </div>
                 </div>

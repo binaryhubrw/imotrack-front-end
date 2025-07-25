@@ -47,6 +47,7 @@ export interface position_accesses {
     cancel: boolean;
     approve: boolean;
     assignVehicle: boolean;
+    updateReason: boolean;
     odometerFuel: boolean;
     start: boolean;
     complete: boolean;
@@ -203,7 +204,7 @@ export type AuthenticatedUserWithPosition = {
     organization_id: string;
     organization_name: string;
     organization_email: string;
-    organization_url: string;
+    organization_logo: string;
     organization_address: string;
     organization_created_at: string;
   };

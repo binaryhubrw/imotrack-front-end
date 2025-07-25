@@ -37,6 +37,7 @@ import {
   useOrganizationUnitsByOrgId,
   useUser,
   useUpdateUser,
+  useOrganizationUnits,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,12 +72,17 @@ function CreateUserModal({
   const { user } = useAuth();
   const canViewOrganizations =
     !!user?.position?.position_access?.organizations?.view;
-
-  // State for org/unit/position
+  const userOrganizationId = user?.organization?.organization_id;
+  // For normal users, get all units in their organization
+  const { data: allUnitsInOrg = [], isLoading: loadingAllUnitsInOrg } = useOrganizationUnits();
+  const userOrgUnits = useMemo(() => {
+    if (!userOrganizationId) return [];
+    return allUnitsInOrg.filter((unit) => unit.organization_id === userOrganizationId);
+  }, [allUnitsInOrg, userOrganizationId]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     canViewOrganizations ? "" : user?.organization?.organization_id || ""
   );
-  const [selectedUnitId, setSelectedUnitId] = useState<string>(unitId || "");
+  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
 
   // Fetch orgs/units/positions
@@ -169,11 +175,20 @@ function CreateUserModal({
   };
   const handleSubmit = async (e: React.MouseEvent) => {
     e.preventDefault();
-    setTouched(
-      Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {})
-    );
-    if (!validateForm()) return;
+    // Include ALL required fields in touched state
+    const allTouchedFields = {
+      ...Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
+      organization_id: true,
+      unit_id: true,
+      position_id: true
+    };
+    setTouched(allTouchedFields);
+    if (!validateForm()) {
+      console.log('Validation failed:', errors); // Debug log
+      return;
+    }
     try {
+      console.log('Submitting user data:', { ...form, position_id: selectedPositionId }); // Debug log
       await onCreate({ ...form, position_id: selectedPositionId });
       setForm({
         first_name: "",
@@ -193,8 +208,8 @@ function CreateUserModal({
       setSelectedPositionId("");
       setErrors({});
       setTouched({});
-    } catch {
-      // error handled by mutation
+    } catch (error) {
+      console.error('Create user error:', error);
     }
   };
   const handleClose = () => {
@@ -291,18 +306,24 @@ function CreateUserModal({
                   }}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
                   disabled={
-                    unitsLoading ||
                     isLoading ||
-                    !selectedOrgId ||
-                    orgUnits.length === 0
+                    (canViewOrganizations
+                      ? unitsLoading || !selectedOrgId || orgUnits.length === 0
+                      : loadingAllUnitsInOrg || userOrgUnits.length === 0)
                   }
                 >
                   <option value="">Select unit</option>
-                  {orgUnits.map((unit) => (
-                    <option key={unit.unit_id} value={unit.unit_id}>
-                      {unit.unit_name}
-                    </option>
-                  ))}
+                  {canViewOrganizations
+                    ? orgUnits.map((unit) => (
+                        <option key={unit.unit_id} value={unit.unit_id}>
+                          {unit.unit_name}
+                        </option>
+                      ))
+                    : userOrgUnits.map((unit) => (
+                        <option key={unit.unit_id} value={unit.unit_id}>
+                          {unit.unit_name}
+                        </option>
+                      ))}
                 </select>
                 {errors.unit_id && touched.unit_id && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -608,6 +629,7 @@ function CreateUserModal({
               Cancel
             </Button>
             <Button
+            type="submit"
               onClick={handleSubmit}
               disabled={
                 isLoading ||

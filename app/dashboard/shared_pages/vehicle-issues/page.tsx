@@ -1,3 +1,4 @@
+'use client'
 import React, { useState, useMemo } from "react";
 import {
   Card,
@@ -24,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Eye } from "lucide-react";
+import { Search, Eye, AlertTriangle } from "lucide-react";
 import { useVehicleIssues } from "@/lib/queries";
 import Link from "next/link";
 import { SkeletonVehicleIssueDetails } from "@/components/ui/skeleton";
@@ -61,9 +62,21 @@ export default function IssueManagementPage() {
   }
   if (isError) {
     return (
-      <div className="p-8 text-center text-red-500">
-        Failed to load vehicle issues.
-      </div>
+      <div className="flex flex-col items-center justify-center p-8 rounded-xl bg-red-50 border border-red-200 shadow-sm">
+      <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+      <h2 className="text-lg font-semibold text-red-600 mb-2">
+        Failed to load vehicle issues
+      </h2>
+      <p className="text-sm text-red-500 mb-4">
+        Something went wrong while fetching data. Please try again later.
+      </p>
+      <button
+        onClick={() => location.reload()}
+        className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+      >
+        Retry
+      </button>
+    </div>
     );
   }
 

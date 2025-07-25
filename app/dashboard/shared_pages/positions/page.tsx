@@ -107,6 +107,7 @@ const defaultPermissions: position_accesses = {
     approve: false,
     assignVehicle: false,
     odometerFuel: false,
+    updateReason: false,
     start: false,
     complete: false,
     viewOwn: false,

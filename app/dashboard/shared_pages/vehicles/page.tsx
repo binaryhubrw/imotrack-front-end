@@ -24,7 +24,6 @@ import {
   Car,
   Image as ImageIcon,
   Loader2,
-  Calendar,
   CheckCircle,
 } from "lucide-react";
 import {
@@ -732,6 +731,11 @@ function CreateVehicleModal({
 // Main Vehicles Page Component
 export default function VehiclesPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const vehicleAccess = user?.position?.position_access?.vehicles;
+  const { data: vehicles = [], isLoading, isError } = useVehicles();
+  const deleteVehicle = useDeleteVehicle();
+  const { data: vehicleModels = [] } = useVehicleModels();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -755,12 +759,34 @@ export default function VehiclesPage() {
       // handled by mutation
     }
   };
-
-  // Queries and Mutations
-  const { data: vehicles = [], isLoading, isError } = useVehicles();
-  const deleteVehicle = useDeleteVehicle();
-  const { data: vehicleModels = [] } = useVehicleModels();
-  const { user } = useAuth();
+  // Always define helper functions before permission check
+  const handleDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
+    try {
+      await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
+      setVehicleToDelete(null);
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+    }
+  };
+  const handleEditVehicle = async (
+    id: string,
+    data: Partial<CreateVehicleDto>
+  ) => {
+    // Fix type for vehicle_type and transmission_mode
+    const updateData = {
+      ...data,
+      vehicle_type: data.vehicle_type as VehicleType | undefined,
+      transmission_mode: data.transmission_mode as TransmissionMode | undefined,
+      vehicle_photo:
+        data.vehicle_photo && data.vehicle_photo instanceof File
+          ? data.vehicle_photo
+          : undefined,
+    };
+    await updateVehicle.mutateAsync({ id, updates: updateData });
+    setEditModalOpen(false);
+    setVehicleToEdit(null);
+  };
 
   // Table Columns - keep only essential ones
   const columns: ColumnDef<Vehicle>[] = useMemo(
@@ -835,35 +861,40 @@ export default function VehiclesPage() {
         header: "Actions",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setVehicleToEdit(row.original);
-                setEditModalOpen(true);
-              }}
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setVehicleToDelete(row.original);
-              }}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {/* Only show Edit if user has update permission */}
+            {vehicleAccess?.update && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVehicleToEdit(row.original);
+                  setEditModalOpen(true);
+                }}
+              >
+                <Edit className="w-4 h-4" />
+              </Button>
+            )}
+            {/* Only show Delete if user has delete permission */}
+            {vehicleAccess?.delete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVehicleToDelete(row.original);
+                }}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         ),
       },
     ],
-    [router, vehicleModels]
+    [router, vehicleModels, vehicleAccess]
   );
-
   const table = useReactTable({
     data: vehicles,
     columns,
@@ -889,37 +920,6 @@ export default function VehiclesPage() {
     },
   });
 
-  // Handle delete vehicle
-  const handleDeleteVehicle = async () => {
-    if (!vehicleToDelete) return;
-
-    try {
-      await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
-      setVehicleToDelete(null);
-    } catch (error) {
-      console.error("Error deleting vehicle:", error);
-    }
-  };
-
-  const handleEditVehicle = async (
-    id: string,
-    data: Partial<CreateVehicleDto>
-  ) => {
-    // Fix type for vehicle_type and transmission_mode
-    const updateData = {
-      ...data,
-      vehicle_type: data.vehicle_type as VehicleType | undefined,
-      transmission_mode: data.transmission_mode as TransmissionMode | undefined,
-      vehicle_photo:
-        data.vehicle_photo && data.vehicle_photo instanceof File
-          ? data.vehicle_photo
-          : undefined,
-    };
-    await updateVehicle.mutateAsync({ id, updates: updateData });
-    setEditModalOpen(false);
-    setVehicleToEdit(null);
-  };
-
   // Stats calculation
   const stats = useMemo(() => {
     const totalVehicles = vehicles.length;
@@ -928,20 +928,26 @@ export default function VehiclesPage() {
       return acc;
     }, {} as Record<string, number>);
 
-    const averageYear =
-      vehicles.length > 0
-        ? Math.round(
-            vehicles.reduce((sum, v) => sum + v.vehicle_year, 0) /
-              vehicles.length
-          )
-        : 0;
+    // New: Available and Occupied counts
+    const availableCount = vehicles.filter(v => v.vehicle_status === 'AVAILABLE').length;
+    const occupiedCount = vehicles.filter(v => v.vehicle_status === 'OCCUPIED').length;
 
     return {
       totalVehicles,
       vehiclesByType,
-      averageYear,
+      availableCount,
+      occupiedCount,
     };
   }, [vehicles]);
+
+  // Permission check: if no view, show denied
+  if (!vehicleAccess?.view) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-lg font-semibold">You do not have permission to view vehicles.</div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <SkeletonVehiclesTable />;
@@ -977,12 +983,15 @@ export default function VehiclesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Add Vehicle
-              </Button>
+              {/* Only show Add Vehicle if user has create permission */}
+              {vehicleAccess?.create && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add Vehicle
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1008,7 +1017,7 @@ export default function VehiclesPage() {
           {/* Active Vehicles (for now, just total) */}
           <Card className="bg-[#f0f3f7] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
             <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3 flex items-center justify-center animate-pulse group-hover:scale-110 transition-transform">
+              <div className="rounded-full bg-blue-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
                 <CheckCircle className="w-6 h-6 text-blue-600" />
               </div>
               <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
@@ -1021,19 +1030,37 @@ export default function VehiclesPage() {
               </div>
             </CardContent>
           </Card>
-          {/* Average Year */}
-          <Card className="bg-[#f7f3f0] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+
+          {/* Available Vehicles */}
+          <Card className="bg-[#f7fbe9] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
             <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-orange-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
-                <Calendar className="w-6 h-6 text-orange-500" />
+              <div className="rounded-full bg-green-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
+                <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
-              <CardTitle className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
-                Average Year
+              <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">
+                Available Vehicles
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-orange-600">
-                {stats.averageYear || "N/A"}
+              <div className="text-2xl font-bold text-green-700">
+                {stats.availableCount}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Occupied Vehicles */}
+          <Card className="bg-[#fbe9e9] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
+            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
+              <div className="rounded-full bg-red-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
+                <Car className="w-6 h-6 text-red-600" />
+              </div>
+              <CardTitle className="text-xs font-semibold text-red-700 uppercase tracking-wider">
+                Occupied Vehicles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+              <div className="text-2xl font-bold text-red-700">
+                {stats.occupiedCount}
               </div>
             </CardContent>
           </Card>

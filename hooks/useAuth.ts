@@ -207,7 +207,7 @@ export const useAuth = () => {
             organization_id: authData.organization.organization_id,
             organization_name: authData.organization.organization_name,
             organization_email: authData.organization.organization_email,
-            organization_url: '',
+            organization_logo: authData.organization.organization_logo,
             organization_address: authData.organization.street_address,
             organization_created_at: authData.organization.created_at,
           },

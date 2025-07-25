@@ -24,7 +24,6 @@ function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; on
       setForm({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        user_nid: '',
         user_phone: user.user_phone || '',
         user_gender: user.user_gender || '',
         user_dob: user.user_dob || '',
