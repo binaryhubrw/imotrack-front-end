@@ -14,6 +14,8 @@ import type { Reservation, CreateReservationDto, ReservationStatus } from '@/typ
 import { SkeletonReservationCard } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import type { Vehicle } from '@/types/next-auth';
+import ErrorUI from '@/components/ErrorUI';
+import { useRouter } from 'next/navigation';
 
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
@@ -670,6 +672,7 @@ export default function ReservationsPage() {
   const { data: allReservations, isLoading: isLoadingAll, isError: isErrorAll } = useReservations();
   const { data: myReservations, isLoading: isLoadingMy, isError: isErrorMy } = useMyReservations();
 
+  const router = useRouter();
   // Choose which data to use
   const reservations: Reservation[] = canViewAll
     ? (allReservations || [])
@@ -887,7 +890,11 @@ export default function ReservationsPage() {
         {isLoading ? (
           <SkeletonReservationCard/>
         ) : isError ? (
-          <div className="p-8 text-center text-red-500">Failed to load reservations. Please try again.</div>
+          <ErrorUI
+            resource='reservations'
+            onBack={() => router.back()}
+            onRetry={() => {window.location.reload()}}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredReservations.map((reservation: Reservation) => (

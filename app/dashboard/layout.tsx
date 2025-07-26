@@ -25,6 +25,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardProvider } from "@/hooks/DashboardContext";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import { useNotifications } from "@/lib/queries";
 
 // Define all possible modules/pages and their nav info
 const MODULE_NAV = [
@@ -148,6 +149,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
+  const { data: notifications = [] } = useNotifications();
 
   // Permission logic
   const permissionData = useMemo(() => {
@@ -161,7 +163,8 @@ export default function DashboardLayout({
     }
 
     const access = user.position.position_access as Record<string, Record<string, boolean>>;
-    const isSuperAdmin = !!access.organizations;
+    // Super admin should have organizations view permission specifically
+    const isSuperAdmin = !!access.organizations?.view;
 
     const hasAnyAccess = (resource: string): boolean => {
       // SuperAdmin follows same rules as other users
@@ -400,8 +403,16 @@ export default function DashboardLayout({
               {user.position.position_name} Dashboard
             </h1>
             <div className="flex items-center gap-4 ml-auto">
-              <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+              <button 
+                onClick={() => router.push('/dashboard/shared_pages/notifications')}
+                className="relative p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              >
                 <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                    {notifications.length > 99 ? '99+' : notifications.length}
+                  </span>
+                )}
               </button>
               <div className="relative">
                 <button

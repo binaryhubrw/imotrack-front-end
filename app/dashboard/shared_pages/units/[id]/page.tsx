@@ -13,7 +13,7 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Ban, Building2 } from "lucide-react";
-import { CreatePositionModal } from "../../positions/page";
+import { CreatePositionModal}  from "../../positions/page";
 import { useCreatePosition } from '@/lib/queries';
 import type { position_accesses } from '@/types/next-auth';
 import { useAuth } from '@/hooks/useAuth';

@@ -1756,7 +1756,7 @@ export const useAuditLogs = (filters: {
       if (filters.page) params.append('page', String(filters.page));
       if (filters.limit) params.append('limit', String(filters.limit));
       const query = params.toString() ? `?${params.toString()}` : '';
-      const { data } = await api.get<ApiResponse<AuditLog[]>>(`/v2/audit-logs${query}`);
+      const { data } = await api.get<ApiResponse<AuditLog[]>>(`/v2/history${query}`);
       if (!data.data) throw new Error('No data');
       return data.data;
     },
