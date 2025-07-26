@@ -485,6 +485,7 @@ export type ReservationStatus =
   | "APPROVED"
   | "REJECTED"
   | "CANCELLED"
+  | "CANCELED"
   | "IN_PROGRESS"
   | "COMPLETED";
 
@@ -527,6 +528,8 @@ export interface Reservation {
   user_id: string;
   user: ReservationUser;
   reserved_vehicles: ReservedVehicle[];
+  description: string;
+  passengers: number;
 }
 
 export interface CreateReservationDto {
@@ -535,6 +538,8 @@ export interface CreateReservationDto {
   reservation_destination: string;
   departure_date: string;
   expected_returning_date: string;
+  description: string;
+  passengers: number;
 }
 
 export interface CancelReservationDto {

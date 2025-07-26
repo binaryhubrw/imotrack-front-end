@@ -25,7 +25,6 @@ import {
   CreateReservationDto,
   CancelReservationDto,
   UpdateReservationStatusDto,
-  AssignVehicleDto,
   StartReservationDto,
   CompleteReservationDto,
   Notification,
@@ -1359,66 +1358,101 @@ export const useUpdateReservation = () => {
 };
 
 
-// --- Update starting odometer and fuel provided for a reserved vehicle ---
-export const useReservationOdometerFuel = () => {
-  const queryClient = useQueryClient();
-  return useMutation<
-    unknown,
-    Error,
-    { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
-  >({
-    mutationFn: async ({ reservedVehicleId, dto }) => {
-      try {
-        const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (!response.data) throw new Error('No data');
-        toast.success('Odometer and fuel updated!');
-        return response.data;
-      } catch (error: unknown) {
-        if (typeof error === 'object' && error !== null && 'response' in error) {
-          // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
-          toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
-        } else {
-          toast.error((error as Error).message || 'Failed to update odometer/fuel');
-        }
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-    },
-  });
-};
-export const useVehicleReservationAssignment = () => {
-  const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { id: string; dto: AssignVehicleDto }>({
-    mutationFn: async ({ id, dto }) => {
-      console.log('Assigning vehicle to reservation:', { id, dto });
-      try {
-        const response = await api.post(`/v2/reservations/${id}/assign-vehicle`, dto, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-        console.log('Assign vehicle full response:', response);
-        const { data } = response;
-        console.log('Assign vehicle data:', data);
+// // --- Update starting odometer and fuel provided for a reserved vehicle ---
+// export const useReservationOdometerFuel = () => {
+//   const queryClient = useQueryClient();
+//   return useMutation<
+//     unknown,
+//     Error,
+//     { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
+//   >({
+//     mutationFn: async ({ reservedVehicleId, dto }) => {
+//       try {
+//         const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
+//           headers: { 'Content-Type': 'application/json' },
+//         });
+//         if (!response.data) throw new Error('No data');
+//         toast.success('Odometer and fuel updated!');
+//         return response.data;
+//       } catch (error: unknown) {
+//         if (typeof error === 'object' && error !== null && 'response' in error) {
+//           // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
+//           toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
+//         } else {
+//           toast.error((error as Error).message || 'Failed to update odometer/fuel');
+//         }
+//         throw error;
+//       }
+//     },
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+//     },
+//   });
+// };
+// export const useVehicleReservationAssignment = () => {
+//   const queryClient = useQueryClient();
+//   return useMutation<Reservation, Error, { id: string; dto: AssignVehicleDto }>({
+//     mutationFn: async ({ id, dto }) => {
+//       console.log('Assigning vehicle to reservation:', { id, dto });
+//       try {
+//         const response = await api.post(`/v2/reservations/${id}/assign-vehicle`, dto, {
+//           headers: { 'Content-Type': 'application/json' },
+//         });
+//         console.log('Assign vehicle full response:', response);
+//         const { data } = response;
+//         console.log('Assign vehicle data:', data);
         
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } catch (error) {
-        console.error('Assign vehicle API error:', error);
-        throw error;
-      }
+//         // Handle different response formats
+//         if (data.data) {
+//           return data.data;
+//         } else if (data) {
+//           return data;
+//         } else {
+//           throw new Error('Invalid response format');
+//         }
+//       } catch (error) {
+//         console.error('Assign vehicle API error:', error);
+//         throw error;
+//       }
+//     },
+//     onSuccess: () => {
+//       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+//       toast.success('Vehicle assigned to reservation!');
+//     },
+//     onError: (error: unknown) => {
+//       let apiMsg: string | undefined;
+//       if (
+//         typeof error === 'object' &&
+//         error !== null &&
+//         'response' in error &&
+//         error.response &&
+//         typeof error.response === 'object' &&
+//         'data' in error.response &&
+//         error.response.data &&
+//         typeof error.response.data === 'object' &&
+//         'message' in error.response.data
+//       ) {
+//         apiMsg = (error.response.data as { message?: string }).message;
+//       }
+//       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign vehicle.'));
+//     },
+//   });
+// };
+
+// ---------------------------------------------------------
+
+export const useReservationVehicleOdometerAssignation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; dto: { vehicle_id: string; starting_odometer: number; fuel_provided: number } }>({
+    mutationFn: async ({ id, dto }) => {
+      const { data } = await api.post<{ message: string; data: Reservation }>(`/v2/reservations/${id}/assign-vehicle-odometer`, dto);
+      if (!data.data) throw new Error('No data');
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Vehicle assigned to reservation!');
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      toast.success('Vehicle assigned and odometer/fuel set successfully!');
     },
     onError: (error: unknown) => {
       let apiMsg: string | undefined;
@@ -1426,19 +1460,15 @@ export const useVehicleReservationAssignment = () => {
         typeof error === 'object' &&
         error !== null &&
         'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
       ) {
-        apiMsg = (error.response.data as { message?: string }).message;
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign vehicle.'));
+      toast.error(apiMsg || 'Failed to assign vehicle and set odometer/fuel');
     },
   });
 };
+
 
 export const useUpdateReservationReason = () => {
   const queryClient = useQueryClient();
@@ -1517,12 +1547,15 @@ export const useStartReservation = () => {
 
 export const useCompleteReservation = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { reservationId: string; dto: CompleteReservationDto }>({
-    mutationFn: async ({ reservationId, dto }) => {
-      console.log('Completing reservation:', { reservationId, dto });
+  return useMutation<Reservation, Error, { reservedVehicleId: string; dto: CompleteReservationDto }>({
+    mutationFn: async ({ reservedVehicleId, dto }) => {
+      console.log('Completing reservation:', { reservedVehicleId, dto });
       try {
-        const response = await api.post(`/v2/reservations/${reservationId}/complete`, dto, {
-          headers: { 'Content-Type': 'application/json' },
+        const formData = new FormData();
+        formData.append('returned_odometer', dto.returned_odometer.toString());
+        
+        const response = await api.post(`/v2/reservations/${reservedVehicleId}/complete`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
         console.log('Complete reservation full response:', response);
         const { data } = response;
@@ -1613,7 +1646,6 @@ export const useDeleteReservation = () => {
     },
   });
 };
-
 
 
 

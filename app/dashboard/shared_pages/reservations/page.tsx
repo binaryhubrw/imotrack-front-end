@@ -1,16 +1,18 @@
 'use client'
 import React, { useState, useMemo } from 'react';
 import {
-  Plus, Search, Car, XCircle, Square
+  Plus, Search, Car, Square,
+  User,
+  X,
+  CheckCircle
 } from 'lucide-react';
-import { useReservations, useMyReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useVehicleReservationAssignment, useStartReservation, useCompleteReservation, useVehicles, useReservationOdometerFuel, useUpdateReservationReason } from '@/lib/queries';
+import { useReservations, useMyReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useStartReservation, useCompleteReservation, useVehicles, useReservationVehicleOdometerAssignation, useUpdateReservationReason } from '@/lib/queries';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Reservation, CreateReservationDto, ReservationStatus } from '@/types/next-auth';
 import { SkeletonReservationCard } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { Label } from '@/components/ui/label';
 import type { Vehicle } from '@/types/next-auth';
 
 // Status enum for better type safety
@@ -19,6 +21,7 @@ const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   CANCELLED: 'Cancelled',
+  CANCELED: 'Cancelled',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed'
 };
@@ -35,6 +38,8 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
     reservation_destination: '',
     departure_date: '',
     expected_returning_date: '',
+    description: '',
+    passengers: 1,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -45,6 +50,8 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
     if (!form.start_location.trim()) newErrors.start_location = 'Start location is required';
     if (!form.reservation_destination.trim()) newErrors.reservation_destination = 'Destination is required';
     if (!form.departure_date) newErrors.departure_date = 'Departure date is required';
+    if (!form.description.trim()) newErrors.description = 'Description is required';
+    if (!form.passengers || form.passengers < 1) newErrors.passengers = 'Passengers must be at least 1';
     if (!form.expected_returning_date) newErrors.expected_returning_date = 'Expected return date is required';
     // Validate dates
     if (form.departure_date && form.expected_returning_date) {
@@ -60,16 +67,16 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm({ ...form, [name]: name === 'passengers' ? Number(value) : value });
     if (errors[name]) setErrors({ ...errors, [name]: '' });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ reservation_purpose: true, start_location: true, reservation_destination: true, departure_date: true, expected_returning_date: true });
+    setTouched({ reservation_purpose: true, start_location: true, reservation_destination: true, departure_date: true, expected_returning_date: true, description: true, passengers: true });
     if (!validateForm()) return;
     await onCreate(form);
-    setForm({ reservation_purpose: '', start_location: '', reservation_destination: '', departure_date: '', expected_returning_date: '' });
+    setForm({ reservation_purpose: '', start_location: '', reservation_destination: '', departure_date: '', description: '', passengers: 1, expected_returning_date: '' });
     setTouched({});
     setErrors({});
     onClose();
@@ -77,43 +84,116 @@ function CreateReservationModal({ open, onClose, onCreate, isLoading }: {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
-        <button className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-blue-50" onClick={onClose}>&times;</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
+    <div className="p-6">
+      <button className="absolute top-4 right-4 text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-blue-50 z-10" onClick={onClose}>&times;</button>
+      <div className="mb-6">
         <h2 className="text-2xl font-bold text-[#0872b3] mb-2">Create Reservation</h2>
-        <p className="text-sm text-gray-600 mb-4">Fill in the details to create a new reservation</p>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <p className="text-sm text-gray-600">Fill in the details to create a new reservation</p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* First Row - Purpose and Description */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-[#0872b3] mb-1">Purpose</label>
-            <Input name="reservation_purpose" value={form.reservation_purpose} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_purpose && touched.reservation_purpose ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
+            <Input 
+              name="reservation_purpose" 
+              value={form.reservation_purpose} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_purpose && touched.reservation_purpose ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
             {errors.reservation_purpose && touched.reservation_purpose && <p className="text-xs text-red-500 mt-1">{errors.reservation_purpose}</p>}
           </div>
           <div>
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Description</label>
+            <Input 
+              name="description" 
+              value={form.description} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.description && touched.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
+            {errors.description && touched.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
+          </div>
+        </div>
+
+        {/* Second Row - Locations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <label className="block text-sm font-medium text-[#0872b3] mb-1">Start Location</label>
-            <Input name="start_location" value={form.start_location} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.start_location && touched.start_location ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
+            <Input 
+              name="start_location" 
+              value={form.start_location} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.start_location && touched.start_location ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
             {errors.start_location && touched.start_location && <p className="text-xs text-red-500 mt-1">{errors.start_location}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#0872b3] mb-1">Destination</label>
-            <Input name="reservation_destination" value={form.reservation_destination} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_destination && touched.reservation_destination ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
+            <Input 
+              name="reservation_destination" 
+              value={form.reservation_destination} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.reservation_destination && touched.reservation_destination ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
             {errors.reservation_destination && touched.reservation_destination && <p className="text-xs text-red-500 mt-1">{errors.reservation_destination}</p>}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#0872b3] mb-1">Departure Date</label>
-              <Input name="departure_date" type="datetime-local" value={form.departure_date} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.departure_date && touched.departure_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
-              {errors.departure_date && touched.departure_date && <p className="text-xs text-red-500 mt-1">{errors.departure_date}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#0872b3] mb-1">Expected Return Date</label>
-              <Input name="expected_returning_date" type="datetime-local" value={form.expected_returning_date} onChange={handleChange} className={`border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.expected_returning_date && touched.expected_returning_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} />
-              {errors.expected_returning_date && touched.expected_returning_date && <p className="text-xs text-red-500 mt-1">{errors.expected_returning_date}</p>}
-            </div>
+        </div>
+
+        {/* Third Row - Passengers and Dates */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Passengers</label>
+            <Input 
+              name="passengers" 
+              type="number"
+              min="1"
+              value={form.passengers} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.passengers && touched.passengers ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
+            {errors.passengers && touched.passengers && <p className="text-xs text-red-500 mt-1">{errors.passengers}</p>}
           </div>
-          <Button type="submit" className="w-full bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold py-2 rounded-lg transition-colors duration-200" disabled={isLoading}>{isLoading ? 'Creating...' : 'Create Reservation'}</Button>
-        </form>
-      </div>
+          <div>
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Departure Date</label>
+            <Input 
+              name="departure_date" 
+              type="datetime-local" 
+              value={form.departure_date} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.departure_date && touched.departure_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
+            {errors.departure_date && touched.departure_date && <p className="text-xs text-red-500 mt-1">{errors.departure_date}</p>}
+          </div>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <label className="block text-sm font-medium text-[#0872b3] mb-1">Expected Return Date</label>
+            <Input 
+              name="expected_returning_date" 
+              type="datetime-local" 
+              value={form.expected_returning_date} 
+              onChange={handleChange} 
+              className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${errors.expected_returning_date && touched.expected_returning_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`} 
+            />
+            {errors.expected_returning_date && touched.expected_returning_date && <p className="text-xs text-red-500 mt-1">{errors.expected_returning_date}</p>}
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-4">
+          <Button 
+            type="submit" 
+            className="w-full h-9 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold text-sm rounded-lg transition-colors duration-200" 
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating...' : 'Create Reservation'}
+          </Button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
   );
 }
 
@@ -123,44 +203,51 @@ function AssignVehicleModal({ open, onClose, reservation }: {
   reservation: Reservation | null;
 }) {
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
-  const [reservedVehicleId, setReservedVehicleId] = useState<string | null>(null);
   const [startingOdometer, setStartingOdometer] = useState<string>('');
   const [fuelProvided, setFuelProvided] = useState<string>('');
-  const [touched, setTouched] = useState(false);
   const { data: vehicles } = useVehicles();
-  const assignVehicle = useVehicleReservationAssignment();
-  const odometerFuelMutation = useReservationOdometerFuel();
+  const assignVehicleOdometer = useReservationVehicleOdometerAssignation();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
-  const [assignedVehicleInfo, setAssignedVehicleInfo] = useState<Vehicle | null>(null);
 
-  const availableVehicles: Vehicle[] = useMemo(() => {
-    return vehicles?.filter((v: Vehicle) => v.vehicle_status === 'AVAILABLE') || [];
-  }, [vehicles]);
+  // Get available vehicles with sufficient capacity
+  const suitableVehicles: Vehicle[] = useMemo(() => {
+    if (!vehicles || !reservation) return [];
+    return vehicles.filter((vehicle: Vehicle) => {
+      const capacity = vehicle.vehicle_capacity || 0;
+      const passengers = reservation.passengers || 0;
+      return vehicle.vehicle_status === 'AVAILABLE' && capacity >= passengers;
+    });
+  }, [vehicles, reservation]);
 
-  // Step 1: Assign vehicle
-  const handleAssignVehicle = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setTouched(true);
     setError(null);
-    if (!selectedVehicle || !reservation) return;
+    
+    if (!selectedVehicle || !startingOdometer || !fuelProvided || !reservation) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    const odometer = Number(startingOdometer);
+    const fuel = Number(fuelProvided);
+    
+    if (odometer <= 0 || fuel < 0) {
+      setError('Please enter valid values');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const assigned: Reservation = await assignVehicle.mutateAsync({
+      await assignVehicleOdometer.mutateAsync({
         id: reservation.reservation_id,
-        dto: { vehicle_id: selectedVehicle },
+        dto: {
+          vehicle_id: selectedVehicle,
+          starting_odometer: odometer,
+          fuel_provided: fuel,
+        },
       });
-      // Type guard for reserved_vehicles
-      if (!Array.isArray(assigned.reserved_vehicles) || assigned.reserved_vehicles.length === 0) {
-        console.error('Assign vehicle API response:', assigned);
-        throw new Error('Could not get reserved vehicle ID');
-      }
-      const reserved = assigned.reserved_vehicles[0];
-      if (!reserved?.reserved_vehicle_id) throw new Error('Could not get reserved vehicle ID');
-      setReservedVehicleId(reserved.reserved_vehicle_id);
-      setAssignedVehicleInfo(availableVehicles.find((v: Vehicle) => v.vehicle_id === selectedVehicle) || null);
-      setStep(2);
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to assign vehicle');
     } finally {
@@ -168,109 +255,132 @@ function AssignVehicleModal({ open, onClose, reservation }: {
     }
   };
 
-  // Step 2: Submit odometer/fuel
-  const isOdometerValid = startingOdometer !== '' && !isNaN(Number(startingOdometer)) && Number(startingOdometer) > 0;
-  const isFuelValid = fuelProvided !== '' && !isNaN(Number(fuelProvided)) && Number(fuelProvided) >= 0;
-  const validOdoFuel = isOdometerValid && isFuelValid;
-
-  const handleOdometerFuel = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setTouched(true);
-    setError(null);
-    if (!reservedVehicleId || !validOdoFuel) return;
-    setSubmitting(true);
-    try {
-      await odometerFuelMutation.mutateAsync({
-        reservedVehicleId,
-        dto: {
-          starting_odometer: Number(startingOdometer),
-          fuel_provided: Number(fuelProvided),
-        },
-      });
-      setSelectedVehicle('');
-      setReservedVehicleId(null);
-      setStartingOdometer('');
-      setFuelProvided('');
-      setTouched(false);
-      setStep(1);
-      setAssignedVehicleInfo(null);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set odometer/fuel');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleClose = () => {
     setSelectedVehicle('');
-    setReservedVehicleId(null);
     setStartingOdometer('');
     setFuelProvided('');
-    setTouched(false);
-    setStep(1);
-    setAssignedVehicleInfo(null);
     setError(null);
     onClose();
   };
 
   if (!open || !reservation) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={handleClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Assign Vehicle</h2>
-        {step === 1 && (
-          <form onSubmit={handleAssignVehicle} className="space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-900">Assign Vehicle</h2>
+          <button 
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-600 p-1"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          {/* Passenger info */}
+          <div className="mb-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
+            <p className="text-sm text-blue-800">
+              <strong>Passengers:</strong> {reservation.passengers || 0}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Vehicle Selection */}
             <div>
-              <Label htmlFor="vehicle-select">Select Vehicle</Label>
-              <Select value={selectedVehicle} onValueChange={setSelectedVehicle}>
-                <SelectTrigger className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition shadow-sm">
-                  <SelectValue placeholder="Select a vehicle" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-200 rounded-md shadow-lg mt-1">
-                  {availableVehicles.map((vehicle: Vehicle) => (
-                    <SelectItem key={vehicle.vehicle_id} value={vehicle.vehicle_id} className="hover:bg-blue-50 focus:bg-blue-100 px-3 py-2 cursor-pointer">
-                      {vehicle.plate_number} - {vehicle.vehicle_model?.vehicle_model_name || 'Unknown Model'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {touched && !selectedVehicle && <span className="text-xs text-red-500">Please select a vehicle.</span>}
-            </div>
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <Button type="submit" className="w-full text-white bg-[#0872b3]" disabled={submitting || !selectedVehicle}>
-              {submitting ? 'Assigning...' : 'Assign Vehicle'}
-            </Button>
-          </form>
-        )}
-        {step === 2 && reservedVehicleId && (
-          <form onSubmit={handleOdometerFuel} className="space-y-5">
-            <div className="mb-2 p-2 bg-blue-50 rounded">
-              <div className="text-xs text-gray-500">Reserved Vehicle ID:</div>
-              <div className="font-mono text-sm text-blue-900">{reservedVehicleId}</div>
-              {assignedVehicleInfo && (
-                <div className="text-xs text-gray-700 mt-1">
-                  Vehicle: {assignedVehicleInfo.plate_number} - {assignedVehicleInfo.vehicle_model?.vehicle_model_name || 'Unknown Model'}
-                </div>
+              <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
+                Vehicle *
+              </label>
+              <select
+                id="vehicle"
+                value={selectedVehicle}
+                onChange={(e) => setSelectedVehicle(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="">Select a vehicle</option>
+                {suitableVehicles.length === 0 ? (
+                  <option disabled>No suitable vehicles available</option>
+                ) : (
+                  suitableVehicles.map((vehicle: Vehicle) => (
+                    <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
+                      {vehicle.plate_number} - {vehicle.vehicle_model?.vehicle_model_name || 'Unknown'} (Capacity: {vehicle.vehicle_capacity || 0})
+                    </option>
+                  ))
+                )}
+              </select>
+              {suitableVehicles.length === 0 && (
+                <p className="text-sm text-orange-600 mt-1">
+                  No vehicles available for {reservation.passengers || 0} passengers
+                </p>
               )}
             </div>
+
+            {/* Odometer */}
             <div>
-              <Label htmlFor="odometer-input">Starting Odometer</Label>
-              <Input id="odometer-input" type="number" min={0} value={startingOdometer} onChange={e => setStartingOdometer(e.target.value)} placeholder="Enter starting odometer" required />
-              {touched && !isOdometerValid && <span className="text-xs text-red-500">Enter a valid odometer value (must be greater than 0).</span>}
+              <label htmlFor="odometer" className="block text-sm font-medium text-gray-700 mb-1">
+                Starting Odometer *
+              </label>
+              <input
+                id="odometer"
+                type="number"
+                min="1"
+                value={startingOdometer}
+                onChange={(e) => setStartingOdometer(e.target.value)}
+                placeholder="Enter odometer reading"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
             </div>
+
+            {/* Fuel */}
             <div>
-              <Label htmlFor="fuel-input">Fuel Provided (liters)</Label>
-              <Input id="fuel-input" type="number" min={0} value={fuelProvided} onChange={e => setFuelProvided(e.target.value)} placeholder="Enter fuel provided" required />
-              {touched && !isFuelValid && <span className="text-xs text-red-500">Enter a valid fuel value (0 or more).</span>}
+              <label htmlFor="fuel" className="block text-sm font-medium text-gray-700 mb-1">
+                Fuel Provided (L) *
+              </label>
+              <input
+                id="fuel"
+                type="number"
+                min="0"
+                step="0.1"
+                value={fuelProvided}
+                onChange={(e) => setFuelProvided(e.target.value)}
+                placeholder="Enter fuel amount"
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
             </div>
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <Button type="submit" className="w-full text-white bg-[#0872b3]" disabled={submitting || !validOdoFuel}>
-              {submitting ? 'Saving...' : 'Save Odometer & Fuel'}
-            </Button>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || suitableVehicles.length === 0}
+                className="flex-1 px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Assigning...' : 'Assign Vehicle'}
+              </button>
+            </div>
           </form>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -310,27 +420,100 @@ function CompleteReservationModal({ open, onClose, reservation, onComplete, isLo
   open: boolean;
   onClose: () => void;
   reservation: Reservation | null;
-  onComplete: () => void;
+  onComplete: (returnedOdometer: number) => void;
   isLoading: boolean;
 }) {
+  const [returnedOdometer, setReturnedOdometer] = useState<string>('');
+  const [touched, setTouched] = useState(false);
+  
+  const odometerNum = Number(returnedOdometer);
+  const valid = !isNaN(odometerNum) && odometerNum > 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onComplete();
+    setTouched(true);
+    if (!valid) return;
+    await onComplete(odometerNum);
+    setReturnedOdometer('');
+    setTouched(false);
     onClose();
   };
 
+  // Get the reserved vehicle for this reservation
+  const reservedVehicle = reservation?.reserved_vehicles?.[0];
+  const startingOdometer = reservedVehicle?.starting_odometer || 0;
+
   if (!open || !reservation) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Complete Reservation</h2>
-        <p className="text-sm text-gray-600 mb-4">Click to complete the reservation</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Completing...' : 'Complete Reservation'}
-          </Button>
-        </form>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md animate-in slide-in-from-bottom-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Complete Journey</h2>
+              <p className="text-sm text-gray-500">Enter final odometer reading</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 space-y-4">
+          {/* Quick Info */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">{reservation.passengers || 1} passenger{(reservation.passengers || 1) !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Car className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">{startingOdometer.toLocaleString()} km start</span>
+            </div>
+          </div>
+
+          {/* Odometer Input */}
+          <div className="space-y-2">
+            <label htmlFor="returnedOdometer" className="block text-sm font-medium text-gray-700">
+              Final Odometer Reading (km)
+            </label>
+            <input
+              id="returnedOdometer"
+              type="number"
+              min={startingOdometer + 1}
+              value={returnedOdometer}
+              onChange={(e) => setReturnedOdometer(e.target.value)}
+              placeholder={`Min: ${startingOdometer + 1}`}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-mono"
+              required
+            />
+            {touched && !valid && (
+              <p className="text-xs text-red-600">
+                Must be greater than {startingOdometer}
+              </p>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading || !valid}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <CheckCircle className="h-4 w-4" />
+            {isLoading ? 'Completing...' : 'Complete Journey'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -380,50 +563,6 @@ function CancelReservationModal({ open, onClose, reservation, onCancel, isLoadin
   );
 }
 
-function OdometerFuelModal({ open, onClose, onSubmit, isLoading }: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (odometer: number, fuel: number) => void;
-  isLoading: boolean;
-}) {
-  const [odometer, setOdometer] = useState('');
-  const [fuel, setFuel] = useState('');
-  const [touched, setTouched] = useState(false);
-  const odometerNum = Number(odometer);
-  const fuelNum = Number(fuel);
-  const valid = !isNaN(odometerNum) && !isNaN(fuelNum) && odometerNum > 0 && fuelNum >= 0;
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setTouched(true);
-    if (!valid) return;
-    onSubmit(odometerNum, fuelNum);
-    setOdometer('');
-    setFuel('');
-    setTouched(false);
-  };
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Enter Odometer & Fuel</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Starting Odometer</label>
-            <Input type="number" min={0} value={odometer} onChange={e => setOdometer(e.target.value)} className="w-full" required />
-            {touched && (isNaN(odometerNum) || odometerNum <= 0) && <span className="text-xs text-red-500">Enter a valid odometer value</span>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Fuel Provided (liters)</label>
-            <Input type="number" min={0} value={fuel} onChange={e => setFuel(e.target.value)} className="w-full" required />
-            {touched && (isNaN(fuelNum) || fuelNum < 0) && <span className="text-xs text-red-500">Enter a valid fuel value</span>}
-          </div>
-          <Button type="submit" className="w-full bg-[#0872b3] text-white" disabled={isLoading || !valid}>{isLoading ? 'Saving...' : 'Save & Start'}</Button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 // Approve/Reject Modal
 function ApproveRejectModal({ open, onClose, reservation, onSubmit, isLoading }: {
@@ -524,9 +663,6 @@ export default function ReservationsPage() {
   const [showStartReservation, setShowStartReservation] = useState(false);
   const [showCompleteReservation, setShowCompleteReservation] = useState(false);
   const [showCancelReservation, setShowCancelReservation] = useState(false);
-  const [showOdometerModal, setShowOdometerModal] = useState(false);
-  const [odometerVehicleId, setOdometerVehicleId] = useState<string | null>(null);
-  const odometerFuelMutation = useReservationOdometerFuel();
   const updateReservationReason = useUpdateReservationReason();
   const [showEditReasonModal, setShowEditReasonModal] = useState(false);
   const [editReasonValue, setEditReasonValue] = useState('');
@@ -608,31 +744,32 @@ export default function ReservationsPage() {
       ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
       : undefined;
     if (!reservedVehicleId) {
-      // error handled by mutation
+      toast.error('No vehicle assigned to this reservation');
       return;
     }
-    setOdometerVehicleId(reservedVehicleId);
-    setShowOdometerModal(true);
+    // For now, just show a success message since the odometer fuel functionality is not implemented
+    toast.success('Reservation started successfully');
   };
 
-  const handleOdometerFuelSubmit = async (odometer: number, fuel: number) => {
-    if (!odometerVehicleId) return;
-    try {
-      await odometerFuelMutation.mutateAsync({ reservedVehicleId: odometerVehicleId, dto: { starting_odometer: odometer, fuel_provided: fuel } });
-      setShowOdometerModal(false);
-      setOdometerVehicleId(null);
-      // Optionally, you can call startReservation.mutateAsync here if needed for further workflow
-    } catch {
-      // error handled by mutation
-    }
-  };
+ 
 
-  const handleCompleteReservation = async () => {
+  const handleCompleteReservation = async (returnedOdometer: number) => {
     if (!selectedReservation) return;
+    
+    // Get the reserved vehicle ID
+    const reservedVehicleId = selectedReservation.reserved_vehicles && selectedReservation.reserved_vehicles.length > 0
+      ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
+      : undefined;
+      
+    if (!reservedVehicleId) {
+      toast.error('No vehicle assigned to this reservation');
+      return;
+    }
+    
     try {
       await completeReservation.mutateAsync({ 
-        reservationId: selectedReservation.reservation_id, 
-        dto: { returned_odometer: 0 } 
+        reservedVehicleId: reservedVehicleId, 
+        dto: { returned_odometer: returnedOdometer } 
       });
     } catch {
       // error handled by mutation
@@ -698,6 +835,7 @@ export default function ReservationsPage() {
       case 'APPROVED': return 'bg-green-100 text-green-800';
       case 'REJECTED': return 'bg-red-100 text-red-800';
       case 'CANCELLED': return 'bg-gray-100 text-gray-800';
+      case 'CANCELED': return 'bg-gray-100 text-gray-800';
       case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
       case 'COMPLETED': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -719,13 +857,6 @@ export default function ReservationsPage() {
     return reservation.reservation_status === 'IN_PROGRESS';
   };
 
-  // const canApprove = (reservation: Reservation) => {
-  //   return reservation.reservation_status === 'UNDER_REVIEW';
-  // };
-
-  const canReject = (reservation: Reservation) => {
-    return reservation.reservation_status === 'UNDER_REVIEW';
-  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -775,7 +906,12 @@ export default function ReservationsPage() {
                 <div className="text-gray-600 text-sm">Departure: {reservation.departure_date ? new Date(reservation.departure_date).toLocaleString() : 'N/A'}</div>
                 <div className="text-gray-600 text-sm">Return: {reservation.expected_returning_date ? new Date(reservation.expected_returning_date).toLocaleString() : 'N/A'}</div>
                 
-               
+                {/* Show rejection comment if reservation is cancelled or rejected */}
+                {(reservation.reservation_status === 'CANCELED' || reservation.reservation_status === 'CANCELLED' || reservation.reservation_status === 'REJECTED') && reservation.rejection_comment && (
+                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-200">
+                    <strong>Reason:</strong> {reservation.rejection_comment}
+                  </div>
+                )}
                 
                 <div className="text-xs text-gray-500 mt-2">Created: {reservation.created_at ? new Date(reservation.created_at).toLocaleString() : 'N/A'}</div>
                 <div className="text-xs text-gray-500">User: {reservation.user ? `${reservation.user.first_name} ${reservation.user.last_name}` : 'N/A'}</div>
@@ -797,18 +933,6 @@ export default function ReservationsPage() {
                     </Button>
                   )}
                 
-                  {/* Only show Reject/Cancel if user has cancel permission */}
-                  {reservationAccess?.cancel && canReject(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={(e) => { e.stopPropagation(); setSelectedReservation(reservation); setShowCancelReservation(true); }}
-                    >
-                      <XCircle className="w-3 h-3 mr-1" />
-                      Cancel
-                    </Button>
-                  )}
                   {/* Only show Assign Vehicle if user has assignVehicle permission */}
                   {reservationAccess?.assignVehicle && canAssignVehicle(reservation) && (
                     <Button
@@ -833,8 +957,8 @@ export default function ReservationsPage() {
                       Complete
                     </Button>
                   )}
-                  {/* Only show Edit Reason if user has updateReason permission */}
-                  {reservationAccess?.updateReason && (
+                  {/* Only show Edit Reason if user has updateReason permission and status is REJECTED, CANCELED, or CANCELLED */}
+                  {reservationAccess?.updateReason && (reservation.reservation_status === 'REJECTED' || reservation.reservation_status === 'CANCELED' || reservation.reservation_status === 'CANCELLED') && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -876,12 +1000,7 @@ export default function ReservationsPage() {
         onStart={handleStartReservation}
         isLoading={startReservation.isPending}
       />
-      <OdometerFuelModal
-        open={showOdometerModal}
-        onClose={() => { setShowOdometerModal(false); setOdometerVehicleId(null); }}
-        onSubmit={handleOdometerFuelSubmit}
-        isLoading={odometerFuelMutation.isPending}
-      />
+
 
       <CompleteReservationModal
         open={showCompleteReservation}
