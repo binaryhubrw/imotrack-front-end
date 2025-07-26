@@ -12,6 +12,8 @@ import type { UpdateUserDto } from '@/types/next-auth';
 import { Input } from '@/components/ui/input';
 import { X } from 'lucide-react';
 import React from "react";
+import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; onClose: () => void; userId: string | null; onUpdated: () => void }) {
   const { data: user, isLoading } = useUser(userId || '');
@@ -104,6 +106,20 @@ export default function UserDetailPage() {
   const id = params.id as string;
   const { data: user, isLoading, isError, refetch } = useUser(id);
   const [showEdit, setShowEdit] = useState(false);
+  const { user: currentUser, isLoading: authLoading } = useAuth();
+
+  // Permission checks
+  const canView = !!currentUser?.position?.position_access?.users?.view;
+  const canUpdate = !!currentUser?.position?.position_access?.users?.update;
+  
+
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (!canView) {
+    return <NoPermissionUI resource="users" />;
+  }
 
   if (isLoading) {
     return <SkeletonEntityDetails />;
@@ -129,18 +145,22 @@ export default function UserDetailPage() {
             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
             Back
           </Button>
-          <div className="flex gap-2">
-            <Button
-              className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
-              onClick={() => setShowEdit(true)}
-            >
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit User
-            </Button>
-          </div>
+                      <div className="flex gap-2">
+              {canUpdate && (
+                <Button
+                  className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
+                  onClick={() => setShowEdit(true)}
+                >
+                  <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                  Edit User
+                </Button>
+              )}
+            </div>
         </div>
         {/* Edit Modal */}
-        <EditUserModal open={showEdit} onClose={() => setShowEdit(false)} userId={id} onUpdated={refetch} />
+        {showEdit && canUpdate && (
+          <EditUserModal open={showEdit} onClose={() => setShowEdit(false)} userId={id} onUpdated={refetch} />
+        )}
         {/* Main Content */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="bg-[#0872b3] text-white p-6">

@@ -10,6 +10,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 // Helper type guard
 function isUserWithAuth(
@@ -63,10 +65,19 @@ export default function PositionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { user, isLoading: authLoading } = useAuth();
+
+  // Call all hooks unconditionally at the top
   const { data: position, isLoading, isError, refetch } = usePosition(id);
   const updatePosition = useUpdatePosition();
   const deletePosition = useDeletePosition();
   const { data: users = [] } = useUsers();
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.positions?.view;
+  const canUpdate = !!user?.position?.position_access?.positions?.update;
+  const canDelete = !!user?.position?.position_access?.positions?.delete;
+
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
     position_name: "",
@@ -80,6 +91,8 @@ export default function PositionDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [disActivateError, setDisActivateError] = useState<string | null>(null);
 
+
+  
   // Open edit modal and prefill form
   const handleEdit = () => {
     if (!position) return;
@@ -137,6 +150,15 @@ export default function PositionDetailPage() {
     }
   };
 
+  // Early returns for loading and permission checks
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (!canView) {
+    return <NoPermissionUI resource="positions" />;
+  }
+
   if (isLoading) {
     return <SkeletonEntityDetails />;
   }
@@ -162,23 +184,27 @@ export default function PositionDetailPage() {
             Back
           </Button>
           <div className="flex gap-2">
-            <Button
-              className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
-              onClick={handleEdit}
-            >
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit Position
-            </Button>
-            <Button
-              className="bg-red-600 text-white hover:bg-red-700"
-              onClick={() => setShowDisActivateConfirm(true)}
-            >
-              DisActivate
-            </Button>
+            {canUpdate && (
+              <Button
+                className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
+                onClick={handleEdit}
+              >
+                <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                Edit Position
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => setShowDisActivateConfirm(true)}
+              >
+                DisActivate
+              </Button>
+            )}
           </div>
         </div>
         {/* Edit Modal */}
-        {showEdit && (
+        {showEdit && canUpdate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
             <form
               onSubmit={handleEditSave}

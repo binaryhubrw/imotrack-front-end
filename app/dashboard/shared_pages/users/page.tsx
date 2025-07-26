@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 // Define the type for CreateUserDto
 import type {
@@ -53,6 +54,7 @@ import type {
   UserRow,
 } from "@/types/next-auth";
 import { SkeletonUsersTable } from "@/components/ui/skeleton";
+import ErrorUI from "@/components/ErrorUI";
 
 
 
@@ -72,12 +74,14 @@ function CreateUserModal({
     !!user?.position?.position_access?.organizations?.view;
   const userOrganizationId = user?.organization?.organization_id;
   const userUnitId = user?.unit?.unit_id;
+  
   // For normal users, get all units in their organization
   const { data: allUnitsInOrg = [] } = useOrganizationUnits();
   const userOrgUnits = useMemo(() => {
     if (!userOrganizationId) return [];
     return allUnitsInOrg.filter((unit) => unit.organization_id === userOrganizationId);
   }, [allUnitsInOrg, userOrganizationId]);
+  
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     canViewOrganizations ? "" : userOrganizationId || ""
   );
@@ -92,8 +96,10 @@ function CreateUserModal({
   const { data: orgUnitsRaw, isLoading: unitsLoading } =
     useOrganizationUnitsByOrgId(selectedOrgId);
   const orgUnits = orgUnitsRaw || [];
+  // Use the appropriate unit ID for fetching positions
+  const effectiveUnitId = canViewOrganizations ? selectedUnitId : (selectedUnitId || userUnitId || "");
   const { data: positions, isLoading: loadingPositions } =
-    useUnitPositions(selectedUnitId);
+    useUnitPositions(effectiveUnitId);
 
   // Set default org/unit/position if only one
   React.useEffect(() => {
@@ -119,6 +125,19 @@ function CreateUserModal({
       setSelectedPositionId(positions[0].position_id);
     }
   }, [positions, selectedPositionId]);
+
+  // Auto-select user's unit and organization for non-super admin users
+  React.useEffect(() => {
+    if (!canViewOrganizations && userOrganizationId && !selectedOrgId) {
+      setSelectedOrgId(userOrganizationId);
+    }
+  }, [canViewOrganizations, userOrganizationId, selectedOrgId]);
+
+  React.useEffect(() => {
+    if (!canViewOrganizations && userUnitId && !selectedUnitId) {
+      setSelectedUnitId(userUnitId);
+    }
+  }, [canViewOrganizations, userUnitId, selectedUnitId]);
 
   // Form state
   const [form, setForm] = useState({
@@ -155,7 +174,7 @@ function CreateUserModal({
     if (!form.street_address.trim())
       newErrors.street_address = "Street address is required";
     if (!selectedOrgId) newErrors.organization_id = "Organization is required";
-    if (!selectedUnitId) newErrors.unit_id = "Unit is required";
+    if (!effectiveUnitId) newErrors.unit_id = "Unit is required";
     if (!selectedPositionId) newErrors.position_id = "Position is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -328,7 +347,7 @@ function CreateUserModal({
                     isLoading ||
                     (canViewOrganizations
                       ? unitsLoading || !selectedOrgId || orgUnits.length === 0
-                      : true)
+                      : userOrgUnits.length === 0)
                   }
                 >
                   <option value="">Select unit</option>
@@ -362,7 +381,7 @@ function CreateUserModal({
                   disabled={
                     loadingPositions ||
                     isLoading ||
-                    !selectedUnitId ||
+                    !effectiveUnitId ||
                     !positions ||
                     positions.length === 0
                   }
@@ -853,8 +872,10 @@ export default function UsersPage() {
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [organizationFilter, setOrganizationFilter] = useState<string>("");
   const [editUserId, setEditUserId] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const canViewAll = !!user?.position?.position_access?.organizations?.view;
+  
+  // Call all hooks unconditionally at the top
   const {
     data: usersData,
     isLoading,
@@ -866,6 +887,11 @@ export default function UsersPage() {
   };
   const createUser = useCreateUser();
   const router = useRouter();
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.users?.view;
+  const canCreate = !!user?.position?.position_access?.users?.create;
+  const canUpdate = !!user?.position?.position_access?.users?.update;
 
   // Flatten users: one row per user-position
   const users: UserRow[] = useMemo(() => {
@@ -1211,26 +1237,33 @@ export default function UsersPage() {
     }
   };
 
+  if (authLoading) {
+    return <SkeletonUsersTable rows={10} />;
+  }
+
+  // Check if user has any relevant permissions
+  const hasAnyPermission = canView || canCreate || canUpdate;
+  if (!hasAnyPermission) {
+    return <NoPermissionUI resource="users" />;
+  }
+
   if (isLoading) {
     return <SkeletonUsersTable rows={10} />;
   }
 
-  if (isError) {
+  // Only show error UI if user has view permission and there's an actual error
+  if (isError && canView) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-            <p className="mt-4 text-red-600">Failed to load users</p>
-            <p className="text-gray-500 text-sm mt-2">
-              An error occurred while fetching users
-            </p>
-          </div>
-        </div>
-      </div>
+      <ErrorUI
+      resource="users"
+      onRetry={() => {
+       // re-fetch your data
+       window.location.reload()
+     }}
+      onBack={() => {
+       router.back()
+      }}
+      />
     );
   }
 
@@ -1244,204 +1277,238 @@ export default function UsersPage() {
             Manage your organization&apos;s users and their permissions
           </p>
         </div>
-        <Button
-          className="flex text-white items-center gap-2 bg-[#0872b3] hover:bg-blue-700"
-          onClick={() => setShowCreate(true)}
-        >
-          <Plus className="w-4 h-4" /> Add User
-        </Button>
+        {canCreate && (
+          <Button
+            className="flex text-white items-center gap-2 bg-[#0872b3] hover:bg-blue-700"
+            onClick={() => setShowCreate(true)}
+          >
+            <Plus className="w-4 h-4" /> Add User
+          </Button>
+        )}
       </div>
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          {/* Search and Filters */}
-          <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={globalFilter ?? ""}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-              />
-            </div>
-            {/* Filters */}
-            <div className="flex items-center gap-2 mb-2">
-              {canViewAll && (
+      {canView ? (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            {/* Search and Filters */}
+            <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={globalFilter ?? ""}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-9 pr-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                />
+              </div>
+              {/* Filters */}
+              <div className="flex items-center gap-2 mb-2">
+                {canViewAll && (
+                  <select
+                    className="border rounded px-2 py-2 text-xs text-gray-700"
+                    value={organizationFilter}
+                    onChange={(e) => {
+                      setOrganizationFilter(e.target.value);
+                      setUnitFilter("");
+                      setPositionFilter("");
+                    }}
+                  >
+                    <option value="">All Organizations</option>
+                    {allOrganizations.map((org) => (
+                      <option
+                        key={org.organization_id}
+                        value={org.organization_id}
+                      >
+                        {org.organization_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <select
                   className="border rounded px-2 py-2 text-xs text-gray-700"
-                  value={organizationFilter}
+                  value={unitFilter}
                   onChange={(e) => {
-                    setOrganizationFilter(e.target.value);
-                    setUnitFilter("");
+                    setUnitFilter(e.target.value);
                     setPositionFilter("");
                   }}
                 >
-                  <option value="">All Organizations</option>
-                  {allOrganizations.map((org) => (
-                    <option
-                      key={org.organization_id}
-                      value={org.organization_id}
-                    >
-                      {org.organization_name}
+                  <option value="">All Units</option>
+                  {filteredUnits.map((unit) => (
+                    <option key={unit.unit_id} value={unit.unit_id}>
+                      {unit.unit_name}
                     </option>
                   ))}
                 </select>
-              )}
-              <select
-                className="border rounded px-2 py-2 text-xs text-gray-700"
-                value={unitFilter}
-                onChange={(e) => {
-                  setUnitFilter(e.target.value);
-                  setPositionFilter("");
-                }}
-              >
-                <option value="">All Units</option>
-                {filteredUnits.map((unit) => (
-                  <option key={unit.unit_id} value={unit.unit_id}>
-                    {unit.unit_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="border rounded px-2 py-2 text-xs text-gray-700"
-                value={positionFilter}
-                onChange={(e) => setPositionFilter(e.target.value)}
-              >
-                <option value="">All Positions</option>
-                {filteredPositions.map((pos) => (
-                  <option key={pos.position_id} value={pos.position_id}>
-                    {pos.position_name}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-gray-500">
-                {table.getFilteredRowModel().rows.length} of{" "}
-                {filteredUsers.length} users
-              </span>
+                <select
+                  className="border rounded px-2 py-2 text-xs text-gray-700"
+                  value={positionFilter}
+                  onChange={(e) => setPositionFilter(e.target.value)}
+                >
+                  <option value="">All Positions</option>
+                  {filteredPositions.map((pos) => (
+                    <option key={pos.position_id} value={pos.position_id}>
+                      {pos.position_name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-gray-500">
+                  {table.getFilteredRowModel().rows.length} of{" "}
+                  {filteredUsers.length} users
+                </span>
+              </div>
             </div>
-          </div>
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead
-                        key={header.id}
-                        className="px-3 py-6 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50"
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length > 0 ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.original.user_id}
-                      className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
-                      onClick={() => {
-                        setEditUserId(null);
-                        router.push(
-                          `/dashboard/shared_pages/users/${row.original.user_id}`
-                        );
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className="px-3 py-6 whitespace-nowrap text-xs text-gray-900"
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className="px-3 py-6 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider bg-gray-50"
                         >
-                          {cell.column.id === "actions" ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditUserId(row.original.user_id);
-                                }}
-                                aria-label="Edit"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )
-                          )}
-                        </TableCell>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="px-3 py-6 text-center text-gray-500"
-                    >
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          {/* Pagination */}
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-700">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
-              </span>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.original.user_id}
+                        className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
+                        onClick={() => {
+                          setEditUserId(null);
+                          router.push(
+                            `/dashboard/shared_pages/users/${row.original.user_id}`
+                          );
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell
+                            key={cell.id}
+                            className="px-3 py-6 whitespace-nowrap text-xs text-gray-900"
+                          >
+                            {cell.column.id === "actions" ? (
+                              <div className="flex items-center gap-1">
+                                {canUpdate && (
+                                  <button
+                                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditUserId(row.original.user_id);
+                                    }}
+                                    aria-label="Edit"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="px-3 py-6 text-center text-gray-500"
+                      >
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            {/* Pagination */}
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-700">
+                  Page {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Show message when user can't view but has other permissions
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Access to View Users
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                You don&apos;t have permission to view existing users, but you can create new ones if you have the appropriate permissions.
+              </p>
+              {canCreate && (
+                <button
+                  className="inline-flex items-center gap-2 px-6 py-3 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <Plus className="w-5 h-5" />
+                  Create New User
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {/* Create User Modal */}
       <CreateUserModal
-        open={showCreate}
+        open={showCreate && canCreate}
         onClose={() => setShowCreate(false)}
         isLoading={createUser.isPending}
         onCreate={handleCreateUser}
       />
-      <EditUserModal
-        open={!!editUserId}
-        userId={editUserId}
-        onClose={() => setEditUserId(null)}
-        onUpdated={() => {}}
-      />
+      {editUserId && canUpdate && (
+        <EditUserModal
+          open={!!editUserId}
+          userId={editUserId}
+          onClose={() => setEditUserId(null)}
+          onUpdated={() => {}}
+        />
+      )}
     </div>
   );
 }

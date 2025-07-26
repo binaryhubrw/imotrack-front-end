@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, AlertCircle, Info, X } from "lucide-react";
+import { Plus, Info, X } from "lucide-react";
 import {
   useUnitPositions,
   useCreatePosition,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonPositionsCards } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
 import type { position_accesses, Unit } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
@@ -73,6 +74,8 @@ interface PositionWithUnitOrg extends Position {
   };
 }
 
+
+
 // Define defaultPermissions at the top of the file
 const defaultPermissions: position_accesses = {
   organizations: {
@@ -113,7 +116,7 @@ const defaultPermissions: position_accesses = {
     viewOwn: false,
   },
   vehicleIssues: { report: false, view: false, update: false, delete: false },
-  history: { view: false },
+
 };
 
 
@@ -442,43 +445,32 @@ export function CreatePositionModal({
   );
 }
 
-// Access denied component
-function AccessDenied({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg border border-gray-200">
-      <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        Access Denied
-      </h3>
-      <p className="text-gray-600 text-center">{message}</p>
-    </div>
-  );
-}
+
 
 export default function PositionsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
 
-  // Permission flags
-  const canViewOrganizations =
-    !!user?.position?.position_access?.organizations?.view;
-  const canViewPositions = !!user?.position?.position_access?.positions?.view;
-  const canCreatePositions =
-    !!user?.position?.position_access?.positions?.create;
+  // Call all hooks unconditionally at the top
+  const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
+  const { data: allPositions, isLoading: allPositionsLoading, error: allPositionsError } = usePositions();
+  const orgUnitsByOrgIdHook = useOrganizationUnitsByOrgId(selectedOrgId || "");
+  const allUnitsHook = useOrganizationUnits();
+  const unitPositionsHook = useUnitPositions(selectedUnitId);
+  const createPosition = useCreatePosition();
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.positions?.view;
+  const canCreate = !!user?.position?.position_access?.positions?.create;
+  const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
 
   // Fetch all organizations (for dropdown) but only use if canViewOrganizations
-  const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
   const allOrganizations = orgData?.organizations || [];
 
-  // Fetch all positions (new API)
-  const { data: allPositions, isLoading: allPositionsLoading, error: allPositionsError } = usePositions();
 
   // Determine which org to use
-  const orgId = canViewOrganizations
-    ? selectedOrgId
-    : user?.organization?.organization_id;
   const organizations = canViewOrganizations
     ? allOrganizations
     : user?.organization
@@ -493,8 +485,6 @@ export default function PositionsPage() {
   }, [canViewOrganizations, organizations, selectedOrgId]);
 
   // Always call both unit hooks
-  const orgUnitsByOrgIdHook = useOrganizationUnitsByOrgId(orgId || "");
-  const allUnitsHook = useOrganizationUnits();
   let orgUnits: Unit[] = [];
   let unitsLoading = false;
   if (canViewOrganizations) {
@@ -520,8 +510,6 @@ export default function PositionsPage() {
   // Do not auto-select the first unit; keep as '' until user selects
 
   // Always call the hook at the top
-  const unitPositionsHook = useUnitPositions(selectedUnitId);
-
   let positions: Position[] = [];
   let positionsLoading = false;
   let positionsError = false;
@@ -578,7 +566,17 @@ export default function PositionsPage() {
     positionsLoading = false;
     positionsError = false;
   }
-  const createPosition = useCreatePosition();
+
+  // Early returns for loading and permission checks
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  // Check if user has any relevant permissions
+  const hasAnyPermission = canView || canCreate;
+  if (!hasAnyPermission) {
+    return <NoPermissionUI resource="positions" />;
+  }
 
   // Guard: if user has no organization, show error
   const showOrgError = !user?.organization?.organization_id;
@@ -609,20 +607,6 @@ export default function PositionsPage() {
         </div>
         <div className="flex-1 overflow-auto p-4">
           <SkeletonPositionsCards />
-        </div>
-      </div>
-    );
-  }
-
-  // Check if user has access to view positions
-  if (!canViewPositions) {
-    return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <h1 className="text-xl font-semibold text-gray-900">Positions</h1>
-        </div>
-        <div className="flex-1 overflow-auto p-4">
-          <AccessDenied message="You don't have permission to view positions. Please contact your administrator." />
         </div>
       </div>
     );
@@ -686,7 +670,7 @@ export default function PositionsPage() {
             </select>
           </div>
         )}
-        {canCreatePositions && selectedUnitId && isSelectedUnitActive && (
+        {canCreate && selectedUnitId && isSelectedUnitActive && (
           <Button
             onClick={() => setShowCreate(true)}
             disabled={!selectedUnitId || !isSelectedUnitActive}
@@ -709,92 +693,119 @@ export default function PositionsPage() {
         )}
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
-        {positionsError ? (
-          <div className="p-8 text-center text-red-500">
-            Failed to load positions. Please try again.
-          </div>
-        ) : filteredPositions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 bg-white rounded-xl border border-gray-100 shadow-md">
-            <svg className="w-16 h-16 text-blue-200 mb-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 className="text-2xl font-bold text-gray-700 mb-2">No Positions Found</h3>
-            <p className="text-gray-500 mb-4 text-center max-w-md">There are no positions in this {selectedUnitId ? 'unit' : selectedOrgId ? 'organization' : 'context'}. Try selecting a different organization or unit, or create a new position if you have permission.</p>
-            
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPositions.map((pos) => (
-              <div
-                key={pos.position_id}
-                className="bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2 relative"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
-                      {pos.position_name}
+      {/* Main Content - Only show if user can view */}
+      {canView ? (
+        <div className="flex-1 overflow-auto p-4">
+          {positionsError ? (
+            <div className="p-8 text-center text-red-500">
+              Failed to load positions. Please try again.
+            </div>
+          ) : filteredPositions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-96 bg-white rounded-xl border border-gray-100 shadow-md">
+              <svg className="w-16 h-16 text-blue-200 mb-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-2xl font-bold text-gray-700 mb-2">No Positions Found</h3>
+              <p className="text-gray-500 mb-4 text-center max-w-md">There are no positions in this {selectedUnitId ? 'unit' : selectedOrgId ? 'organization' : 'context'}. Try selecting a different organization or unit, or create a new position if you have permission.</p>
+              
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPositions.map((pos) => (
+                <div
+                  key={pos.position_id}
+                  className="bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2 relative"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
+                        {pos.position_name}
+                      </div>
+                      <div className="text-gray-600 text-sm mt-1">
+                        {pos.position_description}
+                      </div>
                     </div>
-                    <div className="text-gray-600 text-sm mt-1">
-                      {pos.position_description}
+                    <div className="absolute top-4 right-4 flex gap-2 z-10">
+                      <Link
+                        href={`/dashboard/shared_pages/positions/${pos.position_id}`}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-100"
+                        aria-label="View position"
+                      >
+                        View
+                      </Link>
                     </div>
                   </div>
-                  <div className="absolute top-4 right-4 flex gap-2 z-10">
-                    <Link
-                      href={`/dashboard/shared_pages/positions/${pos.position_id}`}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-100"
-                      aria-label="View position"
+
+                  <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:justify-between text-xs text-gray-500 gap-2">
+                    <div>
+                      Created: {" "}
+                      {pos.created_at
+                        ? new Date(pos.created_at).toLocaleString()
+                        : "N/A"}
+                    </div>
+                    <span
+                      className={`inline-block mt-1 lg:mt-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        pos.position_status === "ACTIVE"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
                     >
-                      View
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:justify-between text-xs text-gray-500 gap-2">
-                  <div>
-                    Created: {" "}
-                    {pos.created_at
-                      ? new Date(pos.created_at).toLocaleString()
-                      : "N/A"}
-                  </div>
-                  <span
-                    className={`inline-block mt-1 lg:mt-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      pos.position_status === "ACTIVE"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    {pos.position_status}
-                  </span>
-                </div>
-
-                <div className="mt-2">
-                  <span className="font-semibold text-gray-700">
-                    Assigned User: {" "}
-                  </span>
-                  {pos.user ? (
-                    <span className="text-gray-800">
-                      {pos.user.first_name} {pos.user.last_name}
-                      <span className="text-gray-500">
-                        {" "}
-                        ({pos.user.auth?.email ?? "N/A"})
-                      </span>
+                      {pos.position_status}
                     </span>
-                  ) : (
-                    <span className="text-gray-400">Unassigned</span>
-                  )}
-                </div>
+                  </div>
 
+                  <div className="mt-2">
+                    <span className="font-semibold text-gray-700">
+                      Assigned User: {" "}
+                    </span>
+                    {pos.user ? (
+                      <span className="text-gray-800">
+                        {pos.user.first_name} {pos.user.last_name}
+                        <span className="text-gray-500">
+                          {" "}
+                          ({pos.user.auth?.email ?? "N/A"})
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Unassigned</span>
+                    )}
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Show message when user can't view but has other permissions
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-blue-600" />
               </div>
-            ))}
-            {/* Remove 'No Positions Found' message entirely */}
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Access to View Positions
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                You don&apos;t have permission to view existing positions, but you can create new ones if you have the appropriate permissions.
+              </p>
+              {canCreate && (
+                <button
+                  className="inline-flex items-center gap-2 px-6 py-3 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <Plus className="w-5 h-5" />
+                  Create New Position
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Create Position Modal */}
-      {canCreatePositions && (
+      {canCreate && (
         <CreatePositionModal
           open={showCreate}
           onClose={() => setShowCreate(false)}

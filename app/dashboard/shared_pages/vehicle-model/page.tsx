@@ -42,6 +42,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { SkeletonVehicleModelsTable } from "@/components/ui/skeleton";
 import { VehicleType } from "@/types/enums";
+import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 function CreateVehicleModal({ 
   open, 
@@ -384,26 +387,30 @@ export default function VehicleModelsPage() {
           >
             <Eye className="w-4 h-4" />
           </button>
-          <button 
-            className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
-            onClick={(e) => {
-              e.stopPropagation();
-              openEditModal(row.original);
-            }}
-            aria-label="Edit"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
-          <button 
-            className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row.original.vehicle_model_id);
-            }}
-            aria-label="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {canUpdate && (
+            <button 
+              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditModal(row.original);
+              }}
+              aria-label="Edit"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          )}
+          {canDelete && (
+            <button 
+              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(row.original.vehicle_model_id);
+              }}
+              aria-label="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -462,34 +469,40 @@ export default function VehicleModelsPage() {
     }
   };
 
+  const { user, isLoading: authLoading } = useAuth();
+  const canView = !!user?.position?.position_access?.vehicleModels?.view;
+  const canCreate = !!user?.position?.position_access?.vehicleModels?.create;
+  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
+  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
+
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  // Check if user has any relevant permissions
+  const hasAnyPermission = canView || canCreate || canUpdate || canDelete;
+  if (!hasAnyPermission) {
+    return <NoPermissionUI resource="vehicle models" />;
+  }
+
   if (isLoading){
     return(
       <SkeletonVehicleModelsTable/>
     )
   }
 
-  if (isError) {
+  // Only show error UI if user has view permission and there's an actual error
+  if (isError && canView) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
-              <Car className="w-4 h-4 text-[#0872b3]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Vehicle Models</h1>
-              <p className="text-gray-600 text-sm mt-1">Manage vehicle models in your fleet</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-            <p className="mt-4 text-red-600 font-semibold">Failed to load vehicle models</p>
-            <p className="text-gray-500 text-sm mt-2">An error occurred while fetching vehicle models</p>
-          </div>
-        </div>
-      </div>
+      <ErrorUI
+        resource="vehicle models"
+        onRetry={() => {
+          window.location.reload();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
     );
   }
 
@@ -507,144 +520,178 @@ export default function VehicleModelsPage() {
               <p className="text-gray-600 text-sm mt-1">Manage vehicle models in your fleet</p>
             </div>
           </div>
-          <Button 
-            className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white" 
-            onClick={() => setShowCreate(true)}
-          >
-            <Plus className="w-4 h-4" /> Add Model
-          </Button>
+          {canCreate && (
+            <Button 
+              className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white" 
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="w-4 h-4" /> Add Model
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-          {/* Search and Filters */}
-          <div className="px-4 py-3 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="Search vehicle models..." 
-                  value={globalFilter ?? ""} 
-                  onChange={(e) => setGlobalFilter(e.target.value)} 
-                  className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] w-64" 
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">
-                  {table.getFilteredRowModel().rows.length} of {vehicleModels?.length || 0} models
-                </span>
+      {canView ? (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            {/* Search and Filters */}
+            <div className="px-4 py-3 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input 
+                    type="text" 
+                    placeholder="Search vehicle models..." 
+                    value={globalFilter ?? ""} 
+                    onChange={(e) => setGlobalFilter(e.target.value)} 
+                    className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] w-64" 
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">
+                    {table.getFilteredRowModel().rows.length} of {vehicleModels?.length || 0} models
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead 
-                        key={header.id} 
-                        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50"
-                      >
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.length > 0 ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow 
-                      key={row.id} 
-                      className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
-                      onClick={() => router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}`)}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id} 
-                          className="px-4 py-4 whitespace-nowrap"
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead 
+                          key={header.id} 
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50"
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
                       ))}
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
-                      <div className="flex flex-col items-center gap-2">
-                        <Car className="w-8 h-8 text-gray-300" />
-                        <p>No vehicle models found</p>
-                        <p className="text-sm">Get started by adding your first vehicle model</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length > 0 ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow 
+                        key={row.id} 
+                        className="hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
+                        onClick={() => router.push(`/dashboard/shared_pages/vehicle-model/${row.original.vehicle_model_id}`)}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell 
+                            key={cell.id} 
+                            className="px-4 py-4 whitespace-nowrap"
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center gap-2">
+                          <Car className="w-8 h-8 text-gray-300" />
+                          <p>No vehicle models found</p>
+                          <p className="text-sm">Get started by adding your first vehicle model</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
 
-          {/* Pagination */}
-          <div className="px-4 py-3 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">
-                  Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => table.previousPage()} 
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => table.nextPage()} 
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+            {/* Pagination */}
+            <div className="px-4 py-3 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => table.previousPage()} 
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => table.nextPage()} 
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Show message when user can't view but has other permissions
+        <div className="flex-1 overflow-auto p-4">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+            <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Access to View Vehicle Models
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                You don&apos;t have permission to view existing vehicle models, but you can create new ones if you have the appropriate permissions.
+              </p>
+              {canCreate && (
+                <button
+                  className="inline-flex items-center gap-2 px-6 py-3 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={() => setShowCreate(true)}
+                >
+                  <Plus className="w-5 h-5" />
+                  Create New Vehicle Model
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Vehicle Model Modal */}
-      <CreateVehicleModal 
-        open={showCreate} 
-        onClose={() => setShowCreate(false)} 
-        isLoading={createVehicleModel.isPending} 
-        onCreate={handleCreateVehicleModel} 
-      />
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this vehicle model? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      {editModalOpen && modelToEdit && (
+      {canCreate && (
+        <CreateVehicleModal 
+          open={showCreate} 
+          onClose={() => setShowCreate(false)} 
+          isLoading={createVehicleModel.isPending} 
+          onCreate={handleCreateVehicleModel} 
+        />
+      )}
+      {showDeleteDialog && canDelete && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this vehicle model? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {editModalOpen && modelToEdit && canUpdate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <form
             onSubmit={confirmEdit}

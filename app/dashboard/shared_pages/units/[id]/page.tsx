@@ -17,14 +17,20 @@ import { CreatePositionModal } from "../../positions/page";
 import { useCreatePosition } from '@/lib/queries';
 import type { position_accesses } from '@/types/next-auth';
 import { useAuth } from '@/hooks/useAuth';
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 export default function UnitDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const { user, isLoading: authLoading } = useAuth();
+  
+  // Call all hooks unconditionally at the top
   const { data: unit, isLoading, isError, refetch } = useOrganizationUnit(id);
   const updateUnit = useUpdateOrganizationUnit();
   const DisActivateUnit = useOrganizationDeleteUnit();
+  const createPosition = useCreatePosition();
+
   const [showEdit, setShowEdit] = useState(false);
   const [showDisActivateConfirm, setShowDisActivateConfirm] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -35,17 +41,22 @@ export default function UnitDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [DisActivateError, setDisActivateError] = useState<string | null>(null);
   const [showCreatePosition, setShowCreatePosition] = useState(false);
-  const createPosition = useCreatePosition();
-  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.units?.view;
+  const canUpdate = !!user?.position?.position_access?.units?.update;
+  const canCreatePosition = !!user?.position?.position_access?.positions?.create;
+  const canDisActivate = !!user?.position?.position_access?.positions?.delete;
+
+  // Helper: is super admin if has organizations access
+  const isSuperAdmin = !!user?.position?.position_access?.organizations;
+
   const filteredPositions = unit ? (
     statusFilter
       ? unit.positions.filter((pos) => pos.position_status === statusFilter)
       : unit.positions
   ) : [];
-
-  // Helper: is super admin if has organizations access
-  const isSuperAdmin = !!user?.position?.position_access?.organizations;
 
   // Open edit modal and prefill form
   const handleEdit = () => {
@@ -141,6 +152,12 @@ export default function UnitDetailPage() {
     router.push('/dashboard/shared_pages/positions');
   };
 
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+  if (!canView) {
+    return <NoPermissionUI resource="units" />;
+  }
   if (isLoading) {
     return <SkeletonEntityDetails />;
   }
@@ -166,13 +183,16 @@ export default function UnitDetailPage() {
             Back
           </Button>
           <div className="flex gap-2">
-            <Button
-              className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
-              onClick={handleEdit}
-            >
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit Unit
-            </Button>
+            {canUpdate && (
+              <Button
+                className="bg-[#0872b3] text-white hover:bg-[#065d8f]"
+                onClick={handleEdit}
+              >
+                <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                Edit Unit
+              </Button>
+            )}
+            {canDisActivate && (
             <Button
               className="bg-cyan-900 text-white hover:bg-red-700"
               onClick={() => setShowDisActivateConfirm(true)}
@@ -180,11 +200,11 @@ export default function UnitDetailPage() {
               <Ban className="mr-2" />
               DisActivate
             </Button>
-           
+            )}
           </div>
         </div>
         {/* Create Position Modal */}
-        {showCreatePosition && (
+        {showCreatePosition && canCreatePosition && (
           <CreatePositionModal
             open={showCreatePosition}
             onClose={() => setShowCreatePosition(false)}
@@ -243,7 +263,7 @@ export default function UnitDetailPage() {
           </div>
         )}
         {/* Edit Modal */}
-        {showEdit && (
+        {showEdit && canUpdate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <form
               onSubmit={handleEditSave}
@@ -323,12 +343,14 @@ export default function UnitDetailPage() {
                 <Building2 className="w-6 h-6 text-indigo-600" />
                 Positions in this Unit
               </h2>
-              <Button
-                className="bg-[#0872b3] text-white hover:bg-[#065a8f]"
-                onClick={() => setShowCreatePosition(true)}
-              >
-                New Position
-              </Button>
+              {canCreatePosition && (
+                <Button
+                  className="bg-[#0872b3] text-white hover:bg-[#065a8f]"
+                  onClick={() => setShowCreatePosition(true)}
+                >
+                  New Position
+                </Button>
+              )}
             </div>
             {/* Filter dropdown */}
             <div className="mb-4">

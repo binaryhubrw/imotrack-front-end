@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { VehicleType } from "@/types/enums";
 import { Ban } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 
 
@@ -31,6 +33,7 @@ export default function VehicleModelDetailPage() {
   const { data: model, isLoading, isError, refetch } = useVehicleModel(id);
   const updateVehicleModel = useUpdateVehicleModel();
   const deleteVehicleModel = useDeleteVehicleModel();
+  const { user, isLoading: authLoading } = useAuth();
   
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -40,6 +43,11 @@ export default function VehicleModelDetailPage() {
     vehicle_type: undefined as VehicleType | undefined,
     manufacturer_name: '',
   });
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.vehicleModels?.view;
+  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
+  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
 
  
   const VEHICLE_TYPE_OPTIONS = [
@@ -113,6 +121,14 @@ export default function VehicleModelDetailPage() {
     return VEHICLE_TYPE_OPTIONS.find(option => option.value === type)?.label || type;
   };
 
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (!canView) {
+    return <NoPermissionUI resource="vehicle models" />;
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -151,19 +167,23 @@ export default function VehicleModelDetailPage() {
             Back
           </Button>
           <div className="flex gap-2">
-            <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={handleEdit}>
-              <FontAwesomeIcon icon={faEdit} className="mr-2" />
-              Edit Model
-            </Button>
-            <Button className="bg-cyan-600 hover:bg-red-500" variant="destructive" onClick={handleDelete}>
-              <Ban className="mr-2" />
-              DisActivate
-            </Button>
+            {canUpdate && (
+              <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={handleEdit}>
+                <FontAwesomeIcon icon={faEdit} className="mr-2" />
+                Edit Model
+              </Button>
+            )}
+            {canDelete && (
+              <Button className="bg-cyan-600 hover:bg-red-500" variant="destructive" onClick={handleDelete}>
+                <Ban className="mr-2" />
+                DisActivate
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Edit Modal */}
-        {showEdit && (
+        {showEdit && canUpdate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <form
               onSubmit={handleEditSave}
@@ -291,22 +311,24 @@ export default function VehicleModelDetailPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>DisActivate Vehicle Model</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to DisActivate &quot;{model.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              DisActivate Model
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showDeleteDialog && canDelete && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>DisActivate Vehicle Model</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to DisActivate &quot;{model.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                DisActivate Model
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

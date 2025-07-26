@@ -24,16 +24,19 @@ import {
 import { TransmissionMode } from "@/types/enums";
 import Image from "next/image";
 import { useAuth } from '@/hooks/useAuth';
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
-  const vehicleAccess = user?.position?.position_access?.vehicles;
+  const { user, isLoading: authLoading } = useAuth();
+  
+  // Move all data fetching hooks to the top
   const { data: vehicle, isLoading, isError, refetch } = useVehicle(id);
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
+  const { data: vehicleModel } = useVehicleModel(vehicle?.vehicle_model_id || '');
   
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -49,8 +52,6 @@ export default function VehicleDetailPage() {
     organization_id: '',
     vehicle_photo: undefined as File | undefined,
   });
-  // Fetch related vehicle model
-  const { data: vehicleModel } = useVehicleModel(vehicle?.vehicle_model_id || '');
 
   React.useEffect(() => {
     if (vehicle) {
@@ -66,6 +67,24 @@ export default function VehicleDetailPage() {
       });
     }
   }, [vehicle]);
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.vehicles?.view;
+  const canUpdate = !!user?.position?.position_access?.vehicles?.update;
+  const canDelete = !!user?.position?.position_access?.vehicles?.delete;
+
+  // Early returns
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return <NoPermissionUI resource="vehicles" />;
+  }
 
   // Open edit modal and prefill form
   const handleEdit = () => {
@@ -142,13 +161,6 @@ export default function VehicleDetailPage() {
       </div>
     );
   }
-  if (!vehicleAccess?.view) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500 text-lg font-semibold">You do not have permission to view this vehicle.</div>
-      </div>
-    );
-  }
   if (isError || !vehicle) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -168,14 +180,14 @@ export default function VehicleDetailPage() {
           </Button>
           <div className="flex gap-2">
             {/* Only show Edit if user has update permission */}
-            {vehicleAccess?.update && (
+            {canUpdate && (
               <Button className="bg-[#0872b3] text-white hover:bg-[#065d8f]" onClick={handleEdit}>
                 <FontAwesomeIcon icon={faEdit} className="mr-2" />
                 Edit Vehicle
               </Button>
             )}
             {/* Only show Delete if user has delete permission */}
-            {vehicleAccess?.delete && (
+            {canDelete && (
               <Button variant="destructive" onClick={handleDelete}>
                 <FontAwesomeIcon icon={faTrash} className="mr-2" />
                 Delete
@@ -185,7 +197,7 @@ export default function VehicleDetailPage() {
         </div>
 
         {/* Edit Modal */}
-        {showEdit && (
+        {showEdit && canUpdate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <form
               onSubmit={handleEditSave}
@@ -243,7 +255,7 @@ export default function VehicleDetailPage() {
                 <button
                   type="submit"
                   className="flex-1 py-2 px-4 bg-[#0872b3] text-white rounded hover:bg-[#065d8f]"
-                  disabled={submitting || !vehicleAccess?.update}
+                  disabled={submitting || !canUpdate}
                 >
                   {submitting ? 'Saving...' : 'Save'}
                 </button>
@@ -370,22 +382,24 @@ export default function VehicleDetailPage() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Vehicle Model</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{vehicleModel?.vehicle_model_name}&quot;? This action cannot be undone and may affect related records.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              Delete Model
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDelete && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the vehicle with plate number &quot;{vehicle?.plate_number}&quot;? This action cannot be undone and may affect related records.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                Delete Vehicle
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

@@ -23,11 +23,19 @@ import {
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/useAuth";
+import NoPermissionUI from "@/components/NoPermissionUI";
 
 export default function OrganizationIdPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+
+  const { user, isLoading: authLoading } = useAuth();
+  const canView = !!user?.position?.position_access?.organizations?.view;
+  const canUpdate = !!user?.position?.position_access?.organizations?.update;
+  const canDisActivate = !!user?.position?.position_access?.organizations?.delete;
+  const canCreateUnit = !!user?.position?.position_access?.units?.create;
 
   // Fetch organization details
   const { data: org, isLoading, isError, error, refetch } = useOrganization(id);
@@ -102,10 +110,13 @@ export default function OrganizationIdPage() {
     }
   };
 
-  const handleCreateUnit = async (data: { unit_name: string; organization_id: string }) => {
+  const handleCreateUnit = async (data: {
+    unit_name: string;
+    organization_id: string;
+  }) => {
     await createUnit.mutateAsync(data);
     setShowCreateUnit(false);
-    router.push('/dashboard/shared_pages/units');
+    router.push("/dashboard/shared_pages/units");
   };
 
   // Handle escape key to close modals
@@ -123,6 +134,13 @@ export default function OrganizationIdPage() {
       return () => document.removeEventListener("keydown", handleEscape);
     }
   }, [showEdit, showDeleteConfirm, showCreateUnit]);
+
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+  if (!canView) {
+    return <NoPermissionUI resource="organizations" />;
+  }
 
   if (isLoading) {
     return <SkeletonEntityDetails />;
@@ -174,20 +192,24 @@ export default function OrganizationIdPage() {
             Organization Details
           </h1>
           <div className="flex gap-2">
-            <button
-              onClick={handleEdit}
-              className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2"
-            >
-              <Edit3 className="w-4 h-4" />
-              Edit
-            </button>
+            {canUpdate && (
+              <button
+                onClick={handleEdit}
+                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2"
+              >
+                <Edit3 className="w-4 h-4" />
+                Edit
+              </button>
+            )}
+            {canDisActivate && (
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
             >
               <Ban className="w-4 h-4" />
-              DisActivate
-            </button>
+                DisActivate
+              </button>
+            )}
           </div>
         </div>
 
@@ -311,12 +333,14 @@ export default function OrganizationIdPage() {
                 Units
               </h3>
               <div className="flex gap-2">
-                <button
-                  className="inline-block px-5 cursor-pointer py-3 bg-[#0872B3] text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                  onClick={() => setShowCreateUnit(true)}
-                >
-                  New Unit
-                </button>
+                {canCreateUnit && (
+                  <button
+                    className="inline-block px-5 cursor-pointer py-3 bg-[#0872B3] text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    onClick={() => setShowCreateUnit(true)}
+                  >
+                    New Unit
+                  </button>
+                )}
               </div>
             </div>
 
@@ -331,7 +355,11 @@ export default function OrganizationIdPage() {
                   <div
                     key={unit.unit_id}
                     className="p-4 bg-white rounded-xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => router.push(`/dashboard/shared_pages/units/${unit.unit_id}`)}
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/shared_pages/units/${unit.unit_id}`
+                      )
+                    }
                   >
                     <div className="flex items-center gap-3">
                       <div className="bg-[#E6F4FF] p-2 rounded-full">
@@ -353,7 +381,7 @@ export default function OrganizationIdPage() {
         </div>
 
         {/* Edit Modal */}
-        {showEdit && (
+        {showEdit && canUpdate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -529,7 +557,10 @@ export default function OrganizationIdPage() {
             open={showCreateUnit}
             onClose={() => setShowCreateUnit(false)}
             onCreate={handleCreateUnit}
-            organization={{ organization_id: org.organization_id, organization_name: org.organization_name }}
+            organization={{
+              organization_id: org.organization_id,
+              organization_name: org.organization_name,
+            }}
           />
         )}
       </div>
@@ -537,8 +568,18 @@ export default function OrganizationIdPage() {
   );
 }
 
-function CreateUnitModal({ open, onClose, onCreate, organization }: { open: boolean; onClose: () => void; onCreate: (data: { unit_name: string; organization_id: string }) => void; organization: { organization_id: string; organization_name: string } }) {
-  const [form, setForm] = useState({ unit_name: '' });
+function CreateUnitModal({
+  open,
+  onClose,
+  onCreate,
+  organization,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreate: (data: { unit_name: string; organization_id: string }) => void;
+  organization: { organization_id: string; organization_name: string };
+}) {
+  const [form, setForm] = useState({ unit_name: "" });
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -549,8 +590,11 @@ function CreateUnitModal({ open, onClose, onCreate, organization }: { open: bool
     e.preventDefault();
     setSubmitting(true);
     try {
-      await onCreate({ unit_name: form.unit_name, organization_id: organization.organization_id });
-      setForm({ unit_name: '' });
+      await onCreate({
+        unit_name: form.unit_name,
+        organization_id: organization.organization_id,
+      });
+      setForm({ unit_name: "" });
       onClose();
     } catch {
       // error handled in mutation

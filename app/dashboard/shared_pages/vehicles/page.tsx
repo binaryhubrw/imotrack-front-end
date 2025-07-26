@@ -56,6 +56,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { TransmissionMode, VehicleType } from "@/types/enums";
+import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 // Extend CreateVehicleDto to make vehicle_type optional for form state
 type CreateVehicleDto = Omit<BaseCreateVehicleDto, 'vehicle_type'> & { vehicle_type?: string };
@@ -731,11 +733,15 @@ function CreateVehicleModal({
 // Main Vehicles Page Component
 export default function VehiclesPage() {
   const router = useRouter();
-  const { user } = useAuth();
-  const vehicleAccess = user?.position?.position_access?.vehicles;
+  const { user, isLoading: authLoading } = useAuth();
+  
+  // Move all data fetching hooks to the top
   const { data: vehicles = [], isLoading, isError } = useVehicles();
   const deleteVehicle = useDeleteVehicle();
   const { data: vehicleModels = [] } = useVehicleModels();
+  const updateVehicle = useUpdateVehicle();
+  const createVehicle = useCreateVehicle();
+  
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -744,51 +750,15 @@ export default function VehiclesPage() {
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const updateVehicle = useUpdateVehicle();
-  const createVehicle = useCreateVehicle();
-  const handleCreateVehicle = async (formData: CreateVehicleDto) => {
-    try {
-      await createVehicle.mutateAsync({
-        ...formData,
-        vehicle_type: formData.vehicle_type as VehicleType,
-        transmission_mode: formData.transmission_mode as TransmissionMode,
-        vehicle_photo: formData.vehicle_photo ?? undefined,
-      });
-      setShowCreateModal(false);
-    } catch {
-      // handled by mutation
-    }
-  };
-  // Always define helper functions before permission check
-  const handleDeleteVehicle = async () => {
-    if (!vehicleToDelete) return;
-    try {
-      await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
-      setVehicleToDelete(null);
-    } catch (error) {
-      console.error("Error deleting vehicle:", error);
-    }
-  };
-  const handleEditVehicle = async (
-    id: string,
-    data: Partial<CreateVehicleDto>
-  ) => {
-    // Fix type for vehicle_type and transmission_mode
-    const updateData = {
-      ...data,
-      vehicle_type: data.vehicle_type as VehicleType | undefined,
-      transmission_mode: data.transmission_mode as TransmissionMode | undefined,
-      vehicle_photo:
-        data.vehicle_photo && data.vehicle_photo instanceof File
-          ? data.vehicle_photo
-          : undefined,
-    };
-    await updateVehicle.mutateAsync({ id, updates: updateData });
-    setEditModalOpen(false);
-    setVehicleToEdit(null);
-  };
 
-  // Table Columns - keep only essential ones
+  // Permission checks
+  const canView = !!user?.position?.position_access?.vehicles?.view;
+  const canCreate = !!user?.position?.position_access?.vehicles?.create;
+  const canUpdate = !!user?.position?.position_access?.vehicles?.update;
+  const canDelete = !!user?.position?.position_access?.vehicles?.delete;
+  const hasAnyPermission = canView || canCreate || canUpdate || canDelete;
+
+  // Table Columns - keep only essential ones (must be before early returns)
   const columns: ColumnDef<Vehicle>[] = useMemo(
     () => [
       {
@@ -862,7 +832,7 @@ export default function VehiclesPage() {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             {/* Only show Edit if user has update permission */}
-            {vehicleAccess?.update && (
+            {canUpdate && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -876,7 +846,7 @@ export default function VehiclesPage() {
               </Button>
             )}
             {/* Only show Delete if user has delete permission */}
-            {vehicleAccess?.delete && (
+            {canDelete && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -893,7 +863,7 @@ export default function VehiclesPage() {
         ),
       },
     ],
-    [router, vehicleModels, vehicleAccess]
+    [router, vehicleModels, canUpdate, canDelete]
   );
   const table = useReactTable({
     data: vehicles,
@@ -920,7 +890,7 @@ export default function VehiclesPage() {
     },
   });
 
-  // Stats calculation
+  // Stats calculation (must be before early returns)
   const stats = useMemo(() => {
     const totalVehicles = vehicles.length;
     const vehiclesByType = vehicles.reduce((acc, vehicle) => {
@@ -940,29 +910,56 @@ export default function VehiclesPage() {
     };
   }, [vehicles]);
 
-  // Permission check: if no view, show denied
-  if (!vehicleAccess?.view) {
+  // Early returns
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500 text-lg font-semibold">You do not have permission to view vehicles.</div>
+        <div className="text-gray-500">Loading...</div>
       </div>
     );
   }
+
+  if (!hasAnyPermission) {
+    return <NoPermissionUI resource="vehicles" />;
+  }
+
+  // Always define helper functions before permission check
+  const handleDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
+    try {
+      await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
+      setVehicleToDelete(null);
+    } catch (error) {
+      console.error("Error deleting vehicle:", error);
+    }
+  };
+  // const handleEditVehicle = async (
+  //   id: string,
+  //   data: Partial<CreateVehicleDto>
+  // ) => {
+  //   // Fix type for vehicle_type and transmission_mode
+  //   const updateData = {
+  //     ...data,
+  //     vehicle_type: data.vehicle_type as VehicleType | undefined,
+  //     transmission_mode: data.transmission_mode as TransmissionMode | undefined,
+  //     vehicle_photo:
+  //       data.vehicle_photo && data.vehicle_photo instanceof File
+  //         ? data.vehicle_photo
+  //         : undefined,
+  //   };
+  //   await updateVehicle.mutateAsync({ id, updates: updateData });
+  //   setEditModalOpen(false);
+  //   setVehicleToEdit(null);
+  // };
+  // Table configuration (must be before early returns)
+
 
   if (isLoading) {
     return <SkeletonVehiclesTable />;
   }
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-red-600 font-medium">Failed to load vehicles</p>
-        <p className="text-gray-500 text-sm mt-2">
-          {isError ? "An error occurred" : "An error occurred"}
-        </p>
-      </div>
-    );
+  if (isError && canView) {
+    return <ErrorUI />;
   }
 
   return (
@@ -984,7 +981,7 @@ export default function VehiclesPage() {
             </div>
             <div className="flex items-center gap-2">
               {/* Only show Add Vehicle if user has create permission */}
-              {vehicleAccess?.create && (
+              {canCreate && (
                 <Button
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
@@ -1066,141 +1063,194 @@ export default function VehiclesPage() {
           </Card>
         </div>
         {/* Table Content */}
-        <div className="flex-1 overflow-auto p-4">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            {/* Table Controls */}
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search vehicles..."
-                  value={globalFilter ?? ""}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-                />
+        {canView ? (
+          <div className="flex-1 overflow-auto p-4">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              {/* Table Controls */}
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search vehicles..."
+                    value={globalFilter ?? ""}
+                    onChange={(e) => setGlobalFilter(e.target.value)}
+                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                  />
+                </div>
+                {globalFilter && (
+                  <span className="text-sm text-gray-500">
+                    {table.getFilteredRowModel().rows.length} of {vehicles.length}{" "}
+                    vehicles
+                  </span>
+                )}
               </div>
-              {globalFilter && (
-                <span className="text-sm text-gray-500">
-                  {table.getFilteredRowModel().rows.length} of {vehicles.length}{" "}
-                  vehicles
-                </span>
-              )}
-            </div>
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-blue-50"
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length > 0 ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
-                        onClick={() =>
-                          router.push(
-                            `/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`
-                          )
-                        }
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            className="px-4 py-4 whitespace-nowrap text-sm"
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead
+                            key={header.id}
+                            className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-blue-50"
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
-                        <div className="flex flex-col items-center justify-center">
-                          <Car className="w-12 h-12 text-gray-400 mb-2" />
-                          <p className="text-gray-500">No vehicles found</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-4 px-4 pb-4">
-              <div className="text-sm text-gray-500">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length > 0 ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`
+                            )
+                          }
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell
+                              key={cell.id}
+                              className="px-4 py-4 whitespace-nowrap text-sm"
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
+                        >
+                          <div className="flex flex-col items-center justify-center">
+                            <Car className="w-12 h-12 text-gray-400 mb-2" />
+                            <p className="text-gray-500">No vehicles found</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Prev
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4 px-4 pb-4">
+                <div className="text-sm text-gray-500">
+                  Page {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Prev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // Show create-only message if user can create but not view
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div className="text-center">
+              <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No View Access
+              </h3>
+              <p className="text-gray-500 mb-4">
+                You don&apos;t have permission to view vehicles, but you can create new ones.
+              </p>
+              {canCreate && (
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Create New Vehicle
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {/* Create Vehicle Modal */}
-        <CreateVehicleModal
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onCreate={handleCreateVehicle}
-          isLoading={createVehicle.isPending}
-          vehicleModels={vehicleModels}
-          organizationId={(user && user.organization && user.organization.organization_id) ? user.organization.organization_id : ""}
-        />
+        {canCreate && (
+          <CreateVehicleModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onCreate={async (formData) => {
+              try {
+                await createVehicle.mutateAsync({
+                  ...formData,
+                  vehicle_type: formData.vehicle_type as VehicleType,
+                  transmission_mode: formData.transmission_mode as TransmissionMode,
+                  vehicle_photo: formData.vehicle_photo ?? undefined,
+                });
+                setShowCreateModal(false);
+              } catch {
+                // handled by mutation
+              }
+            }}
+            isLoading={createVehicle.isPending}
+            vehicleModels={vehicleModels}
+            organizationId={(user && user.organization && user.organization.organization_id) ? user.organization.organization_id : ""}
+          />
+        )}
         {/* Edit Vehicle Modal */}
-        <EditVehicleModal
-          open={editModalOpen}
-          onClose={() => {
-            setEditModalOpen(false);
-            setVehicleToEdit(null);
-          }}
-          vehicle={vehicleToEdit}
-          onUpdate={handleEditVehicle}
-          isLoading={updateVehicle.isPending}
-          vehicleModels={vehicleModels}
-        />
+        {canUpdate && (
+          <EditVehicleModal
+            open={editModalOpen}
+            onClose={() => {
+              setEditModalOpen(false);
+              setVehicleToEdit(null);
+            }}
+            vehicle={vehicleToEdit}
+            onUpdate={async (id, data) => {
+              // Fix type for vehicle_type and transmission_mode
+              const updateData = {
+                ...data,
+                vehicle_type: data.vehicle_type as VehicleType | undefined,
+                transmission_mode: data.transmission_mode as TransmissionMode | undefined,
+                vehicle_photo:
+                  data.vehicle_photo && data.vehicle_photo instanceof File
+                    ? data.vehicle_photo
+                    : undefined,
+              };
+              await updateVehicle.mutateAsync({ id, updates: updateData });
+              setEditModalOpen(false);
+              setVehicleToEdit(null);
+            }}
+            isLoading={updateVehicle.isPending}
+            vehicleModels={vehicleModels}
+          />
+        )}
         {/* Delete Confirmation Modal */}
-        {vehicleToDelete && (
+        {vehicleToDelete && canDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-fade-in">
               {/* Close Button */}
