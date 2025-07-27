@@ -14,8 +14,6 @@ import {
 } from "@tanstack/react-table";
 import { 
   Plus,
-  Edit,
-  Trash2,
   Search,
   X,
   ChevronLeft,
@@ -45,6 +43,14 @@ import { VehicleType } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+
+// Helper function to format dates
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString();
+};
 
 function CreateVehicleModal({ 
   open, 
@@ -285,6 +291,11 @@ export default function VehicleModelsPage() {
 
   // Open edit modal and prefill form
   const openEditModal = (model: VehicleModel) => {
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicle models');
+      return;
+    }
+    
     setModelToEdit(model);
     setEditForm({
       vehicle_model_name: model.vehicle_model_name || '',
@@ -319,64 +330,100 @@ export default function VehicleModelsPage() {
   const createVehicleModel = useCreateVehicleModel();
   const deleteVehicleModel = useDeleteVehicleModel();
 
-  const columns: ColumnDef<VehicleModel>[] = useMemo(() => [
+  const handleCreateVehicleModel = async (formData: CreateVehicleModelDto) => {
+    if (!canCreate) {
+      toast.error('You do not have permission to create vehicle models');
+      return;
+    }
+    
+    try {
+      await createVehicleModel.mutateAsync(formData);
+      setShowCreate(false);
+    } catch (error) {
+      console.error('Error creating vehicle model:', error);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicle models');
+      return;
+    }
+    setDeleteId(id);
+    setShowDeleteDialog(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (!deleteId || !canDelete) return;
+    try {
+      await deleteVehicleModel.mutateAsync({ id: deleteId });
+      setShowDeleteDialog(false);
+      setDeleteId(null);
+    } catch {
+      // error handled by mutation
+      setShowDeleteDialog(false);
+      setDeleteId(null);
+    }
+  };
+
+  const { user, isLoading: authLoading } = useAuth();
+  const canView = !!user?.position?.position_access?.vehicleModels?.view;
+  const canCreate = !!user?.position?.position_access?.vehicleModels?.create;
+  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
+  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
+
+  // Define columns after all functions are declared
+  const columns = useMemo<ColumnDef<VehicleModel>[]>(() => [
     {
       accessorKey: "vehicle_model_name",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Model Name</span>,
+      header: "Model Name",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
-            <Car className="w-4 h-4 text-[#0872b3]" />
-          </div>
-          <span className="text-sm font-medium text-gray-900">{row.getValue("vehicle_model_name")}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "manufacturer_name",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Manufacturer</span>,
-      cell: ({ row }) => (
-        <span className="text-sm text-gray-700">{row.getValue("manufacturer_name")}</span>
+        <div className="font-medium">{row.getValue("vehicle_model_name")}</div>
       ),
     },
     {
       accessorKey: "vehicle_type",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Type</span>,
+      header: "Type",
       cell: ({ row }) => {
         const type = row.getValue("vehicle_type") as string;
         const getTypeColor = (type: string) => {
           switch (type.toLowerCase()) {
             case 'sedan': return 'bg-blue-100 text-blue-800';
             case 'suv': return 'bg-green-100 text-green-800';
+            case 'hatchback': return 'bg-yellow-100 text-yellow-800';
             case 'truck': return 'bg-orange-100 text-orange-800';
             case 'van': return 'bg-purple-100 text-purple-800';
             default: return 'bg-gray-100 text-gray-800';
           }
         };
         return (
-          <span className={`px-2 py-1 text-xs rounded-full font-medium ${getTypeColor(type)}`}>
+          <Badge className={getTypeColor(type)}>
             {type}
-          </span>
+          </Badge>
         );
       },
+    },
+    {
+      accessorKey: "manufacturer_name",
+      header: "Manufacturer",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("manufacturer_name")}</div>
+      ),
     },
     {
       accessorKey: "created_at",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Created</span>,
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"));
-        return (
-          <span className="text-sm text-gray-500">
-            {date.toLocaleDateString()}
-          </span>
-        );
-      },
+      header: "Created",
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-500">
+          {formatDate(row.getValue("created_at"))}
+        </div>
+      ),
     },
     {
       id: "actions",
-      header: () => <span className="text-xs font-semibold uppercase tracking-wider">Actions</span>,
+      header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1">
+        <div className="flex gap-2">
           <button 
             className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" 
             onClick={(e) => {
@@ -388,33 +435,29 @@ export default function VehicleModelsPage() {
             <Eye className="w-4 h-4" />
           </button>
           {canUpdate && (
-            <button 
-              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" 
-              onClick={(e) => {
-                e.stopPropagation();
-                openEditModal(row.original);
-              }}
-              aria-label="Edit"
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openEditModal(row.original)}
+              className="text-[#0872b3] border-[#0872b3] hover:bg-[#0872b3] hover:text-white"
             >
-              <Edit className="w-4 h-4" />
-            </button>
+              Edit
+            </Button>
           )}
           {canDelete && (
-            <button 
-              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(row.original.vehicle_model_id);
-              }}
-              aria-label="Delete"
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleDelete(row.original.vehicle_model_id)}
+              className="text-red-600 border-red-600 hover:bg-red-600 hover:text-white"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
+              Delete
+            </Button>
           )}
         </div>
       ),
     },
-  ], [router]);
+  ], [canDelete, canUpdate, handleDelete, openEditModal, router]);
 
   const table = useReactTable<VehicleModel>({
     data: vehicleModels || [],
@@ -442,38 +485,6 @@ export default function VehicleModelsPage() {
       },
     },
   });
-
-  const handleCreateVehicleModel = async (formData: CreateVehicleModelDto) => {
-    try {
-      await createVehicleModel.mutateAsync(formData);
-      setShowCreate(false);
-    } catch (error) {
-      console.error('Error creating vehicle model:', error);
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
-    setShowDeleteDialog(true);
-  };
-  const confirmDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await deleteVehicleModel.mutateAsync({ id: deleteId });
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    } catch {
-      // error handled by mutation
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    }
-  };
-
-  const { user, isLoading: authLoading } = useAuth();
-  const canView = !!user?.position?.position_access?.vehicleModels?.view;
-  const canCreate = !!user?.position?.position_access?.vehicleModels?.create;
-  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
-  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
 
   if (authLoading) {
     return <div className="p-8 text-center">Loading...</div>;

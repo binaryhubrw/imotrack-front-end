@@ -1,79 +1,117 @@
-
-
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  AlertTriangle, 
-  Calendar, 
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Calendar,
   Car,
-  Clock, 
+  Clock,
   Download,
   Phone,
   CheckCircle,
   XCircle,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useVehicleIssue } from '@/lib/queries';
+import { useVehicleIssue, useUpdateVehicleIssue, useDeleteVehicleIssue } from '@/lib/queries';
+import { useAuth } from '@/hooks/useAuth';
+import NoPermissionUI from '@/components/NoPermissionUI';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
+// All possible status values for vehicle issues
+const STATUS_LABELS: Record<string, string> = {
+  OPEN: 'Reported',
+  IN_PROGRESS: 'In Progress',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+};
+
+const STATUS_BADGE: Record<string, string> = {
+  OPEN: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100',
+  IN_PROGRESS: 'bg-blue-100 text-blue-800 hover:bg-blue-100',
+  RESOLVED: 'bg-green-100 text-green-800 hover:bg-green-100',
+  CLOSED: 'bg-gray-200 text-gray-800 hover:bg-gray-200',
+};
 
 export default function IssueDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const issueId = params.id as string;
-  const { data: issue, isLoading, isError } = useVehicleIssue(issueId);
+  const { data: issue, isLoading, isError, error, refetch } = useVehicleIssue(issueId);
+  const updateVehicleIssue = useUpdateVehicleIssue();
+  const deleteVehicleIssue = useDeleteVehicleIssue();
+  const { user, isLoading: authLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0872B3]" />
-          </div>
-        </div>
-      </main>
-    );
-  }
+  // Debug logging
+  console.log('IssueDetailsPage Debug:', {
+    issueId,
+    issue,
+    isLoading,
+    isError,
+    error: error?.message,
+    params: params,
+    url: window.location.href
+  });
 
-  if (isError || !issue) {
-    return (
-      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
-        <div className="max-w-4xl mx-auto">
-          <Card className="text-center py-12">
-            <CardContent>
-              <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Issue Not Found</h2>
-              <p className="text-gray-600 mb-6">The issue could not be found.</p>
-              <Button onClick={() => router.push('/dashboard/staff/issue-management')} className="bg-[#0872B3] hover:bg-blue-700">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Issue History
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    );
-  }
+  // Permission checks
+  const canView = !!user?.position?.position_access?.vehicleIssues?.view;
+  const canUpdate = !!user?.position?.position_access?.vehicleIssues?.update;
+  const canDelete = !!user?.position?.position_access?.vehicleIssues?.delete;
+  const hasAnyPermission = canView || canUpdate || canDelete;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Reported</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">In Progress</Badge>;
-      case 'RESOLVED':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Resolved</Badge>;
-      case 'CLOSED':
-        return <Badge className="bg-gray-200 text-gray-800 hover:bg-gray-200">Closed</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editForm, setEditForm] = useState({
+    issue_title: '',
+    issue_description: '',
+    issue_status: 'OPEN' as 'OPEN' | 'CLOSED' | 'IN_PROGRESS' | 'RESOLVED' | string,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  // Initialize edit form when issue data is available
+  useEffect(() => {
+    if (issue) {
+      setEditForm({
+        issue_title: issue.issue_title || '',
+        issue_description: issue.issue_description || '',
+        issue_status: (issue.issue_status as typeof editForm.issue_status) || 'OPEN',
+      });
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issue]);
 
+  // Status badge component
+  const getStatusBadge = (status: string) => (
+    <Badge className={STATUS_BADGE[status] || 'bg-gray-100 text-gray-800 hover:bg-gray-100'}>
+      {STATUS_LABELS[status] || status}
+    </Badge>
+  );
+
+  // Status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'OPEN':
@@ -89,7 +127,9 @@ export default function IssueDetailsPage() {
     }
   };
 
+  // Export as text report
   const generateReport = () => {
+    if (!issue) return;
     const reportData = `
 Issue Report
 ============
@@ -104,7 +144,6 @@ ${issue.issue_description}
 ---
 Generated on: ${new Date().toLocaleString()}
     `;
-
     const blob = new Blob([reportData], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -115,14 +154,112 @@ Generated on: ${new Date().toLocaleString()}
     document.body.removeChild(link);
   };
 
+  // Edit handlers
+  const handleEdit = () => {
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicle issues');
+      return;
+    }
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicle issues');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await updateVehicleIssue.mutateAsync({
+        issueId,
+        updates: editForm,
+      });
+      toast.success('Issue updated successfully!');
+      setShowEditModal(false);
+      refetch();
+    } catch {
+      toast.error('Failed to update issue');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Delete handlers
+  const handleDelete = () => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicle issues');
+      return;
+    }
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!canDelete) return;
+    try {
+      await deleteVehicleIssue.mutateAsync({ issueId });
+      toast.success('Issue deleted successfully!');
+      router.push('/dashboard/shared_pages/vehicle-issues');
+    } catch {
+      toast.error('Failed to delete issue');
+    }
+  };
+
+  // Loading and permission states
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+  if (!hasAnyPermission) {
+    return <NoPermissionUI resource="vehicle issues" />;
+  }
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0872B3]" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+  if (isError || !issue) {
+    return (
+      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
+        <div className="max-w-4xl mx-auto">
+          <Card className="text-center py-12">
+            <CardContent>
+              <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Issue Not Found</h2>
+              <p className="text-gray-600 mb-6">
+                The issue could not be found. Issue ID: {issueId}
+              </p>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 text-left">
+                  <p className="text-red-800 font-medium">Error Details:</p>
+                  <p className="text-red-600 text-sm">{error.message}</p>
+                </div>
+              )}
+              <Button onClick={() => router.push('/dashboard/shared_pages/vehicle-issues')} className="bg-[#0872B3] hover:bg-blue-700">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Issue History
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    );
+  }
+
+  // Main render
   return (
     <main className="min-h-screen bg-[#e6f2fa] px-4 py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <Button 
+          <Button
             onClick={() => router.push('/dashboard/shared_pages/vehicle-issues')}
-            variant="ghost" 
+            variant="ghost"
             className="text-[#0872B3] hover:bg-blue-50"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -133,6 +270,18 @@ Generated on: ${new Date().toLocaleString()}
               <Download className="w-4 h-4 mr-2" />
               Export Report
             </Button>
+            {canUpdate && (
+              <Button onClick={handleEdit} className="bg-[#0872B3] hover:bg-[#065d8f]">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Issue
+              </Button>
+            )}
+            {canDelete && (
+              <Button onClick={handleDelete} variant="destructive" className="bg-red-600 hover:bg-red-700">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Issue
+              </Button>
+            )}
           </div>
         </div>
 
@@ -192,7 +341,7 @@ Generated on: ${new Date().toLocaleString()}
                 <div className="space-y-4">
                   <div className="text-center">
                     {getStatusIcon(issue.issue_status)}
-                    <p className="mt-2 font-medium text-gray-900">{issue.issue_status}</p>
+                    <p className="mt-2 font-medium text-gray-900">{STATUS_LABELS[issue.issue_status] || issue.issue_status}</p>
                     <p className="text-sm text-gray-600">
                       {issue.issue_status === 'OPEN' && 'Issue has been reported and is awaiting review'}
                       {issue.issue_status === 'IN_PROGRESS' && 'Issue is currently being addressed'}
@@ -225,13 +374,95 @@ Generated on: ${new Date().toLocaleString()}
               <Alert className="border-yellow-200 bg-yellow-50">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <AlertDescription className="text-yellow-800">
-                  This issue has been reported and is awaiting review. You will be notified once its being addressed.
+                  This issue has been reported and is awaiting review. You will be notified once it is being addressed.
                 </AlertDescription>
               </Alert>
             )}
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && canUpdate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <form
+            onSubmit={handleEditSave}
+            className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
+          >
+            <h2 className="text-xl font-bold mb-2">Edit Vehicle Issue</h2>
+            <label className="text-sm font-medium">Issue Title
+              <input
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872B3] focus:border-transparent"
+                value={editForm.issue_title}
+                onChange={e => setEditForm(f => ({ ...f, issue_title: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="text-sm font-medium">Description
+              <Textarea
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872B3] focus:border-transparent"
+                value={editForm.issue_description}
+                onChange={e => setEditForm(f => ({ ...f, issue_description: e.target.value }))}
+                required
+                rows={4}
+              />
+            </label>
+            <label className="text-sm font-medium">Status
+              <Select
+                value={editForm.issue_status}
+                onValueChange={(value: typeof editForm.issue_status) => setEditForm(f => ({ ...f, issue_status: value }))}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OPEN">Open</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="RESOLVED">Resolved</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+            <div className="flex gap-3 mt-4">
+              <button
+                type="button"
+                className="flex-1 py-2 px-4 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowEditModal(false)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2 px-4 bg-[#0872B3] text-white rounded hover:bg-[#065d8f]"
+                disabled={submitting}
+              >
+                {submitting ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && canDelete && (
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Vehicle Issue</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &quot;{issue.issue_title}&quot;? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+                Delete Issue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </main>
   );
 }

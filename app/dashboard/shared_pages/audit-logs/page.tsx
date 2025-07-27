@@ -7,6 +7,7 @@ import ErrorUI from '@/components/ErrorUI';
 import NoPermissionUI from '@/components/NoPermissionUI';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { SkeletonSystemLogsDashboard } from '@/components/ui/skeleton';
 
 export default function SystemLogsDashboard() {
   const router = useRouter();
@@ -99,13 +100,7 @@ export default function SystemLogsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex items-center justify-center">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full"
-        />
-      </div>
+      <SkeletonSystemLogsDashboard />
     );
   }
 

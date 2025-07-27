@@ -16,6 +16,7 @@ import { useUpdatePassword } from '@/lib/queries';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { SkeletonUserProfilePage } from '@/components/ui/skeleton';
 
 export default function UserProfilePage() {
   // Add router for manual navigation control
@@ -45,6 +46,7 @@ export default function UserProfilePage() {
     newPassword: '',
     confirmPassword: ''
   });
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // Use the update password mutation
   const updatePasswordMutation = useUpdatePassword();
@@ -95,6 +97,7 @@ export default function UserProfilePage() {
       toast.error('New passwords do not match');
       return;
     }
+
     if (passwordForm.newPassword.length < 8) {
       toast.error('Password must be at least 8 characters long');
       return;
@@ -103,12 +106,13 @@ export default function UserProfilePage() {
     try {
       // Use the actual mutation to update password with correct parameter names
       const response = await updatePasswordMutation.mutateAsync({
-        current_password: passwordForm.currentPassword,
-        new_password: passwordForm.newPassword,
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
       });
       
       // Clear the form on success
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordChanged(true);
       
       // Show success message from API response
       if (response && response.message) {
@@ -116,15 +120,14 @@ export default function UserProfilePage() {
       } else {
         toast.success('Password changed successfully!');
       }
+      
+      // Reset the success state after 3 seconds
+      setTimeout(() => setPasswordChanged(false), 3000);
     } catch (error: unknown) {
       console.error('Password change error:', error);
-      if (error && typeof error === 'object' && 'response' in error) {
-        const apiError = error as { response?: { data?: { message?: string } } };
-        toast.error(apiError.response?.data?.message || 'Failed to change password');
-      } else if (error instanceof Error) {
-        toast.error(error.message || 'Failed to change password');
-      } else {
-        toast.error('Failed to change password');
+      // Error handling is already done in the mutation, but we can add additional logging
+      if (error instanceof Error) {
+        console.error('Password change error details:', error.message);
       }
     }
   };
@@ -139,27 +142,11 @@ export default function UserProfilePage() {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';
   };
 
-  const getRoleColor = (role: string) => {
-    const colors: Record<string, string> = {
-      'fleet manager': 'bg-purple-100 text-purple-800 border-purple-200',
-      'admin': 'bg-red-100 text-red-800 border-red-200',
-      'manager': 'bg-blue-100 text-blue-800 border-blue-200',
-      'user': 'bg-green-100 text-green-800 border-green-200',
-      'hr': 'bg-orange-100 text-orange-800 border-orange-200',
-      'staff': 'bg-indigo-100 text-indigo-800 border-indigo-200'
-    };
-    return colors[role?.toLowerCase()] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
 
   // Show loading state while authentication is being checked
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your profile...</p>
-        </div>
-      </div>
+      <SkeletonUserProfilePage/>
     );
   }
 
@@ -235,11 +222,7 @@ export default function UserProfilePage() {
                   <Building className="w-4 h-4" />
                   {user.organization.organization_name}
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getRoleColor(user.position.position_name)}`}>
-                    {user.position.position_name}
-                  </span>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -448,10 +431,10 @@ export default function UserProfilePage() {
             <div className="lg:col-span-3">
               <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg overflow-hidden">
                 {/* Enhanced Header with Better Visual Hierarchy */}
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                <CardHeader className="bg-gradient-to-r from-[#0872b3]/5 to-[#0872b3]/10 border-b border-[#0872b3]/20">
                   <CardTitle className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Lock className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-[#0872b3]/10 rounded-lg flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-[#0872b3]" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
@@ -462,12 +445,12 @@ export default function UserProfilePage() {
 
                 <CardContent className="p-6">
                   {/* Security Tips Banner */}
-                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="mb-6 p-4 bg-[#0872b3]/5 border border-[#0872b3]/20 rounded-lg">
                     <div className="flex items-start gap-3">
-                      <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Shield className="w-5 h-5 text-[#0872b3] mt-0.5 flex-shrink-0" />
                       <div>
-                        <h4 className="text-sm font-medium text-blue-900 mb-1">Password Security Tips</h4>
-                        <ul className="text-xs text-blue-800 space-y-1">
+                        <h4 className="text-sm font-medium text-[#0872b3] mb-1">Password Security Tips</h4>
+                        <ul className="text-xs text-[#0872b3]/80 space-y-1">
                           <li>• Use at least 8 characters with mixed case, numbers, and symbols</li>
                           <li>• Avoid using personal information or common words</li>
                           <li>• Don&apos;t reuse passwords from other accounts</li>
@@ -477,9 +460,18 @@ export default function UserProfilePage() {
                   </div>
 
                   <form onSubmit={handlePasswordChange} className="space-y-6 max-w-md">
+                    {/* Success Message */}
+                    {passwordChanged && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-800">
+                          <Check className="w-5 h-5 text-green-600" />
+                          <span className="font-medium">Password updated successfully!</span>
+                        </div>
+                      </div>
+                    )}
                     {/* Current Password with Enhanced UX */}
                     <div className="space-y-2">
-                      <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Label htmlFor="currentPassword" className="text-sm font-medium text-[#0872b3] flex items-center gap-2">
                         Current Password
                         <span className="text-red-500">*</span>
                       </Label>
@@ -489,14 +481,14 @@ export default function UserProfilePage() {
                           type={showPassword ? 'text' : 'password'}
                           value={passwordForm.currentPassword}
                           onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-                          className="pr-12 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 group-hover:border-gray-300"
+                          className="px-4 py-5 transition-all duration-200 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] group-hover:border-[#0872b3]/30"
                           placeholder="Enter current password"
                           required
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0872b3]/60 hover:text-[#0872b3] transition-colors p-1 rounded"
                           aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -506,7 +498,7 @@ export default function UserProfilePage() {
 
                     {/* New Password with Strength Indicator */}
                     <div className="space-y-2">
-                      <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Label htmlFor="newPassword" className="text-sm font-medium text-[#0872b3] flex items-center gap-2">
                         New Password
                         <span className="text-red-500">*</span>
                       </Label>
@@ -516,7 +508,7 @@ export default function UserProfilePage() {
                           type="password"
                           value={passwordForm.newPassword}
                           onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-                          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 group-hover:border-gray-300"
+                          className="px-4 py-5 transition-all duration-200 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] group-hover:border-[#0872b3]/30"
                           placeholder="Create a strong password"
                           minLength={8}
                           required
@@ -572,7 +564,7 @@ export default function UserProfilePage() {
 
                     {/* Confirm Password with Real-time Validation */}
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Label htmlFor="confirmPassword" className="text-sm font-medium text-[#0872b3] flex items-center gap-2">
                         Confirm New Password
                         <span className="text-red-500">*</span>
                       </Label>
@@ -582,12 +574,12 @@ export default function UserProfilePage() {
                           type="password"
                           value={passwordForm.confirmPassword}
                           onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                          className={`transition-all duration-200 focus:ring-2 group-hover:border-gray-300 ${
+                          className={`px-4 py-5 transition-all duration-200 focus:ring-2 group-hover:border-[#0872b3]/30 ${
                             passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword
                               ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
                               : passwordForm.confirmPassword && passwordForm.newPassword === passwordForm.confirmPassword
                               ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
-                              : 'focus:ring-blue-500 focus:border-blue-500'
+                              : 'focus:ring-[#0872b3] focus:border-[#0872b3]'
                           }`}
                           placeholder="Confirm your new password"
                           required
@@ -631,7 +623,7 @@ export default function UserProfilePage() {
                           passwordForm.newPassword !== passwordForm.confirmPassword ||
                           passwordForm.newPassword.length < 8
                         }
-                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2 px-6 py-2.5"
+                        className=" cursor-pointer py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                       >
                         {updatePasswordMutation.isPending ? (
                           <>

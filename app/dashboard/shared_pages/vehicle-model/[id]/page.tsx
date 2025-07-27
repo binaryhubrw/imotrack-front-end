@@ -46,9 +46,12 @@ export default function VehicleModelDetailPage() {
 
   // Permission checks
   const canView = !!user?.position?.position_access?.vehicleModels?.view;
+  const canViewSingle = !!user?.position?.position_access?.vehicleModels?.viewSingle;
   const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
   const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
 
+  // Check if user has any relevant permissions
+  const hasAnyPermission = canView || canViewSingle || canUpdate || canDelete;
  
   const VEHICLE_TYPE_OPTIONS = [
     { value: "SEDAN", label: "Sedan" },
@@ -77,6 +80,11 @@ export default function VehicleModelDetailPage() {
 
   // Open edit modal and prefill form
   const handleEdit = () => {
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicle models');
+      return;
+    }
+    
     if (!model) return;
     setEditForm({
       vehicle_model_name: model.vehicle_model_name || '',
@@ -89,6 +97,11 @@ export default function VehicleModelDetailPage() {
   // Save edit
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicle models');
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await updateVehicleModel.mutateAsync({ id, updates: editForm });
@@ -103,10 +116,16 @@ export default function VehicleModelDetailPage() {
   };
 
   const handleDelete = () => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicle models');
+      return;
+    }
     setShowDeleteDialog(true);
   };
 
   const confirmDelete = async () => {
+    if (!canDelete) return;
+    
     try {
       await deleteVehicleModel.mutateAsync({ id });
       toast.success("Vehicle model deleted!");
@@ -125,7 +144,7 @@ export default function VehicleModelDetailPage() {
     return <div className="p-8 text-center">Loading...</div>;
   }
 
-  if (!canView) {
+  if (!hasAnyPermission) {
     return <NoPermissionUI resource="vehicle models" />;
   }
 

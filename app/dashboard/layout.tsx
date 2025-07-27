@@ -79,7 +79,7 @@ const MODULE_NAV = [
   },
   {
     key: "history",
-    label: "Audit Logs",
+    label: "History",
     href: "/dashboard/shared_pages/audit-logs",
     icon: <FontAwesomeIcon icon={faFileAlt} />,
     superAdminOnly: true, // Only SuperAdmin can see this

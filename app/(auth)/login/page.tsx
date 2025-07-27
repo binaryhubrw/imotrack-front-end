@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -300,6 +301,16 @@ function LoginForm() {
               >
                 <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
               </button>
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="mb-6 text-right">
+              <Link
+                href="/forgot-password"
+                className="text-[#0872b3] hover:text-[#065d8f] transition-colors text-sm font-medium hover:underline"
+              >
+                Forgot your password?
+              </Link>
             </div>
 
             {/* Error Message */}

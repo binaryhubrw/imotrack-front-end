@@ -224,6 +224,11 @@ export type ForgotPasswordRequest = {
   email: string;
 };
 
+// Forgot password response type
+export type ForgotPasswordResponse = {
+  email: string;
+};
+
 // Reset password request type
 export type ResetPasswordRequest = {
   email: string;
@@ -233,8 +238,16 @@ export type ResetPasswordRequest = {
 
 // Update password request type
 export type UpdatePasswordRequest = {
-  current_password: string;
-  new_password: string;
+  currentPassword: string;
+  newPassword: string;
+};
+
+// Update password response type
+export type UpdatePasswordResponse = {
+  auth_id: string;
+  email: string;
+  updated_at: string | null;
+  user_status: string;
 };
 
 // Organization Types (NEW API)
@@ -493,43 +506,42 @@ export interface ReservationUser {
   user_id: string;
   first_name: string;
   last_name: string;
-  user_nid: string;
   user_phone: string;
-  created_at: string;
-  user_dob: string;
-  user_photo: string | null;
-  user_gender: string;
-  street_address: string;
-  auth_id: string;
+  email: string;
 }
 
 export interface ReservedVehicle {
   reserved_vehicle_id: string;
-  vehicle_id: string;
-  reservation_id: string;
   starting_odometer?: number;
   fuel_provided?: number;
   returned_odometer?: number;
-  started_at?: string;
-  completed_at?: string;
+  returned_date?: string | null;
+  vehicle: {
+    vehicle_id: string;
+    vehicle_name: string;
+    vehicle_model: string;
+    vehicle_status: string;
+    license_plate: string;
+     vehicle_capacity: string;
+    plate_number: string;
+  };
 }
 
 export interface Reservation {
   reservation_id: string;
-  created_at: string;
   reservation_purpose: string;
   start_location: string;
   reservation_destination: string;
   departure_date: string;
   expected_returning_date: string;
-  reservation_status: ReservationStatus;
-  reviewed_at: string | null;
-  rejection_comment: string | null;
-  user_id: string;
-  user: ReservationUser;
-  reserved_vehicles: ReservedVehicle[];
   description: string;
   passengers: number;
+  reservation_status: ReservationStatus;
+  created_at: string;
+  reviewed_at: string | null;
+  rejection_comment: string | null;
+  user: ReservationUser;
+  reserved_vehicles: ReservedVehicle[];
 }
 
 export interface CreateReservationDto {

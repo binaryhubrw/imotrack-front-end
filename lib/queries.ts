@@ -7,8 +7,9 @@ import {
   PositionAuthResponse,
   ApiResponse,
   ForgotPasswordRequest,
-  ResetPasswordRequest,
+  ForgotPasswordResponse,
   UpdatePasswordRequest,
+  UpdatePasswordResponse,
   PaginatedOrganizations,
   Organization,
   CreateUnitDto,
@@ -173,11 +174,12 @@ export const useForgotPassword = () => {
   return useMutation({
     mutationFn: async (request: ForgotPasswordRequest) => {
       try {
-        // Create FormData for forgot password
-        const formData = new FormData();
-        formData.append('email', request.email);
+        // Send JSON data directly as per backend API specification
+        const jsonData = {
+          email: request.email,
+        };
 
-        const response = await api.post<ApiResponse>('/auth/forgot-password', formData, {
+        const response = await api.post<ApiResponse<ForgotPasswordResponse>>('/v2/auth/forgot-password', jsonData, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -212,24 +214,34 @@ export const useForgotPassword = () => {
   });
 };
 
-export const useResetPassword = () => {
-  return useMutation({
-    mutationFn: async (request: ResetPasswordRequest) => {
-      try {
-        // Create FormData for reset password
-        const formData = new FormData();
-        formData.append('email', request.email);
-        formData.append('new_password', request.new_password);
-        formData.append('reset_token', request.reset_token);
 
-        const response = await api.post<ApiResponse>('/auth/reset-password', formData, {
+export const useUpdatePassword = () => {
+  return useMutation({
+    mutationFn: async (request: UpdatePasswordRequest) => {
+      try {
+        // Send JSON data with camelCase field names as per user's example
+        const jsonData = {
+          currentPassword: request.currentPassword,
+          newPassword: request.newPassword,
+        };
+
+        // Debug: Log the request data being sent
+        console.log('Update password request data:', jsonData);
+        console.log('Update password request URL:', '/v2/auth/update-password');
+        console.log('Request body stringified:', JSON.stringify(jsonData));
+
+        // Debug: Check if token is available (API interceptor will handle it)
+        const token = localStorage.getItem('token');
+        console.log('Auth token available:', !!token);
+
+        const response = await api.post<ApiResponse<UpdatePasswordResponse>>('/v2/auth/update-password', jsonData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
           },
         });
         
         // Debug the response
-        console.log('Reset password response:', response);
+        console.log('Update password response:', response);
 
         if (!response.data) {
           throw new Error('No response received from server');
@@ -241,45 +253,6 @@ export const useResetPassword = () => {
         }
 
         return response.data;
-      } catch (error: unknown) {
-        console.error('Reset password request failed:', error);
-        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          console.error('Error response:', axiosError.response?.data);
-          const errorMessage = axiosError.response?.data?.message || 'Failed to reset password';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-        toast.error('Failed to reset password');
-        throw error;
-      }
-    },
-  });
-};
-
-export const useUpdatePassword = () => {
-  return useMutation({
-    mutationFn: async (request: UpdatePasswordRequest) => {
-      try {
-        // TODO: Implement actual password update endpoint
-        // For now, this is a placeholder that simulates the API call
-        console.log('Password update request:', request);
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Simulate success response
-        const mockResponse = {
-          message: 'Password updated successfully',
-          data: {
-            success: true
-          }
-        };
-        
-        // Show success toast
-        toast.success(mockResponse.message);
-        
-        return mockResponse;
       } catch (error: unknown) {
         console.error('Update password request failed:', error);
         if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
@@ -733,6 +706,44 @@ export const usePosition = (position_id: string) => {
   });
 };
 
+export const useAssignPositionToUser = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string; data: Position }, Error, { position_id: string; email: string }>({
+    mutationFn: async ({ position_id, email }) => {
+      const formData = new FormData();
+      formData.append('email', email);
+      
+      const { data } = await api.patch<{ message: string; data: Position }>(`/v2/organizations/positions/${position_id}/assign`, formData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!data.message) throw new Error('No data');
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
+      queryClient.invalidateQueries({ queryKey: ['all-positions'] });
+      toast.success('User assigned to position successfully!');
+    },
+    onError: (error: unknown) => {
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        error.response &&
+        typeof error.response === 'object' &&
+        'data' in error.response &&
+        error.response.data &&
+        typeof error.response.data === 'object' &&
+        'message' in error.response.data
+      ) {
+        apiMsg = (error.response.data as { message?: string }).message;
+      }
+      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign user to position.'));
+    },
+  });
+};
+
 export const usePositions = () => {
   return useQuery<Position[], Error>({
     queryKey: ['all-positions'],
@@ -1178,7 +1189,21 @@ export const useDeleteVehicle = () => {
 
 
 
+
 // --- Reservations ---
+
+export const useReservation = (id: string) => {
+  return useQuery<Reservation, Error>({
+    queryKey: ['reservation', id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Reservation }>(`/v2/reservations/${id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!id,
+  });
+};
+
 export const useReservations = () => {
   return useQuery<Reservation[], Error>({
     queryKey: ['reservations'],

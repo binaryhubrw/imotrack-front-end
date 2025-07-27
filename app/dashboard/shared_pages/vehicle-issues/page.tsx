@@ -1,184 +1,249 @@
-'use client'
-import React, { useState, useMemo } from "react";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Search, Eye, AlertTriangle } from "lucide-react";
-import { useVehicleIssues } from "@/lib/queries";
-import Link from "next/link";
-import { SkeletonVehicleIssueDetails } from "@/components/ui/skeleton";
+'use client';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Search, Eye, Plus, Clock, CheckCircle } from 'lucide-react';
+import { useVehicleIssues } from '@/lib/queries';
+import ErrorUI from '@/components/ErrorUI';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import NoPermissionUI from '@/components/NoPermissionUI';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
-export default function IssueManagementPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const { data: issues = [], isLoading, isError } = useVehicleIssues();
+export default function VehicleIssuesPage() {
+  const { data: issues = [], isLoading, isError, error } = useVehicleIssues();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('all');
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
-  const statusLabels: Record<string, string> = {
-    OPEN: "Reported",
-    CLOSED: "Closed",
-  };
+  // Debug logging
+  console.log('VehicleIssuesPage Debug:', {
+    issues,
+    isLoading,
+    isError,
+    error: error?.message,
+    issuesCount: issues.length
+  });
+
+  // Permission checks
+  const canView = !!user?.position?.position_access?.vehicleIssues?.view;
+  const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
 
   const filteredIssues = useMemo(() => {
-    return issues.filter((issue) => {
-      const matchesSearch =
-        issue.issue_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        issue.issue_description
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (issue.reserved_vehicle_id &&
-          issue.reserved_vehicle_id
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()));
-      const matchesStatus =
-        filterStatus === "all" || issue.issue_status === filterStatus;
-      return matchesSearch && matchesStatus;
+    return issues.filter(issue => {
+      const matchesSearch = issue.issue_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           issue.issue_description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filter === 'all' || 
+                           (filter === 'open' && issue.issue_status === 'OPEN') ||
+                           (filter === 'closed' && issue.issue_status === 'CLOSED');
+      return matchesSearch && matchesFilter;
     });
-  }, [issues, searchQuery, filterStatus]);
+  }, [issues, searchTerm, filter]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'OPEN':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Open</Badge>;
+      case 'CLOSED':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Closed</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'OPEN':
+        return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
+      case 'CLOSED':
+        return <CheckCircle className="w-5 h-5 text-gray-500" />;
+      default:
+        return <AlertTriangle className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const created = new Date(dateString);
+    const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  if (authLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (!canView) {
+    return <NoPermissionUI resource="vehicle issues" />;
+  }
 
   if (isLoading) {
-    return <SkeletonVehicleIssueDetails />;
-  }
-  if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 rounded-xl bg-red-50 border border-red-200 shadow-sm">
-      <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-      <h2 className="text-lg font-semibold text-red-600 mb-2">
-        Failed to load vehicle issues
-      </h2>
-      <p className="text-sm text-red-500 mb-4">
-        Something went wrong while fetching data. Please try again later.
-      </p>
-      <button
-        onClick={() => location.reload()}
-        className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
-      >
-        Retry
-      </button>
-    </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600" />
+          </div>
+        </div>
+      </div>
     );
   }
 
+  if (isError) {
+    return (
+      <ErrorUI
+        resource='vehicle issues'
+        onBack={() => router.back()}
+        onRetry={() => {window.location.reload()}}
+      />
+    );
+  }
+
+  const openIssuesCount = issues.filter(issue => issue.issue_status === 'OPEN').length;
+  const closedIssuesCount = issues.filter(issue => issue.issue_status === 'CLOSED').length;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Issue Management</CardTitle>
-            <CardDescription>
-              View and manage reported vehicle issues
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Search issues..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <AlertTriangle className="w-8 h-8 text-blue-600" />
+                {openIssuesCount > 0 && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold"
+                  >
+                    {openIssuesCount}
+                  </motion.span>
+                )}
               </div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="OPEN">Reported</SelectItem>
-                  <SelectItem value="CLOSED">Closed</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Vehicle Issues</h1>
+                <p className="text-gray-600">{openIssuesCount} open issues, {closedIssuesCount} resolved</p>
+              </div>
             </div>
-            {/* Table */}
-            <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date Reported</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredIssues.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center text-gray-500 py-8"
-                      >
-                        No issues found.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredIssues.map((issue) => (
-                      <TableRow key={issue.issue_id}>
-                        <TableCell>{issue.issue_title}</TableCell>
-                        <TableCell>{issue.issue_description}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              issue.issue_status === "RESOLVED"
-                                ? "default"
-                                : issue.issue_status === "IN_PROGRESS"
-                                ? "secondary"
-                                : "outline"
-                            }
-                          >
-                            {statusLabels[issue.issue_status] ||
-                              issue.issue_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(issue.issue_date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Link
-                            href={`/dashboard/shared_pages/vehicle-issues/${issue.issue_id}`}
-                            legacyBehavior
-                          >
-                            <a>
-                              <Button size="icon" variant="outline">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </a>
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+            {canReport && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/dashboard/shared_pages/vehicle-issues/new')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Report Issue
+              </motion.button>
+            )}
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search issues..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+              />
             </div>
-          </CardContent>
-        </Card>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
+            >
+              <option value="all">All Issues</option>
+              <option value="open">Open Issues</option>
+              <option value="closed">Closed Issues</option>
+            </select>
+          </div>
+        </motion.div>
+
+        {/* Issues List */}
+        <AnimatePresence mode="popLayout">
+          {filteredIssues.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-12"
+            >
+              <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-500 mb-2">No issues found</h3>
+              <p className="text-gray-400">
+                {searchTerm || filter !== 'all' 
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'No vehicle issues have been reported yet'
+                }
+              </p>
+            </motion.div>
+          ) : (
+            <div className="space-y-4">
+              {filteredIssues.map((issue, index) => {
+                return (
+                  <motion.div
+                    key={issue.issue_id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-xl shadow-sm border-l-4 p-6 hover:shadow-md transition-all duration-200 border-blue-500"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getStatusIcon(issue.issue_status)}
+                          {getStatusBadge(issue.issue_status)}
+                          <span className="text-sm text-gray-500">ID: {issue.issue_id}</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          {issue.issue_title}
+                        </h3>
+                        <p className="text-gray-700 mb-3 leading-relaxed line-clamp-2">
+                          {issue.issue_description}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{formatTimeAgo(issue.created_at)}</span>
+                          </div>
+                          <span className="text-gray-300">•</span>
+                          <span>Vehicle ID: {issue.reserved_vehicle_id}</span>
+                          <span className="text-gray-300">•</span>
+                          <span>{new Date(issue.issue_date).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Link href={`/dashboard/shared_pages/vehicle-issues/${issue.issue_id}`}>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View details"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </motion.button>
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

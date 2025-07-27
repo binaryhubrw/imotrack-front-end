@@ -405,12 +405,12 @@ function CreateVehicleModal({
         vehicle_model_id: vehicleModels[0].vehicle_model_id,
       }));
     }
-  }, [vehicleModels]);
+  }, [vehicleModels, form.vehicle_model_id]);
   React.useEffect(() => {
     if (organizationId && form.organization_id !== organizationId) {
       setForm((f) => ({ ...f, organization_id: organizationId }));
     }
-  }, [organizationId]);
+  }, [organizationId, form.organization_id]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -863,7 +863,7 @@ export default function VehiclesPage() {
         ),
       },
     ],
-    [router, vehicleModels, canUpdate, canDelete]
+    [vehicleModels, canUpdate, canDelete]
   );
   const table = useReactTable({
     data: vehicles,
@@ -925,6 +925,11 @@ export default function VehiclesPage() {
 
   // Always define helper functions before permission check
   const handleDeleteVehicle = async () => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicles');
+      return;
+    }
+    
     if (!vehicleToDelete) return;
     try {
       await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
@@ -933,26 +938,53 @@ export default function VehiclesPage() {
       console.error("Error deleting vehicle:", error);
     }
   };
-  // const handleEditVehicle = async (
-  //   id: string,
-  //   data: Partial<CreateVehicleDto>
-  // ) => {
-  //   // Fix type for vehicle_type and transmission_mode
-  //   const updateData = {
-  //     ...data,
-  //     vehicle_type: data.vehicle_type as VehicleType | undefined,
-  //     transmission_mode: data.transmission_mode as TransmissionMode | undefined,
-  //     vehicle_photo:
-  //       data.vehicle_photo && data.vehicle_photo instanceof File
-  //         ? data.vehicle_photo
-  //         : undefined,
-  //   };
-  //   await updateVehicle.mutateAsync({ id, updates: updateData });
-  //   setEditModalOpen(false);
-  //   setVehicleToEdit(null);
-  // };
-  // Table configuration (must be before early returns)
 
+  const handleCreateVehicle = async (formData: CreateVehicleDto) => {
+    if (!canCreate) {
+      toast.error('You do not have permission to create vehicles');
+      return;
+    }
+    
+    try {
+      // Fix type casting for API compatibility
+      const apiData = {
+        ...formData,
+        vehicle_type: formData.vehicle_type as VehicleType,
+        transmission_mode: formData.transmission_mode as TransmissionMode,
+        vehicle_photo: formData.vehicle_photo || undefined,
+      };
+      await createVehicle.mutateAsync(apiData);
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error("Error creating vehicle:", error);
+    }
+  };
+
+  const handleUpdateVehicle = async (id: string, data: Partial<CreateVehicleDto>) => {
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicles');
+      return;
+    }
+    
+    try {
+      // Fix type for vehicle_type and transmission_mode
+      const updateData = {
+        ...data,
+        vehicle_type: data.vehicle_type as VehicleType | undefined,
+        transmission_mode: data.transmission_mode as TransmissionMode | undefined,
+        vehicle_photo:
+          data.vehicle_photo && data.vehicle_photo instanceof File
+            ? data.vehicle_photo
+            : undefined,
+      };
+      await updateVehicle.mutateAsync({ id, updates: updateData });
+      setEditModalOpen(false);
+      setVehicleToEdit(null);
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+    }
+  };
+  // Table configuration (must be before early returns)
 
   if (isLoading) {
     return <SkeletonVehiclesTable />;
@@ -1204,17 +1236,7 @@ export default function VehiclesPage() {
             open={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             onCreate={async (formData) => {
-              try {
-                await createVehicle.mutateAsync({
-                  ...formData,
-                  vehicle_type: formData.vehicle_type as VehicleType,
-                  transmission_mode: formData.transmission_mode as TransmissionMode,
-                  vehicle_photo: formData.vehicle_photo ?? undefined,
-                });
-                setShowCreateModal(false);
-              } catch {
-                // handled by mutation
-              }
+              await handleCreateVehicle(formData);
             }}
             isLoading={createVehicle.isPending}
             vehicleModels={vehicleModels}
@@ -1231,19 +1253,7 @@ export default function VehiclesPage() {
             }}
             vehicle={vehicleToEdit}
             onUpdate={async (id, data) => {
-              // Fix type for vehicle_type and transmission_mode
-              const updateData = {
-                ...data,
-                vehicle_type: data.vehicle_type as VehicleType | undefined,
-                transmission_mode: data.transmission_mode as TransmissionMode | undefined,
-                vehicle_photo:
-                  data.vehicle_photo && data.vehicle_photo instanceof File
-                    ? data.vehicle_photo
-                    : undefined,
-              };
-              await updateVehicle.mutateAsync({ id, updates: updateData });
-              setEditModalOpen(false);
-              setVehicleToEdit(null);
+              await handleUpdateVehicle(id, data);
             }}
             isLoading={updateVehicle.isPending}
             vehicleModels={vehicleModels}

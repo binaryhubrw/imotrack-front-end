@@ -6,7 +6,7 @@ import {
   X,
   CheckCircle
 } from 'lucide-react';
-import { useReservations, useMyReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useStartReservation, useCompleteReservation, useVehicles, useReservationVehicleOdometerAssignation, useUpdateReservationReason } from '@/lib/queries';
+import { useReservations, useMyReservations, useCreateReservation, useCancelReservation, useUpdateReservation, useCompleteReservation, useVehicles, useReservationVehicleOdometerAssignation, useUpdateReservationReason } from '@/lib/queries';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -388,35 +388,7 @@ function AssignVehicleModal({ open, onClose, reservation }: {
   );
 }
 
-function StartReservationModal({ open, onClose, reservation, onStart, isLoading }: {
-  open: boolean;
-  onClose: () => void;
-  reservation: Reservation | null;
-  onStart: () => void;
-  isLoading: boolean;
-}) {
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onStart();
-    onClose();
-  };
 
-  if (!open || !reservation) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button className="absolute top-3 right-3 text-gray-400 hover:text-gray-700" onClick={onClose}>&times;</button>
-        <h2 className="text-xl font-bold mb-4">Start Reservation</h2>
-        <p className="text-sm text-gray-600 mb-4">Click to start the reservation</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Button type="submit" className="w-full p-2 text-white bg-[#0872b3]" disabled={isLoading}>
-            {isLoading ? 'Starting...' : 'Start Reservation'}
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function CompleteReservationModal({ open, onClose, reservation, onComplete, isLoading }: {
   open: boolean;
@@ -644,50 +616,53 @@ export default function ReservationsPage() {
   const reservationAccess = user?.position?.position_access?.reservations;
   const orgAccess = user?.position?.position_access?.organizations;
 
-  // Permission logic
+  // Enhanced permission logic with more granular checks
   const canViewAll = reservationAccess?.view || orgAccess?.view;
   const canViewOwn = reservationAccess?.viewOwn;
-  const canViewPage = canViewAll || canViewOwn || (
-    reservationAccess?.create ||
-    reservationAccess?.cancel ||
-    reservationAccess?.approve ||
-    reservationAccess?.assignVehicle ||
-    reservationAccess?.update ||
-    reservationAccess?.start ||
-    reservationAccess?.complete
-  );
+  const canCreate = reservationAccess?.create;
+  const canUpdate = reservationAccess?.update;
+  const canCancel = reservationAccess?.cancel;
+  const canApprove = reservationAccess?.approve;
+  const canAssignVehicle = reservationAccess?.assignVehicle;
+  const canUpdateReason = reservationAccess?.updateReason;
+  const canStart = reservationAccess?.start;
+  const canComplete = reservationAccess?.complete;
+  const canViewPage = canViewAll || canViewOwn || canCreate || canCancel || canApprove || canAssignVehicle || canUpdate || canStart || canComplete;
 
   // Always call hooks
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showAssignVehicle, setShowAssignVehicle] = useState(false);
-  const [showStartReservation, setShowStartReservation] = useState(false);
   const [showCompleteReservation, setShowCompleteReservation] = useState(false);
   const [showCancelReservation, setShowCancelReservation] = useState(false);
   const updateReservationReason = useUpdateReservationReason();
   const [showEditReasonModal, setShowEditReasonModal] = useState(false);
   const [editReasonValue, setEditReasonValue] = useState('');
   const [editReasonReservation, setEditReasonReservation] = useState<Reservation | null>(null);
+  
+  // Enhanced data fetching based on permissions
   const { data: allReservations, isLoading: isLoadingAll, isError: isErrorAll } = useReservations();
   const { data: myReservations, isLoading: isLoadingMy, isError: isErrorMy } = useMyReservations();
 
   const router = useRouter();
-  // Choose which data to use
-  const reservations: Reservation[] = canViewAll
-    ? (allReservations || [])
-    : canViewOwn
-      ? myReservations
+  
+  // Choose which data to use based on permissions - wrapped in useMemo to prevent unnecessary re-renders
+  const reservations = useMemo(() => {
+    if (canViewAll) {
+      return allReservations || [];
+    } else if (canViewOwn) {
+      return myReservations
         ? Array.isArray(myReservations) ? myReservations : [myReservations]
-        : []
-      : [];
+        : [];
+    }
+    return [];
+  }, [canViewAll, canViewOwn, allReservations, myReservations]);
 
   const isLoading = canViewAll ? isLoadingAll : canViewOwn ? isLoadingMy : false;
   const isError = canViewAll ? isErrorAll : canViewOwn ? isErrorMy : false;
 
   const createReservation = useCreateReservation();
-  // const assignVehicle = useVehicleReservationAssignment();
-  const startReservation = useStartReservation();
   const completeReservation = useCompleteReservation();
   const cancelReservation = useCancelReservation();
   const updateReservation = useUpdateReservation();
@@ -714,6 +689,11 @@ export default function ReservationsPage() {
   }
 
   const handleCreate = async (form: CreateReservationDto) => {
+    if (!canCreate) {
+      toast.error('You do not have permission to create reservations');
+      return;
+    }
+    
     try {
       // Format dates to ISO string for backend
       const formattedForm = {
@@ -728,35 +708,14 @@ export default function ReservationsPage() {
     }
   };
 
-
-  // const handleAssignVehicle = async (vehicleId: string) => {
-  //   if (!selectedReservation) return;
-  //   try {
-  //     await assignVehicle.mutateAsync({ 
-  //       id: selectedReservation.reservation_id, 
-  //       dto: { vehicle_id: vehicleId } 
-  //     });
-  //   } catch {
-  //     // error handled by mutation
-  //   }
-  // };
-
-  const handleStartReservation = async () => {
-    if (!selectedReservation) return;
-    const reservedVehicleId = selectedReservation.reserved_vehicles && selectedReservation.reserved_vehicles.length > 0
-      ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
-      : undefined;
-    if (!reservedVehicleId) {
-      toast.error('No vehicle assigned to this reservation');
-      return;
-    }
-    // For now, just show a success message since the odometer fuel functionality is not implemented
-    toast.success('Reservation started successfully');
-  };
-
- 
+  
 
   const handleCompleteReservation = async (returnedOdometer: number) => {
+    if (!canComplete) {
+      toast.error('You do not have permission to complete reservations');
+      return;
+    }
+    
     if (!selectedReservation) return;
     
     // Get the reserved vehicle ID
@@ -780,6 +739,11 @@ export default function ReservationsPage() {
   };
 
   const handleCancelReservation = async (rejectionComment: string) => {
+    if (!canCancel) {
+      toast.error('You do not have permission to cancel reservations');
+      return;
+    }
+    
     if (!selectedReservation) return;
     try {
       await cancelReservation.mutateAsync({ 
@@ -791,18 +755,12 @@ export default function ReservationsPage() {
     }
   };
 
-  // const handleApproveReservation = async (reservation: Reservation) => {
-  //   try {
-  //     await updateReservation.mutateAsync({ 
-  //       id: reservation.reservation_id, 
-  //       dto: { status: 'APPROVED' } 
-  //     });
-  //   } catch {
-  //     // error handled by mutation
-  //   }
-  // };
-
   const handleUpdateReservationReason = async () => {
+    if (!canUpdateReason) {
+      toast.error('You do not have permission to update reservation reasons');
+      return;
+    }
+    
     if (!editReasonReservation) return;
     try {
       await updateReservationReason.mutateAsync({
@@ -818,6 +776,11 @@ export default function ReservationsPage() {
   };
 
   const handleApproveReject = async (action: 'APPROVED' | 'REJECTED', reason: string) => {
+    if (!canApprove) {
+      toast.error('You do not have permission to approve/reject reservations');
+      return;
+    }
+    
     if (!approveRejectReservation) return;
     try {
       await updateReservation.mutateAsync({
@@ -830,7 +793,6 @@ export default function ReservationsPage() {
       // error handled by mutation
     }
   };
-
 
   const getStatusColor = (status: ReservationStatus) => {
     switch (status) {
@@ -845,21 +807,27 @@ export default function ReservationsPage() {
     }
   };
 
-  const canAssignVehicle = (reservation: Reservation) => {
-    return reservation.reservation_status === 'APPROVED' && 
+  const canAssignVehicleToReservation = (reservation: Reservation) => {
+    return canAssignVehicle && reservation.reservation_status === 'APPROVED' && 
            (!reservation.reserved_vehicles || reservation.reserved_vehicles.length === 0);
   };
 
-  // const canStartReservation = (reservation: Reservation) => {
-  //   return reservation.reservation_status === 'APPROVED' && 
-  //          reservation.reserved_vehicles && 
-  //          reservation.reserved_vehicles.length > 0;
-  // };
-
   const canCompleteReservation = (reservation: Reservation) => {
-    return reservation.reservation_status === 'IN_PROGRESS';
+    return canComplete && reservation.reservation_status === 'IN_PROGRESS';
   };
 
+
+  const canApproveRejectReservation = (reservation: Reservation) => {
+    return canApprove && reservation.reservation_status === 'UNDER_REVIEW';
+  };
+
+  const canCancelReservation = (reservation: Reservation) => {
+    return canCancel && (reservation.reservation_status === 'UNDER_REVIEW' || reservation.reservation_status === 'APPROVED');
+  };
+
+  const canEditReason = (reservation: Reservation) => {
+    return canUpdateReason && (reservation.reservation_status === 'REJECTED' || reservation.reservation_status === 'CANCELED' || reservation.reservation_status === 'CANCELLED');
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -877,7 +845,7 @@ export default function ReservationsPage() {
             />
           </div>
           {/* Only show Add Reservation if user has create permission */}
-          {reservationAccess?.create && (
+          {canCreate && (
             <Button className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" /> Add Reservation
             </Button>
@@ -923,10 +891,20 @@ export default function ReservationsPage() {
                 <div className="text-xs text-gray-500 mt-2">Created: {reservation.created_at ? new Date(reservation.created_at).toLocaleString() : 'N/A'}</div>
                 <div className="text-xs text-gray-500">User: {reservation.user ? `${reservation.user.first_name} ${reservation.user.last_name}` : 'N/A'}</div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons - Enhanced with proper permission checks */}
                 <div className="flex flex-wrap gap-1 mt-3">
+                  {/* View Button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-[#0872b3] border-[#0872b3] hover:bg-[#0872b3] hover:text-white"
+                    onClick={() => router.push(`/dashboard/shared_pages/reservations/${reservation.reservation_id}`)}
+                  >
+                    View
+                  </Button>
+
                   {/* Approve/Reject Button */}
-                  {(reservationAccess?.approve || reservationAccess?.cancel) && reservation.reservation_status === 'UNDER_REVIEW' && (
+                  {canApproveRejectReservation(reservation) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -940,8 +918,8 @@ export default function ReservationsPage() {
                     </Button>
                   )}
                 
-                  {/* Only show Assign Vehicle if user has assignVehicle permission */}
-                  {reservationAccess?.assignVehicle && canAssignVehicle(reservation) && (
+                  {/* Assign Vehicle Button */}
+                  {canAssignVehicleToReservation(reservation) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -952,8 +930,9 @@ export default function ReservationsPage() {
                       Assign Vehicle
                     </Button>
                   )}
-                  {/* Only show Complete if user has complete permission */}
-                  {reservationAccess?.complete && canCompleteReservation(reservation) && (
+
+                  {/* Complete Button */}
+                  {canCompleteReservation(reservation) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -964,8 +943,21 @@ export default function ReservationsPage() {
                       Complete
                     </Button>
                   )}
-                  {/* Only show Edit Reason if user has updateReason permission and status is REJECTED, CANCELED, or CANCELLED */}
-                  {reservationAccess?.updateReason && (reservation.reservation_status === 'REJECTED' || reservation.reservation_status === 'CANCELED' || reservation.reservation_status === 'CANCELLED') && (
+
+                  {/* Cancel Button */}
+                  {canCancelReservation(reservation) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={(e) => { e.stopPropagation(); setSelectedReservation(reservation); setShowCancelReservation(true); }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+
+                  {/* Edit Reason Button */}
+                  {canEditReason(reservation) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -1000,14 +992,7 @@ export default function ReservationsPage() {
         reservation={selectedReservation}
       />
 
-      <StartReservationModal
-        open={showStartReservation}
-        onClose={() => setShowStartReservation(false)}
-        reservation={selectedReservation}
-        onStart={handleStartReservation}
-        isLoading={startReservation.isPending}
-      />
-
+      
 
       <CompleteReservationModal
         open={showCompleteReservation}

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Plus, Info, X } from "lucide-react";
 import {
   useUnitPositions,
@@ -9,7 +9,9 @@ import {
   useOrganizationUnits,
   usePositions,
   useUsers,
+  useAssignPositionToUser,
 } from "@/lib/queries";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonPositionsCards } from "@/components/ui/skeleton";
@@ -445,13 +447,122 @@ export function CreatePositionModal({
   );
 }
 
+export function AssignUserModal({
+  open,
+  onClose,
+  position,
+  onAssign,
+}: {
+  open: boolean;
+  onClose: () => void;
+  position: Position | null;
+  onAssign: (position_id: string, data: { email: string }) => Promise<void>;
+}) {
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!position || !email.trim()) return;
+
+    setSubmitting(true);
+    try {
+      await onAssign(position.position_id, { email: email.trim() });
+      setEmail("");
+      onClose();
+    } catch (error) {
+      console.error("Error assigning user:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setEmail("");
+    onClose();
+  };
+
+  if (!open || !position) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-300">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div>
+            <h2 className="text-xl font-bold text-[#0872b3]">
+              Assign User to Position
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {position.position_name}
+            </p>
+          </div>
+          <button
+            className="text-gray-400 hover:text-[#0872b3] transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+            onClick={handleClose}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#0872b3] mb-2">
+              User Email
+            </label>
+            <Input
+              type="email"
+              placeholder="Enter user email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] transition-colors duration-200"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The user will receive an invitation to join this position.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={submitting}
+              className="border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || !email.trim()}
+              className="min-w-[120px] bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200"
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Assigning...
+                </span>
+              ) : (
+                "Assign User"
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function PositionsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showAssignUser, setShowAssignUser] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
 
   // Call all hooks unconditionally at the top
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
@@ -460,22 +571,25 @@ export default function PositionsPage() {
   const allUnitsHook = useOrganizationUnits();
   const unitPositionsHook = useUnitPositions(selectedUnitId);
   const createPosition = useCreatePosition();
+  const assignPositionToUser = useAssignPositionToUser();
 
   // Permission checks
   const canView = !!user?.position?.position_access?.positions?.view;
   const canCreate = !!user?.position?.position_access?.positions?.create;
+  const canAssignUser = !!user?.position?.position_access?.positions?.assignUser;
   const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
 
   // Fetch all organizations (for dropdown) but only use if canViewOrganizations
   const allOrganizations = orgData?.organizations || [];
 
-
-  // Determine which org to use
-  const organizations = canViewOrganizations
-    ? allOrganizations
-    : user?.organization
-    ? [user.organization]
-    : [];
+  // Determine which org to use - wrapped in useMemo to prevent unnecessary re-renders
+  const organizations = useMemo(() => {
+    return canViewOrganizations
+      ? allOrganizations
+      : user?.organization
+      ? [user.organization]
+      : [];
+  }, [canViewOrganizations, allOrganizations, user?.organization]);
 
   // Set default org if only one (for org dropdown)
   useEffect(() => {
@@ -596,6 +710,15 @@ export default function PositionsPage() {
     user_ids: string[];
   }) => {
     await createPosition.mutateAsync(positionData);
+  };
+
+  const handleAssignUser = async (position_id: string, data: { email: string }) => {
+    await assignPositionToUser.mutateAsync({ position_id, email: data.email });
+  };
+
+  const handleOpenAssignUserModal = (position: Position) => {
+    setSelectedPosition(position);
+    setShowAssignUser(true);
   };
 
   // Show loading state
@@ -767,7 +890,18 @@ export default function PositionsPage() {
                         </span>
                       </span>
                     ) : (
-                      <span className="text-gray-400">Unassigned</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400">Unassigned</span>
+                        {canAssignUser && (
+                          <Button
+                            onClick={() => handleOpenAssignUserModal(pos)}
+                            size="sm"
+                            className="ml-2 bg-[#0872b3] hover:bg-[#065a8f] text-white text-xs px-2 py-1 h-6"
+                          >
+                            Assign User
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -811,6 +945,16 @@ export default function PositionsPage() {
           onClose={() => setShowCreate(false)}
           onCreate={handleCreatePosition}
           unitId={selectedUnitId}
+        />
+      )}
+
+      {/* Assign User Modal */}
+      {showAssignUser && selectedPosition && (
+        <AssignUserModal
+          open={showAssignUser}
+          onClose={() => setShowAssignUser(false)}
+          position={selectedPosition}
+          onAssign={handleAssignUser}
         />
       )}
     </div>

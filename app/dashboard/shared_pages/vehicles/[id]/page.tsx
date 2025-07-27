@@ -70,8 +70,12 @@ export default function VehicleDetailPage() {
 
   // Permission checks
   const canView = !!user?.position?.position_access?.vehicles?.view;
+  const canViewSingle = !!user?.position?.position_access?.vehicles?.viewSingle;
   const canUpdate = !!user?.position?.position_access?.vehicles?.update;
   const canDelete = !!user?.position?.position_access?.vehicles?.delete;
+
+  // Check if user has any relevant permissions
+  const hasAnyPermission = canView || canViewSingle || canUpdate || canDelete;
 
   // Early returns
   if (authLoading) {
@@ -82,12 +86,17 @@ export default function VehicleDetailPage() {
     );
   }
 
-  if (!canView) {
+  if (!hasAnyPermission) {
     return <NoPermissionUI resource="vehicles" />;
   }
 
   // Open edit modal and prefill form
   const handleEdit = () => {
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicles');
+      return;
+    }
+    
     if (!vehicle) return;
     setEditForm({
       plate_number: vehicle.plate_number || '',
@@ -105,6 +114,11 @@ export default function VehicleDetailPage() {
   // Save edit
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canUpdate) {
+      toast.error('You do not have permission to update vehicles');
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await updateVehicle.mutateAsync({
@@ -114,7 +128,7 @@ export default function VehicleDetailPage() {
           transmission_mode: editForm.transmission_mode as TransmissionMode,
         },
       });
-      toast.success("Vehicle model updated!");
+      toast.success("Vehicle updated!");
       setShowEdit(false);
       refetch();
     } catch {
@@ -125,15 +139,21 @@ export default function VehicleDetailPage() {
   };
 
   const handleDelete = () => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicles');
+      return;
+    }
     setShowDeleteDialog(true);
   };
 
   const confirmDelete = async () => {
+    if (!canDelete) return;
+    
     try {
       await deleteVehicle.mutateAsync({ id });
-      toast.success("Vehicle model deleted!");
+      toast.success("Vehicle deleted!");
       setShowDeleteDialog(false);
-      router.push("/dashboard/shared_pages/vehicle-model");
+      router.push("/dashboard/shared_pages/vehicles");
     } catch {
       setShowDeleteDialog(false);
     }

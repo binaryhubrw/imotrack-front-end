@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
+import {  Activity, Bell, Building, Calendar, Clock, Edit3, Globe, Lock, Mail, MapPin, Monitor, Phone, Shield, User, 
+ } from "lucide-react"
 
 const skeletonVariants = cva(
   "relative overflow-hidden rounded-md bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100",
@@ -1032,6 +1034,253 @@ function SkeletonTable({
   )
 }
 
+
+
+function SkeletonUserProfilePage({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50", className)} {...props}>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="animate-pulse">
+          {/* Enhanced Header Section */}
+          <div className="mb-8">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full bg-gray-200 shadow-lg ring-4 ring-white flex items-center justify-center">
+                    <User className="w-8 h-8 text-gray-400" />
+                  </div>
+                </div>
+                <div className="text-center lg:text-left flex-1">
+                  <Skeleton className="h-8 w-48 mb-2 mx-auto lg:mx-0" />
+                  <div className="flex items-center justify-center lg:justify-start gap-2 mb-3">
+                    <Building className="w-4 h-4 text-gray-300" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white shadow-md border border-blue-100">
+              <User className="w-4 h-4 text-gray-300" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50">
+              <Lock className="w-4 h-4 text-gray-300" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+
+          {/* Content Area - Profile Tab */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Profile Info */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg rounded-lg">
+                {/* Card Header */}
+                <div className="flex flex-row items-center justify-between p-6 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-gray-300" />
+                    <Skeleton className="h-5 w-40" />
+                  </div>
+                  <div className="p-2">
+                    <Edit3 className="w-4 h-4 text-gray-300" />
+                  </div>
+                </div>
+
+                {/* Card Content */}
+                <div className="p-6 space-y-6">
+                  {/* First and Last Name Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Skeleton className="h-4 w-28" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Email and Phone Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-12" />
+                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <Mail className="w-4 h-4 text-gray-300" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-12" />
+                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <Phone className="w-4 h-4 text-gray-300" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* National ID and DOB Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                        <Calendar className="w-4 h-4 text-gray-300" />
+                        <Skeleton className="h-4 w-28" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Gender Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-16" />
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Side Panel */}
+            <div className="space-y-4">
+              {/* Account Status Card */}
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0 rounded-lg">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Activity className="w-5 h-5 text-white" />
+                    <Skeleton className="h-5 w-28 bg-white/20" />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-12 bg-blue-100/30" />
+                      <Skeleton className="h-4 w-16 bg-white/30" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-16 bg-blue-100/30" />
+                      <Skeleton className="h-4 w-20 bg-white/30" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization Card */}
+              <div className="bg-white/80 backdrop-blur-sm border-white/20 rounded-lg">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Shield className="w-5 h-5 text-gray-300" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-40" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Unit Card */}
+              <div className="bg-white/80 backdrop-blur-sm border-white/20 rounded-lg">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <MapPin className="w-5 h-5 text-gray-300" />
+                    <Skeleton className="h-5 w-8" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export {  };
+
+
+
+function SkeletonNotificationsPage({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6", className)} {...props}>
+      <div className="max-w-4xl mx-auto">
+        <div className="animate-pulse">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Bell className="w-8 h-8 text-gray-300" />
+                  <Skeleton className="absolute -top-2 -right-2 w-6 h-6 rounded-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-8 w-48 mb-2" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+              </div>
+              <Skeleton className="h-10 w-32 rounded-lg" />
+            </div>
+
+            {/* Search and Filter Section */}
+            <div className="flex gap-4 mb-6">
+              <div className="relative flex-1">
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
+              <Skeleton className="h-12 w-24 rounded-lg" />
+            </div>
+          </div>
+
+          {/* Notifications List */}
+          <div className="space-y-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-sm border-l-4 border-gray-200 p-6"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Skeleton className="h-6 w-24 rounded-full" />
+                      <Skeleton className="w-2 h-2 rounded-full" />
+                    </div>
+                    <div className="mb-3">
+                      <SkeletonText lines={2} />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="w-4 h-4 rounded" />
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-1 rounded-full" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="w-9 h-9 rounded-lg" />
+                    <Skeleton className="w-9 h-9 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
 function SkeletonVehicleIssueDetails({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div className={cn("min-h-screen bg-gray-50 py-8", className)} {...props}>
@@ -1058,6 +1307,116 @@ function SkeletonVehicleIssueDetails({ className, ...props }: React.ComponentPro
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonSystemLogsDashboard({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6", className)} {...props}>
+      <div className="max-w-7xl mx-auto">
+        <div className="animate-pulse">
+          {/* Header Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-200 rounded-lg">
+                  <Activity className="w-8 h-8 text-gray-400" />
+                </div>
+                <div>
+                  <Skeleton className="h-8 w-40 mb-2" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              </div>
+            </div>
+
+            {/* Filters Section */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                {/* Search Input */}
+                <div className="relative">
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </div>
+                {/* Name Filter */}
+                <Skeleton className="h-12 w-full rounded-lg" />
+                {/* Email Filter */}
+                <Skeleton className="h-12 w-full rounded-lg" />
+                {/* Action Filter */}
+                <Skeleton className="h-12 w-full rounded-lg" />
+                {/* Start Date */}
+                <Skeleton className="h-12 w-full rounded-lg" />
+                {/* End Date */}
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </div>
+            </div>
+          </div>
+
+          {/* Logs List */}
+          <div className="space-y-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-sm p-6"
+              >
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex items-start gap-4 flex-1">
+                    {/* User Avatar */}
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Log Details */}
+                    <div className="flex-1">
+                      {/* Action Badge */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <Skeleton className="h-8 w-32 rounded-full" />
+                      </div>
+                      
+                      {/* Three Column Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        {/* User Info Column */}
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-40" />
+                          <Skeleton className="h-3 w-28" />
+                        </div>
+                        
+                        {/* System Info Column */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Monitor className="w-4 h-4 text-gray-300" />
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-gray-300" />
+                            <Skeleton className="h-4 w-20" />
+                          </div>
+                        </div>
+                        
+                        {/* Time Info Column */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-gray-300" />
+                            <Skeleton className="h-4 w-16" />
+                          </div>
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </div>
+                      
+                      {/* Record ID */}
+                      <div className="mt-2">
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -1279,6 +1638,9 @@ export {
   SkeletonDashboard,
   SkeletonEntityDetails,
   SkeletonReservationCard,
+  SkeletonNotificationsPage,
   SkeletonVehicleIssueDetails, 
+  SkeletonSystemLogsDashboard,
+  SkeletonUserProfilePage,
   skeletonVariants 
 }

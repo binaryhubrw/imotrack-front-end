@@ -92,10 +92,10 @@ function CreateUserModal({
 
   // Fetch orgs/units/positions
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
-  const allOrganizations = orgData?.organizations || [];
+  const allOrganizations = useMemo(() => orgData?.organizations || [], [orgData?.organizations]);
   const { data: orgUnitsRaw, isLoading: unitsLoading } =
     useOrganizationUnitsByOrgId(selectedOrgId);
-  const orgUnits = orgUnitsRaw || [];
+  const orgUnits = useMemo(() => orgUnitsRaw || [], [orgUnitsRaw]);
   // Use the appropriate unit ID for fetching positions
   const effectiveUnitId = canViewOrganizations ? selectedUnitId : (selectedUnitId || userUnitId || "");
   const { data: positions, isLoading: loadingPositions } =
