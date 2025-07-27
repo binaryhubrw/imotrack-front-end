@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Make sure this matches your backend URL exactly
-const baseURL = process.env.NEXT_API_URL || 'https://imoteack.onrender.com';
+// const baseURL = process.env.NEXT_API_URL || 'https://imoteack.onrender.com';
 
 // Debug: Log the base URL being used
 console.log('API Base URL:', baseURL);
