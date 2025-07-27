@@ -115,8 +115,7 @@ export default function UserProfilePage() {
       setPasswordChanged(true);
       
       // Show success message from API response
-      if (response && response.message) {
-        toast.success(response.message);
+      if (response && response) {
       } else {
         toast.success('Password changed successfully!');
       }

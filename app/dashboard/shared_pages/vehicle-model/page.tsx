@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -289,31 +289,35 @@ export default function VehicleModelsPage() {
     manufacturer_name: '',
   });
 
+  const { user, isLoading: authLoading } = useAuth();
+  const canView = !!user?.position?.position_access?.vehicleModels?.view;
+  const canCreate = !!user?.position?.position_access?.vehicleModels?.create;
+  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
+  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
+
   // Open edit modal and prefill form
-  const openEditModal = (model: VehicleModel) => {
+  const openEditModal = useCallback((model: VehicleModel) => {
     if (!canUpdate) {
       toast.error('You do not have permission to update vehicle models');
       return;
     }
-    
     setModelToEdit(model);
     setEditForm({
-      vehicle_model_name: model.vehicle_model_name || '',
-      vehicle_type: Object.values(VehicleType).includes(model.vehicle_type as VehicleType)
-        ? (model.vehicle_type as VehicleType)
-        : VehicleType.SEDAN,
-      manufacturer_name: model.manufacturer_name || '',
+      vehicle_model_name: model.vehicle_model_name,
+      vehicle_type: model.vehicle_type as VehicleType,
+      manufacturer_name: model.manufacturer_name,
     });
     setEditModalOpen(true);
-  };
-  const closeEditModal = () => {
+  }, [canUpdate]);
+  const closeEditModal = useCallback(() => {
     setEditModalOpen(false);
     setModelToEdit(null);
     setEditLoading(false);
-  };
-  const confirmEdit = async (e: React.FormEvent) => {
+  }, []);
+  const confirmEdit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modelToEdit) return;
+    
     setEditLoading(true);
     try {
       await updateVehicleModel.mutateAsync({
@@ -321,8 +325,32 @@ export default function VehicleModelsPage() {
         updates: editForm,
       });
       closeEditModal();
+    } catch (error) {
+      console.error('Error updating vehicle model:', error);
     } finally {
       setEditLoading(false);
+    }
+  }, [modelToEdit, editForm, updateVehicleModel, closeEditModal]);
+
+  const handleDelete = useCallback((id: string) => {
+    if (!canDelete) {
+      toast.error('You do not have permission to delete vehicle models');
+      return;
+    }
+    setDeleteId(id);
+    setShowDeleteDialog(true);
+  }, [canDelete]);
+  
+  const confirmDelete = async () => {
+    if (!deleteId || !canDelete) return;
+    try {
+      await deleteVehicleModel.mutateAsync({ id: deleteId });
+      setShowDeleteDialog(false);
+      setDeleteId(null);
+    } catch {
+      // error handled by mutation
+      setShowDeleteDialog(false);
+      setDeleteId(null);
     }
   };
 
@@ -343,34 +371,6 @@ export default function VehicleModelsPage() {
       console.error('Error creating vehicle model:', error);
     }
   };
-
-  const handleDelete = (id: string) => {
-    if (!canDelete) {
-      toast.error('You do not have permission to delete vehicle models');
-      return;
-    }
-    setDeleteId(id);
-    setShowDeleteDialog(true);
-  };
-  
-  const confirmDelete = async () => {
-    if (!deleteId || !canDelete) return;
-    try {
-      await deleteVehicleModel.mutateAsync({ id: deleteId });
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    } catch {
-      // error handled by mutation
-      setShowDeleteDialog(false);
-      setDeleteId(null);
-    }
-  };
-
-  const { user, isLoading: authLoading } = useAuth();
-  const canView = !!user?.position?.position_access?.vehicleModels?.view;
-  const canCreate = !!user?.position?.position_access?.vehicleModels?.create;
-  const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
-  const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
 
   // Define columns after all functions are declared
   const columns = useMemo<ColumnDef<VehicleModel>[]>(() => [

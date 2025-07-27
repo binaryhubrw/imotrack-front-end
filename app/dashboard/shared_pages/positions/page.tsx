@@ -122,7 +122,7 @@ const defaultPermissions: position_accesses = {
 };
 
 
-export function CreatePositionModal({
+function CreatePositionModal({
   open,
   onClose,
   onCreate,
@@ -447,7 +447,7 @@ export function CreatePositionModal({
   );
 }
 
-export function AssignUserModal({
+function AssignUserModal({
   open,
   onClose,
   position,
@@ -579,17 +579,15 @@ export default function PositionsPage() {
   const canAssignUser = !!user?.position?.position_access?.positions?.assignUser;
   const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
 
-  // Fetch all organizations (for dropdown) but only use if canViewOrganizations
-  const allOrganizations = orgData?.organizations || [];
-
   // Determine which org to use - wrapped in useMemo to prevent unnecessary re-renders
   const organizations = useMemo(() => {
+    const allOrgs = orgData?.organizations || [];
     return canViewOrganizations
-      ? allOrganizations
+      ? allOrgs
       : user?.organization
       ? [user.organization]
       : [];
-  }, [canViewOrganizations, allOrganizations, user?.organization]);
+  }, [canViewOrganizations, orgData?.organizations, user?.organization]);
 
   // Set default org if only one (for org dropdown)
   useEffect(() => {

@@ -1,40 +1,43 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from './api';
-import { 
-  LoginCredentials, 
+import {
+  LoginCredentials,
   LoginResponse,
   PositionAuthRequest,
   PositionAuthResponse,
-  ApiResponse,
   ForgotPasswordRequest,
   ForgotPasswordResponse,
   UpdatePasswordRequest,
   UpdatePasswordResponse,
-  PaginatedOrganizations,
+  ResetPasswordRequest,
+  ApiResponse,
   Organization,
-  CreateUnitDto,
+  PaginatedOrganizations,
   Pagination,
   Unit,
+  CreateUnitDto,
   Position,
-  CreateUserDto,
   UserWithPositions,
+  UpdateUserDto,
+  CreateUserDto,
   VehicleModel,
   CreateVehicleModelDto,
   Vehicle,
-  position_accesses,
   Reservation,
   CreateReservationDto,
   CancelReservationDto,
   UpdateReservationStatusDto,
   StartReservationDto,
   CompleteReservationDto,
+  VehicleIssue,
+  CreateVehicleIssueDto,
+  UpdateVehicleIssueDto,
   Notification,
+  AuditLog,
+  position_accesses,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { TransmissionMode, VehicleType } from '@/types/enums';
-import type { VehicleIssue, CreateVehicleIssueDto, UpdateVehicleIssueDto } from '@/types/next-auth';
-import type { AuditLog } from '@/types/next-auth';
-import type { UpdateUserDto } from '@/types/next-auth';
 
 // Define Unit type matching API response
 
@@ -216,55 +219,74 @@ export const useForgotPassword = () => {
 
 
 export const useUpdatePassword = () => {
-  return useMutation({
+  return useMutation<UpdatePasswordResponse, Error, UpdatePasswordRequest>({
     mutationFn: async (request: UpdatePasswordRequest) => {
-      try {
-        // Send JSON data with camelCase field names as per user's example
-        const jsonData = {
-          currentPassword: request.currentPassword,
-          newPassword: request.newPassword,
-        };
+      const jsonData = {
+        currentPassword: request.currentPassword,
+        newPassword: request.newPassword,
+      };
 
-        // Debug: Log the request data being sent
-        console.log('Update password request data:', jsonData);
-        console.log('Update password request URL:', '/v2/auth/update-password');
-        console.log('Request body stringified:', JSON.stringify(jsonData));
+      console.log('Update password request data:', jsonData);
+      console.log('Update password request URL:', '/v2/auth/update-password');
 
-        // Debug: Check if token is available (API interceptor will handle it)
-        const token = localStorage.getItem('token');
-        console.log('Auth token available:', !!token);
+      const response = await api.post<ApiResponse<UpdatePasswordResponse>>('/v2/auth/update-password', jsonData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
 
-        const response = await api.post<ApiResponse<UpdatePasswordResponse>>('/v2/auth/update-password', jsonData, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        // Debug the response
-        console.log('Update password response:', response);
+      console.log('Update password response:', response);
 
-        if (!response.data) {
-          throw new Error('No response received from server');
-        }
-
-        // Show success toast
-        if (response.data.message) {
-          toast.success(response.data.message);
-        }
-
-        return response.data;
-      } catch (error: unknown) {
-        console.error('Update password request failed:', error);
-        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          console.error('Error response:', axiosError.response?.data);
-          const errorMessage = axiosError.response?.data?.message || 'Failed to update password';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-        toast.error('Failed to update password');
-        throw error;
+      if (!response.data.data) {
+        throw new Error('No data received from update password request');
       }
+
+      return response.data.data;
+    },
+    onSuccess: () => {
+      toast.success('Password updated successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Update password request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update password';
+      console.error('Update password error message:', errorMessage);
+      toast.error('Failed to update password');
+    },
+  });
+};
+
+export const useResetPassword = () => {
+  return useMutation<{ message: string }, Error, ResetPasswordRequest>({
+    mutationFn: async (request: ResetPasswordRequest) => {
+      const jsonData = {
+        email: request.email,
+        new_password: request.new_password,
+        reset_token: request.reset_token,
+      };
+
+      console.log('Reset password request data:', jsonData);
+      console.log('Reset password request URL:', '/v2/auth/reset-password');
+
+      const response = await api.post<ApiResponse<{ message: string }>>('/v2/auth/reset-password', jsonData, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      console.log('Reset password response:', response);
+
+      if (!response.data.data) {
+        throw new Error('No data received from reset password request');
+      }
+
+      return response.data.data;
+    },
+    onSuccess: () => {
+      toast.success('Password reset successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Reset password request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to reset password';
+      console.error('Reset password error message:', errorMessage);
+      toast.error('Failed to reset password');
     },
   });
 };

@@ -13,11 +13,491 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Ban, Building2 } from "lucide-react";
-import { CreatePositionModal}  from "../../positions/page";
 import { useCreatePosition } from '@/lib/queries';
 import type { position_accesses } from '@/types/next-auth';
 import { useAuth } from '@/hooks/useAuth';
 import NoPermissionUI from "@/components/NoPermissionUI";
+import { useUsers } from '@/lib/queries';
+
+// Default permissions object
+const defaultPermissions: position_accesses = {
+  organizations: { create: false, view: false, update: false, delete: false },
+  units: { create: false, view: false, update: false, delete: false },
+  positions: { create: false, view: false, update: false, delete: false },
+  users: { create: false, view: false, update: false, delete: false },
+  vehicleModels: { create: false, view: false, viewSingle: false, update: false, delete: false },
+  vehicles: { create: false, view: false, viewSingle: false, update: false, delete: false },
+  reservations: { create: false, view: false, update: false, delete: false, cancel: false, approve: false, assignVehicle: false, updateReason: false, odometerFuel: false, start: false, complete: false, viewOwn: false },
+  vehicleIssues: { report: false, view: false, update: false, delete: false },
+};
+
+function CreatePositionModal({
+  open,
+  onClose,
+  onCreate,
+  unitId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreate: (data: {
+    position_name: string;
+    position_description: string;
+    unit_id: string;
+    position_access: position_accesses;
+    user_ids: string[];
+  }) => Promise<void>;
+  unitId: string;
+}) {
+  const [form, setForm] = useState({
+    position_name: "",
+    position_description: "",
+    position_access: { ...defaultPermissions },
+    user_ids: [] as string[],
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const { data: users = [] } = useUsers();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, multiple } = e.target;
+    if (name === 'user_ids' && multiple) {
+      const options = (e.target as HTMLSelectElement).options;
+      const selected = Array.from(options).filter((o) => (o as HTMLOptionElement).selected).map((o) => (o as HTMLOptionElement).value);
+      // If 'ALL' is selected, select all user_ids
+      if (selected.includes('ALL')) {
+        setForm((f) => ({ ...f, user_ids: users.map(u => u.user_id) }));
+      } else {
+        setForm((f) => ({ ...f, user_ids: selected }));
+      }
+    } else {
+      setForm({ ...form, [name]: value });
+    }
+  };
+
+  // Update handleAccessChange to use string for module and index with as keyof position_accesses
+  const handleAccessChange = (module: string, perm: string) => {
+    setForm((prev) => {
+      const perms = {
+        ...(prev.position_access as Record<string, Record<string, boolean>>)[
+          module
+        ],
+      };
+      perms[perm] = !perms[perm];
+      return {
+        ...prev,
+        position_access: {
+          ...prev.position_access,
+          [module]: perms,
+        },
+      };
+    });
+  };
+
+  // Add function to handle selecting/deselecting all permissions for a module
+  const handleSelectAllPermissions = (module: string) => {
+    setForm((prev) => {
+      const currentPerms = (prev.position_access as Record<string, Record<string, boolean>>)[module];
+      const allSelected = Object.values(currentPerms).every(Boolean);
+      
+      // If all are selected, deselect all. Otherwise, select all.
+      const newPerms = Object.keys(currentPerms).reduce((acc, perm) => {
+        acc[perm] = !allSelected;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      return {
+        ...prev,
+        position_access: {
+          ...prev.position_access,
+          [module]: newPerms,
+        },
+      };
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const positionData = {
+        position_name: form.position_name,
+        position_description: form.position_description,
+        unit_id: unitId,
+        position_access: form.position_access,
+        user_ids: form.user_ids,
+      };
+
+      await onCreate(positionData);
+
+      // Reset form
+      setForm({
+        position_name: "",
+        position_description: "",
+        position_access: { ...defaultPermissions },
+        user_ids: [],
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error creating position:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      position_name: "",
+      position_description: "",
+      position_access: { ...defaultPermissions },
+      user_ids: [],
+    });
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300">
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-6 rounded-t-xl">
+          <button
+            className="absolute top-4 right-4 text-gray-400 hover:text-blue-600 transition-colors duration-200 p-1 rounded-full hover:bg-gray-100"
+            onClick={handleClose}
+            disabled={submitting}
+          >
+            <FontAwesomeIcon icon="times" className="w-5 h-5" />
+          </button>
+          <h2 className="text-2xl font-bold text-blue-700 pr-10">
+            Create New Position
+          </h2>
+          <p className="text-gray-600 mt-2">
+            Add a new position to this unit with specific permissions.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Basic Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Position Name *
+              </label>
+              <input
+                type="text"
+                name="position_name"
+                value={form.position_name}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="e.g., Fleet Manager"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <input
+                type="text"
+                name="position_description"
+                value={form.position_description}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Brief description of the position"
+              />
+            </div>
+          </div>
+
+          {/* Permissions Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Permissions
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Organizations */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Organizations</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("organizations")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.organizations).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.organizations as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("organizations", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Units */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Units</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("units")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.units).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.units as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("units", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Positions */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Positions</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("positions")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.positions).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.positions as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("positions", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Users */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Users</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("users")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.users).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.users as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("users", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vehicle Models */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Vehicle Models</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("vehicleModels")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.vehicleModels).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.vehicleModels as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("vehicleModels", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vehicles */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Vehicles</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("vehicles")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.vehicles).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.vehicles as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("vehicles", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reservations */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Reservations</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("reservations")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.reservations).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.reservations as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("reservations", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Vehicle Issues */}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Vehicle Issues</h4>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAllPermissions("vehicleIssues")}
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    Toggle All
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {Object.entries(defaultPermissions.vehicleIssues).map(([perm]) => (
+                    <label key={perm} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={(form.position_access.vehicleIssues as Record<string, boolean>)[perm]}
+                        onChange={() => handleAccessChange("vehicleIssues", perm)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700 capitalize">
+                        {perm}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Users Assignment */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Assign Users (Optional)
+            </label>
+            <select
+              name="user_ids"
+              multiple
+              value={form.user_ids}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px]"
+            >
+              <option value="ALL">Select All Users</option>
+              {users.map((user) => (
+                <option key={user.user_id} value={user.user_id}>
+                  {user.first_name} {user.last_name} ({user.email})
+                </option>
+              ))}
+            </select>
+                          <p className="text-sm text-gray-500 mt-1">
+                Hold Ctrl/Cmd to select multiple users or choose &quot;Select All Users&quot;
+              </p>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              disabled={submitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting}
+            >
+              {submitting ? "Creating..." : "Create Position"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function UnitDetailPage() {
   const router = useRouter();

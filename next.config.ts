@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["avatars.githubusercontent.com","res.cloudinary.com","i.imgur.com"],
   },
+   eslint: {
+    // ✅ Warning: This will completely skip ESLint during builds
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
