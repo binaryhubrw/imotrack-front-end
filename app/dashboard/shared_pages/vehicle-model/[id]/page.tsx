@@ -24,6 +24,7 @@ import { VehicleType } from "@/types/enums";
 import { Ban } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 
 
@@ -170,9 +171,17 @@ export default function VehicleModelDetailPage() {
   }
   if (isError || !model) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Error loading vehicle model details</div>
-      </div>
+      
+      <ErrorUI
+                    resource={`model ${model?.vehicle_model_name}`}
+                    onRetry={() => {
+                      // re-fetch your data
+                      router.refresh();
+                    }}
+                    onBack={() => {
+                      router.back();
+                    }}
+                  />
     );
   }
   // Main return

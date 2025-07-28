@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateVehicleIssueDto, ReservedVehicle } from "@/types/next-auth";
+import ErrorUI from "@/components/ErrorUI";
 
 export default function ReservationDetailPage() {
   const router = useRouter();
@@ -116,9 +117,16 @@ export default function ReservationDetailPage() {
 
   if (isError || !reservation) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Error loading reservation details</div>
-      </div>
+     <ErrorUI
+             resource={`reservation ${reservation?.reservation_purpose}`}
+             onRetry={() => {
+               // re-fetch your data
+               router.refresh();
+             }}
+             onBack={() => {
+               router.back();
+             }}
+           />
     );
   }
 

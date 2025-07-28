@@ -12,6 +12,7 @@ import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 // Helper type guard
 function isUserWithAuth(
@@ -161,10 +162,18 @@ export default function PositionDetailPage() {
   }
   if (isError || !position) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Error loading position details</div>
-      </div>
-    );
+    
+    <ErrorUI
+            resource={`position ${position?.position_name}`}
+            onRetry={() => {
+              // re-fetch your data
+              router.refresh();
+            }}
+            onBack={() => {
+              router.back();
+            }}
+          />
+    )
   }
 
   return (

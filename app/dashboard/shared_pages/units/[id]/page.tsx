@@ -18,6 +18,7 @@ import { useCreatePosition } from "@/lib/queries";
 import type { position_accesses } from "@/types/next-auth";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 export default function UnitDetailPage() {
   const router = useRouter();
@@ -192,9 +193,16 @@ export default function UnitDetailPage() {
   }
   if (isError || !unit) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Error loading unit details</div>
-      </div>
+     <ErrorUI
+             resource={`unit ${unit?.unit_name}`}
+             onRetry={() => {
+               // re-fetch your data
+               router.refresh();
+             }}
+             onBack={() => {
+               router.back();
+             }}
+           />
     );
   }
 

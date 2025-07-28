@@ -25,6 +25,7 @@ import Image from "next/image";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 export default function OrganizationIdPage() {
   const router = useRouter();
@@ -34,11 +35,12 @@ export default function OrganizationIdPage() {
   const { user, isLoading: authLoading } = useAuth();
   const canView = !!user?.position?.position_access?.organizations?.view;
   const canUpdate = !!user?.position?.position_access?.organizations?.update;
-  const canDisActivate = !!user?.position?.position_access?.organizations?.delete;
+  const canDisActivate =
+    !!user?.position?.position_access?.organizations?.delete;
   const canCreateUnit = !!user?.position?.position_access?.units?.create;
 
   // Fetch organization details
-  const { data: org, isLoading, isError, error, refetch } = useOrganization(id);
+  const { data: org, isLoading, isError, refetch } = useOrganization(id);
   // Prepare delete, update, and units hooks
   const deleteOrganization = useDeleteOrganization();
   const updateOrganization = useUpdateOrganization();
@@ -148,17 +150,16 @@ export default function OrganizationIdPage() {
 
   if (isError) {
     return (
-      <main className="min-h-[60vh] flex flex-col items-center justify-center text-red-600">
-        <p className="text-lg">
-          Error loading organization: {error?.message || "Unknown error"}
-        </p>
-        <button
-          onClick={() => router.back()}
-          className="mt-4 px-4 py-2 bg-[#0872B3] text-white rounded hover:bg-blue-700 flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-      </main>
+      <ErrorUI
+        resource={`organization ${org?.organization_name}`}
+        onRetry={() => {
+          // re-fetch your data
+          router.refresh();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
     );
   }
 
@@ -202,11 +203,11 @@ export default function OrganizationIdPage() {
               </button>
             )}
             {canDisActivate && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
-            >
-              <Ban className="w-4 h-4" />
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+              >
+                <Ban className="w-4 h-4" />
                 DisActivate
               </button>
             )}

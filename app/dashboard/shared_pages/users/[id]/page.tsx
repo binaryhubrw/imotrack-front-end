@@ -14,6 +14,7 @@ import { X } from 'lucide-react';
 import React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
+import ErrorUI from "@/components/ErrorUI";
 
 function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; onClose: () => void; userId: string | null; onUpdated: () => void }) {
   const { data: user, isLoading } = useUser(userId || '');
@@ -126,9 +127,16 @@ export default function UserDetailPage() {
   }
   if (isError || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Error loading user details</div>
-      </div>
+      <ErrorUI
+              resource={`user ${user?.first_name}`}
+              onRetry={() => {
+                // re-fetch your data
+                router.refresh();
+              }}
+              onBack={() => {
+                router.back();
+              }}
+            />
     );
   }
 

@@ -10,9 +10,8 @@ import {
   Download,
   Phone,
   CheckCircle,
-  XCircle,
   Edit,
-  Trash2,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +37,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import type { FC } from "react";
+import ErrorUI from "@/components/ErrorUI";
+import Image from "next/image";
 
 // All possible status values for vehicle issues
 const STATUS_LABELS: Record<string, string> = {
@@ -75,7 +76,9 @@ const VehicleDetailsCard: FC<{
       <CardContent>
         <div className="flex flex-col md:flex-row gap-6 items-center">
           {vehicle.vehicle_photo && (
-            <img
+            <Image
+            width={40}
+            height={40}
               src={vehicle.vehicle_photo}
               alt={vehicle.plate_number || "Vehicle Photo"}
               className="w-40 h-28 object-cover rounded-lg border shadow"
@@ -249,7 +252,6 @@ export default function IssueDetailsPage() {
           : new Date().toISOString().split("T")[0],
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue]);
 
   // Status badge component
@@ -386,36 +388,16 @@ Generated on: ${new Date().toLocaleString()}
   }
   if (isError || !issue) {
     return (
-      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
-        <div className="max-w-4xl mx-auto">
-          <Card className="text-center py-12">
-            <CardContent>
-              <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Issue Not Found
-              </h2>
-              <p className="text-gray-600 mb-6">
-                The issue could not be found. Issue ID: {issueId}
-              </p>
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 text-left">
-                  <p className="text-red-800 font-medium">Error Details:</p>
-                  <p className="text-red-600 text-sm">{error.message}</p>
-                </div>
-              )}
-              <Button
-                onClick={() =>
-                  router.push("/dashboard/shared_pages/vehicle-issues")
-                }
-                className="bg-[#0872B3] hover:bg-blue-700"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Issue History
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      <ErrorUI
+              resource={`issue ${issue?.issue_title}`}
+              onRetry={() => {
+                // re-fetch your data
+                router.refresh();
+              }}
+              onBack={() => {
+                router.back();
+              }}
+            />
     );
   }
 
@@ -459,7 +441,7 @@ Generated on: ${new Date().toLocaleString()}
                 variant="destructive"
                 className="bg-red-400 hover:bg-red-500"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Ban className="w-4 h-4 mr-2" />
                 DisActivate Issue
               </Button>
             )}

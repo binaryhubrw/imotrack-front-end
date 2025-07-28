@@ -1,13 +1,14 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Search, Eye, Plus, Clock } from 'lucide-react';
+import { AlertTriangle, Search, Eye, Clock } from 'lucide-react';
 import { useVehicleIssues } from '@/lib/queries';
 import ErrorUI from '@/components/ErrorUI';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import NoPermissionUI from '@/components/NoPermissionUI';
 import Link from 'next/link';
+import { SkeletonVehiclesTable } from '@/components/ui/skeleton';
 
 export default function VehicleIssuesPage() {
   const { data: issues = [], isLoading, isError, error } = useVehicleIssues();
@@ -27,7 +28,7 @@ export default function VehicleIssuesPage() {
 
   // Permission checks
   const canView = !!user?.position?.position_access?.vehicleIssues?.view;
-  const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
+  // const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
 
   const filteredIssues = useMemo(() => {
     return issues.filter(issue => {
@@ -64,13 +65,7 @@ export default function VehicleIssuesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600" />
-          </div>
-        </div>
-      </div>
+      <SkeletonVehiclesTable />
     );
   }
 
@@ -115,7 +110,7 @@ export default function VehicleIssuesPage() {
                 <p className="text-gray-600">{openIssuesCount} open issues, {closedIssuesCount} resolved</p>
               </div>
             </div>
-            {canReport && (
+            {/* {canReport && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -125,7 +120,7 @@ export default function VehicleIssuesPage() {
                 <Plus className="w-4 h-4" />
                 Report Issue
               </motion.button>
-            )}
+            )} */}
           </div>
 
           {/* Search and Filter */}

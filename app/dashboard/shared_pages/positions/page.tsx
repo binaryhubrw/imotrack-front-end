@@ -101,6 +101,7 @@ export default function PositionsPage() {
   const allOrganizations = orgData?.organizations || [];
 
   // Determine which org to use
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const organizations = canViewOrganizations
     ? allOrganizations
     : user?.organization

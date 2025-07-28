@@ -58,7 +58,9 @@ import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 
 // Extend CreateVehicleDto to make vehicle_type optional for form state
-type CreateVehicleDto = Omit<BaseCreateVehicleDto, 'vehicle_type'> & { vehicle_type?: string };
+type CreateVehicleDto = Omit<BaseCreateVehicleDto, "vehicle_type"> & {
+  vehicle_type?: string;
+};
 
 // Edit Vehicle Modal Component
 function EditVehicleModal({
@@ -732,13 +734,13 @@ function CreateVehicleModal({
 export default function VehiclesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
-  
+
   // Move all data fetching hooks to the top
   const { data: vehicles = [], isLoading, isError } = useVehicles();
   const { data: vehicleModels = [] } = useVehicleModels();
   const updateVehicle = useUpdateVehicle();
   const createVehicle = useCreateVehicle();
-  
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -881,8 +883,12 @@ export default function VehiclesPage() {
     }, {} as Record<string, number>);
 
     // New: Available and Occupied counts
-    const availableCount = vehicles.filter(v => v.vehicle_status === 'AVAILABLE').length;
-    const occupiedCount = vehicles.filter(v => v.vehicle_status === 'OCCUPIED').length;
+    const availableCount = vehicles.filter(
+      (v) => v.vehicle_status === "AVAILABLE"
+    ).length;
+    const occupiedCount = vehicles.filter(
+      (v) => v.vehicle_status === "OCCUPIED"
+    ).length;
 
     return {
       totalVehicles,
@@ -905,13 +911,12 @@ export default function VehiclesPage() {
     return <NoPermissionUI resource="vehicles" />;
   }
 
-
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {
     if (!canCreate) {
-      toast.error('You do not have permission to create vehicles');
+      toast.error("You do not have permission to create vehicles");
       return;
     }
-    
+
     try {
       // Fix type casting for API compatibility
       const apiData = {
@@ -927,18 +932,23 @@ export default function VehiclesPage() {
     }
   };
 
-  const handleUpdateVehicle = async (id: string, data: Partial<CreateVehicleDto>) => {
+  const handleUpdateVehicle = async (
+    id: string,
+    data: Partial<CreateVehicleDto>
+  ) => {
     if (!canUpdate) {
-      toast.error('You do not have permission to update vehicles');
+      toast.error("You do not have permission to update vehicles");
       return;
     }
-    
+
     try {
       // Fix type for vehicle_type and transmission_mode
       const updateData = {
         ...data,
         vehicle_type: data.vehicle_type as VehicleType | undefined,
-        transmission_mode: data.transmission_mode as TransmissionMode | undefined,
+        transmission_mode: data.transmission_mode as
+          | TransmissionMode
+          | undefined,
         vehicle_photo:
           data.vehicle_photo && data.vehicle_photo instanceof File
             ? data.vehicle_photo
@@ -958,7 +968,18 @@ export default function VehiclesPage() {
   }
 
   if (isError && canView) {
-    return <ErrorUI />;
+    return (
+      <ErrorUI
+        resource="vehicles"
+        onRetry={() => {
+          // re-fetch your data
+          router.refresh();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
+    );
   }
 
   return (
@@ -1078,8 +1099,8 @@ export default function VehiclesPage() {
                 </div>
                 {globalFilter && (
                   <span className="text-sm text-gray-500">
-                    {table.getFilteredRowModel().rows.length} of {vehicles.length}{" "}
-                    vehicles
+                    {table.getFilteredRowModel().rows.length} of{" "}
+                    {vehicles.length} vehicles
                   </span>
                 )}
               </div>
@@ -1184,7 +1205,8 @@ export default function VehiclesPage() {
                 No View Access
               </h3>
               <p className="text-gray-500 mb-4">
-                You don&apos;t have permission to view vehicles, but you can create new ones.
+                You don&apos;t have permission to view vehicles, but you can
+                create new ones.
               </p>
               {canCreate && (
                 <Button
@@ -1207,7 +1229,11 @@ export default function VehiclesPage() {
             }}
             isLoading={createVehicle.isPending}
             vehicleModels={vehicleModels}
-            organizationId={(user && user.organization && user.organization.organization_id) ? user.organization.organization_id : ""}
+            organizationId={
+              user && user.organization && user.organization.organization_id
+                ? user.organization.organization_id
+                : ""
+            }
           />
         )}
         {/* Edit Vehicle Modal */}
