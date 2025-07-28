@@ -742,12 +742,7 @@ export const useAssignPositionToUser = () => {
   const queryClient = useQueryClient();
   return useMutation<{ message: string; data: Position }, Error, { position_id: string; email: string }>({
     mutationFn: async ({ position_id, email }) => {
-      const formData = new FormData();
-      formData.append('email', email);
-      
-      const { data } = await api.patch<{ message: string; data: Position }>(`/v2/organizations/positions/${position_id}/assign`, formData, {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const { data } = await api.patch<{ message: string; data: Position }>(`/v2/organizations/positions/${position_id}/assign`, { email });
       if (!data.message) throw new Error('No data');
       return data;
     },
@@ -1587,12 +1582,7 @@ export const useCompleteReservation = () => {
     mutationFn: async ({ reservedVehicleId, dto }) => {
       console.log('Completing reservation:', { reservedVehicleId, dto });
       try {
-        const formData = new FormData();
-        formData.append('returned_odometer', dto.returned_odometer.toString());
-        
-        const response = await api.post(`/v2/reservations/${reservedVehicleId}/complete`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const response = await api.post(`/v2/reservations/${reservedVehicleId}/complete`, { returned_odometer: dto.returned_odometer });
         console.log('Complete reservation full response:', response);
         const { data } = response;
         console.log('Complete reservation data:', data);

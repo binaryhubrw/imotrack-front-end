@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Info, } from "lucide-react";
+import { Plus, Info, UserPlus, View } from "lucide-react";
 import {
   useUnitPositions,
   useCreatePosition,
@@ -8,15 +8,148 @@ import {
   useOrganizationUnitsByOrgId,
   useOrganizationUnits,
   usePositions,
+  useAssignPositionToUser,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
-import { SkeletonPositionsCards } from "@/components/ui/skeleton";
+import { SkeletonUnitsTable } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import type { position_accesses, Unit } from "@/types/next-auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { CreatePositionModal } from "./CreatePositionModal";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+// Assign User Modal Component
+function AssignUserModal({
+  open,
+  onClose,
+  positionName,
+  onAssign,
+  isLoading,
+}: {
+  open: boolean;
+  onClose: () => void;
+  positionName: string;
+  onAssign: (email: string) => Promise<void>;
+  isLoading: boolean;
+}) {
+  const [email, setEmail] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    try {
+      await onAssign(email);
+      setEmail("");
+      setErrors({});
+      onClose();
+    } catch (error) {
+      console.error("Error assigning user:", error);
+    }
+  };
+
+  const handleClose = () => {
+    setEmail("");
+    setErrors({});
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-blue-600" />
+              Assign User to Position
+            </h2>
+            <button
+              onClick={handleClose}
+              disabled={isLoading}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">
+            Assign a user to the position: <span className="font-medium text-gray-900">{positionName}</span>
+          </p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              User Email
+            </label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (errors.email) {
+                  setErrors(prev => ({ ...prev, email: "" }));
+                }
+              }}
+              placeholder="Enter user's email address"
+              className={`w-full ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              disabled={isLoading}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex-1 py-2 px-4 bg-[#0872B3] text-white rounded-lg hover:bg-[#065d8f] transition-colors disabled:opacity-50"
+            >
+              {isLoading ? "Assigning..." : "Assign User"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 interface Position {
   position_id: string;
   position_name: string;
@@ -78,6 +211,8 @@ export default function PositionsPage() {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState<{ id: string; name: string } | null>(null);
 
   // Call all hooks unconditionally at the top
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
@@ -90,12 +225,14 @@ export default function PositionsPage() {
   const allUnitsHook = useOrganizationUnits();
   const unitPositionsHook = useUnitPositions(selectedUnitId);
   const createPosition = useCreatePosition();
+  const assignPositionToUser = useAssignPositionToUser();
 
   // Permission checks
   const canView = !!user?.position?.position_access?.positions?.view;
   const canCreate = !!user?.position?.position_access?.positions?.create;
   const canViewOrganizations =
     !!user?.position?.position_access?.organizations?.view;
+  const canAssignUser = !!user?.position?.position_access?.positions?.assignUser;
 
   // Fetch all organizations (for dropdown) but only use if canViewOrganizations
   const allOrganizations = orgData?.organizations || [];
@@ -233,6 +370,34 @@ export default function PositionsPage() {
     await createPosition.mutateAsync(positionData);
   };
 
+  const handleAssignUser = async (email: string) => {
+    if (!selectedPosition || !canAssignUser) {
+      toast.error("You do not have permission to assign users to positions");
+      return;
+    }
+
+    try {
+      await assignPositionToUser.mutateAsync({
+        position_id: selectedPosition.id,
+        email: email,
+      });
+      // Refresh the data
+      window.location.reload();
+    } catch (error) {
+      console.error("Error assigning user:", error);
+      toast.error("Failed to assign user to position");
+    }
+  };
+
+  const openAssignModal = (positionId: string, positionName: string) => {
+    if (!canAssignUser) {
+      toast.error("You do not have permission to assign users to positions");
+      return;
+    }
+    setSelectedPosition({ id: positionId, name: positionName });
+    setShowAssignModal(true);
+  };
+
   // Show loading state
   if (orgsLoading || unitsLoading || positionsLoading) {
     return (
@@ -241,7 +406,7 @@ export default function PositionsPage() {
           <div className="h-8 bg-gray-200 rounded animate-pulse w-64"></div>
         </div>
         <div className="flex-1 overflow-auto p-4">
-          <SkeletonPositionsCards />
+          <SkeletonUnitsTable />
         </div>
       </div>
     );
@@ -367,68 +532,74 @@ export default function PositionsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPositions.map((pos) => (
-                <div
-                  key={pos.position_id}
-                  className="bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2 relative"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold text-gray-900">Position Name</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                    <TableHead className="font-semibold text-gray-900">Assigned User</TableHead>
+                    <TableHead className="font-semibold text-gray-900 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPositions.map((pos) => (
+                    <TableRow key={pos.position_id} className="hover:bg-gray-50 border-b border-gray-100">
+                      <TableCell className="font-medium text-blue-800">
                         {pos.position_name}
-                      </div>
-                      <div className="text-gray-600 text-sm mt-1">
-                        {pos.position_description}
-                      </div>
-                    </div>
-                    <div className="absolute top-4 right-4 flex gap-2 z-10">
-                      <Link
-                        href={`/dashboard/shared_pages/positions/${pos.position_id}`}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors border border-blue-100"
-                        aria-label="View position"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex flex-col lg:flex-row lg:items-center lg:justify-between text-xs text-gray-500 gap-2">
-                    <div>
-                      Created:{" "}
-                      {pos.created_at
-                        ? new Date(pos.created_at).toLocaleString()
-                        : "N/A"}
-                    </div>
-                    <span
-                      className={`inline-block mt-1 lg:mt-0 px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        pos.position_status === "ACTIVE"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {pos.position_status}
-                    </span>
-                  </div>
-
-                  <div className="mt-2">
-                    <span className="font-semibold text-gray-700">
-                      Assigned User:{" "}
-                    </span>
-                    {pos.user ? (
-                      <span className="text-gray-800">
-                        {pos.user.first_name} {pos.user.last_name}
-                        <span className="text-gray-500">
-                          {" "}
-                          ({pos.user.auth?.email ?? "N/A"})
-                        </span>
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">Unassigned</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={pos.position_status === "ACTIVE" ? "default" : "secondary"}
+                          className={pos.position_status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}
+                        >
+                          {pos.position_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {pos.user ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900">
+                              {pos.user.first_name} {pos.user.last_name}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {pos.user.auth?.email || "No email"}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic">Unassigned</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/dashboard/shared_pages/positions/${pos.position_id}`}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="View position"
+                          >
+                            <View className="w-4 h-4" />
+                          </Link>
+                          {!pos.user && canAssignUser && (
+                            <Button
+                              onClick={() => openAssignModal(pos.position_id, pos.position_name)}
+                              size="sm"
+                              className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                              title="Assign user"
+                            >
+                              <UserPlus className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {pos.user && (
+                            <span className="text-green-600 text-sm font-medium">
+                              ✓ Assigned
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </div>
@@ -468,6 +639,17 @@ export default function PositionsPage() {
           onClose={() => setShowCreate(false)}
           onCreate={handleCreatePosition}
           unitId={selectedUnitId}
+        />
+      )}
+
+      {/* Assign User Modal */}
+      {showAssignModal && selectedPosition && (
+        <AssignUserModal
+          open={showAssignModal}
+          onClose={() => setShowAssignModal(false)}
+          positionName={selectedPosition.name}
+          onAssign={handleAssignUser}
+          isLoading={assignPositionToUser.isPending}
         />
       )}
     </div>

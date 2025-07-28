@@ -14,9 +14,10 @@ import {
   User,
   Mail,
   AlertCircle,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, useCreateVehicleIssue } from "@/lib/queries";
+import { useReservation, useCreateVehicleIssue, useCompleteReservation } from "@/lib/queries";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,6 +45,7 @@ export default function ReservationDetailPage() {
   const { data: reservation, isLoading, isError } = useReservation(id);
   const { user, isLoading: authLoading } = useAuth();
   const createIssue = useCreateVehicleIssue();
+  const completeReservation = useCompleteReservation();
 
   // Modal state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -53,11 +55,15 @@ export default function ReservationDetailPage() {
     issue_title: "",
     issue_description: "",
   });
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [returnedOdometer, setReturnedOdometer] = useState<number | null>(null);
 
   // Permission checks
   const canView = !!user?.position?.position_access?.reservations?.view;
   const canReportIssue =
     !!user?.position?.position_access?.vehicleIssues?.report;
+  const canCompleteReservation =
+    !!user?.position?.position_access?.reservations?.complete;
 
   const handleReportIssue = (vehicle: ReservedVehicle) => {
     setSelectedVehicle(vehicle);
@@ -101,6 +107,38 @@ export default function ReservationDetailPage() {
     setShowReportModal(false);
     setIssueForm({ issue_title: "", issue_description: "" });
     setSelectedVehicle(null);
+  };
+
+  const handleCompleteReservation = async () => {
+    if (!selectedVehicle || returnedOdometer === null) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    const completeData = {
+      reservedVehicleId: selectedVehicle.reserved_vehicle_id,
+      dto: {
+        returned_odometer: returnedOdometer,
+      },
+    };
+
+    completeReservation.mutate(completeData, {
+      onSuccess: () => {
+        setShowCompleteModal(false);
+        setReturnedOdometer(null);
+        // Redirect to reservation details or refresh
+        router.refresh();
+      },
+      onError: (error) => {
+        console.error("Error completing reservation:", error);
+        // Error toast is already handled by the hook
+      },
+    });
+  };
+
+  const handleCloseCompleteModal = () => {
+    setShowCompleteModal(false);
+    setReturnedOdometer(null);
   };
 
   if (authLoading) {
@@ -344,6 +382,11 @@ export default function ReservationDetailPage() {
                   const canReportIssueForThisVehicle =
                     canReportIssue &&
                     reservation.reservation_status === "APPROVED";
+                  const canCompleteThisReservation =
+                    canCompleteReservation &&
+                    isOccupied &&
+                    (reservation.reservation_status === "IN_PROGRESS" || 
+                     reservation.reservation_status === "APPROVED");
 
                   return (
                     <div
@@ -431,6 +474,24 @@ export default function ReservationDetailPage() {
                           >
                             <AlertCircle className="w-4 h-4 mr-2" />
                             Report Issue
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Complete Reservation Button */}
+                      {canCompleteThisReservation && (
+                        <div className="mt-4 pt-3 border-t border-gray-200">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300"
+                            onClick={() => {
+                              setSelectedVehicle(reservedVehicle);
+                              setShowCompleteModal(true);
+                            }}
+                          >
+                            <CheckSquare className="w-4 h-4 mr-2" />
+                            Return Vehicle
                           </Button>
                         </div>
                       )}
@@ -583,6 +644,86 @@ export default function ReservationDetailPage() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
                   Report Issue
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Reservation Modal */}
+      <Dialog open={showCompleteModal} onOpenChange={setShowCompleteModal}>
+        <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200 shadow-xl">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+              <CheckSquare className="w-6 h-6 text-green-500" />
+              Return Vehicle
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-6">
+            {selectedVehicle && (
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Car className="w-4 h-4 text-green-600" />
+                  Vehicle Details
+                </h4>
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p>
+                    <span className="font-medium">Vehicle:</span>{" "}
+                    {selectedVehicle.vehicle.vehicle_name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Plate Number:</span>{" "}
+                    {selectedVehicle.vehicle.plate_number}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label
+                htmlFor="returned_odometer"
+                className="text-sm font-medium text-gray-700"
+              >
+                Returned Odometer (km) *
+              </Label>
+              <Input
+                id="returned_odometer"
+                type="number"
+                placeholder="Enter returned odometer reading"
+                value={returnedOdometer || ""}
+                onChange={(e) => setReturnedOdometer(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={handleCloseCompleteModal}
+              className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCompleteReservation}
+              disabled={
+                completeReservation.isPending ||
+                returnedOdometer === null
+              }
+              className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
+            >
+              {completeReservation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Returning...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4" />
+                  Return Vehicle
                 </div>
               )}
             </Button>
