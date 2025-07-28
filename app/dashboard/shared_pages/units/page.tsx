@@ -102,7 +102,9 @@ function CreateUnitModal({
     try {
       await onCreate({
         unit_name: form.unit_name,
-        organization_id: canViewOrganizations ? form.organization_id : (userOrganizationId || ""),
+        organization_id: canViewOrganizations
+          ? form.organization_id
+          : userOrganizationId || "",
       });
       setForm({ unit_name: "", organization_id: userOrganizationId || "" });
       onClose();
@@ -185,8 +187,16 @@ export default function UnitsPage() {
 
   // Call all hooks unconditionally at the top
   const { data: orgData } = useOrganizations(1, 100);
-  const { data: allUnits, isLoading: isLoadingAll, isError: isErrorAll } = useOrganizationUnits();
-  const { data: orgUnits, isLoading: isLoadingOrg, isError: isErrorOrg } = useOrganizationUnitsByOrgId(selectedOrg);
+  const {
+    data: allUnits,
+    isLoading: isLoadingAll,
+    isError: isErrorAll,
+  } = useOrganizationUnits();
+  const {
+    data: orgUnits,
+    isLoading: isLoadingOrg,
+    isError: isErrorOrg,
+  } = useOrganizationUnitsByOrgId(selectedOrg);
   const updateUnit = useUpdateOrganizationUnit();
   const createUnit = useCreateUnit();
 
@@ -200,7 +210,8 @@ export default function UnitsPage() {
   const canView = !!user?.position?.position_access?.units?.view;
   const canCreate = !!user?.position?.position_access?.units?.create;
   const canUpdate = !!user?.position?.position_access?.units?.update;
-  const canViewOrganizations = !!user?.position?.position_access?.organizations?.view;
+  const canViewOrganizations =
+    !!user?.position?.position_access?.organizations?.view;
 
   const userOrganizationId = user?.organization?.organization_id;
 
@@ -328,7 +339,7 @@ export default function UnitsPage() {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
+      cell: ({ row }) =>
         canUpdate ? (
           <div className="flex items-center">
             <button
@@ -339,8 +350,7 @@ export default function UnitsPage() {
               <Edit className="w-4 h-4" />
             </button>
           </div>
-        ) : null
-      ),
+        ) : null,
     },
   ];
 
@@ -369,7 +379,7 @@ export default function UnitsPage() {
   if (authLoading) {
     return <SkeletonUnitsTable rows={10} />;
   }
-  
+
   // Check if user has any relevant permissions
   const hasAnyPermission = canView || canCreate || canUpdate;
   if (!hasAnyPermission) {
@@ -383,17 +393,17 @@ export default function UnitsPage() {
   if (isError && canView) {
     return (
       <ErrorUI
-       resource="units"
-       onRetry={() => {
-        // re-fetch your data
-        window.location.reload()
-      }}
-       onBack={() => {
-        router.back()
-       }}
-       />
-  )
-}
+        resource="units"
+        onRetry={() => {
+          // re-fetch your data
+          window.location.reload();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
+    );
+  }
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -623,7 +633,9 @@ export default function UnitsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                      onClick={() =>
+                        table.setPageIndex(table.getPageCount() - 1)
+                      }
                       disabled={!table.getCanNextPage()}
                     >
                       {">>"}
@@ -681,7 +693,8 @@ export default function UnitsPage() {
                   No Access to View Units
                 </h3>
                 <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  You don&apos;t have permission to view existing units, but you can create new ones if you have the appropriate permissions.
+                  You don&apos;t have permission to view existing units, but you
+                  can create new ones if you have the appropriate permissions.
                 </p>
                 {canCreate && (
                   <button

@@ -56,8 +56,6 @@ import type {
 import { SkeletonUsersTable } from "@/components/ui/skeleton";
 import ErrorUI from "@/components/ErrorUI";
 
-
-
 function CreateUserModal({
   open,
   onClose,
@@ -74,14 +72,16 @@ function CreateUserModal({
     !!user?.position?.position_access?.organizations?.view;
   const userOrganizationId = user?.organization?.organization_id;
   const userUnitId = user?.unit?.unit_id;
-  
+
   // For normal users, get all units in their organization
   const { data: allUnitsInOrg = [] } = useOrganizationUnits();
   const userOrgUnits = useMemo(() => {
     if (!userOrganizationId) return [];
-    return allUnitsInOrg.filter((unit) => unit.organization_id === userOrganizationId);
+    return allUnitsInOrg.filter(
+      (unit) => unit.organization_id === userOrganizationId
+    );
   }, [allUnitsInOrg, userOrganizationId]);
-  
+
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     canViewOrganizations ? "" : userOrganizationId || ""
   );
@@ -92,12 +92,17 @@ function CreateUserModal({
 
   // Fetch orgs/units/positions
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
-  const allOrganizations = useMemo(() => orgData?.organizations || [], [orgData?.organizations]);
+  const allOrganizations = useMemo(
+    () => orgData?.organizations || [],
+    [orgData?.organizations]
+  );
   const { data: orgUnitsRaw, isLoading: unitsLoading } =
     useOrganizationUnitsByOrgId(selectedOrgId);
   const orgUnits = useMemo(() => orgUnitsRaw || [], [orgUnitsRaw]);
   // Use the appropriate unit ID for fetching positions
-  const effectiveUnitId = canViewOrganizations ? selectedUnitId : (selectedUnitId || userUnitId || "");
+  const effectiveUnitId = canViewOrganizations
+    ? selectedUnitId
+    : selectedUnitId || userUnitId || "";
   const { data: positions, isLoading: loadingPositions } =
     useUnitPositions(effectiveUnitId);
 
@@ -115,7 +120,11 @@ function CreateUserModal({
   React.useEffect(() => {
     if (canViewOrganizations && orgUnits.length === 1 && !selectedUnitId) {
       setSelectedUnitId(orgUnits[0].unit_id);
-    } else if (!canViewOrganizations && userOrgUnits.length === 1 && !selectedUnitId) {
+    } else if (
+      !canViewOrganizations &&
+      userOrgUnits.length === 1 &&
+      !selectedUnitId
+    ) {
       setSelectedUnitId(userOrgUnits[0].unit_id);
     }
   }, [canViewOrganizations, orgUnits, userOrgUnits, selectedUnitId]);
@@ -202,11 +211,11 @@ function CreateUserModal({
       ...Object.keys(form).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
       organization_id: true,
       unit_id: true,
-      position_id: true
+      position_id: true,
     };
     setTouched(allTouchedFields);
     if (!validateForm()) {
-      console.log('Validation failed:', errors); // Debug log
+      console.log("Validation failed:", errors); // Debug log
       return;
     }
     try {
@@ -222,17 +231,13 @@ function CreateUserModal({
         position_id: "",
         email: "",
       });
-      setSelectedOrgId(
-        canViewOrganizations ? "" : userOrganizationId || ""
-      );
-      setSelectedUnitId(
-        canViewOrganizations ? "" : userUnitId || ""
-      );
+      setSelectedOrgId(canViewOrganizations ? "" : userOrganizationId || "");
+      setSelectedUnitId(canViewOrganizations ? "" : userUnitId || "");
       setSelectedPositionId("");
       setErrors({});
       setTouched({});
     } catch (error) {
-      console.error('Create user error:', error);
+      console.error("Create user error:", error);
     }
   };
   const handleClose = () => {
@@ -247,12 +252,8 @@ function CreateUserModal({
       position_id: "",
       email: "",
     });
-    setSelectedOrgId(
-      canViewOrganizations ? "" : userOrganizationId || ""
-    );
-    setSelectedUnitId(
-      canViewOrganizations ? "" : userUnitId || ""
-    );
+    setSelectedOrgId(canViewOrganizations ? "" : userOrganizationId || "");
+    setSelectedUnitId(canViewOrganizations ? "" : userUnitId || "");
     setSelectedPositionId("");
     setErrors({});
     setTouched({});
@@ -667,7 +668,7 @@ function CreateUserModal({
               Cancel
             </Button>
             <Button
-            type="submit"
+              type="submit"
               onClick={handleSubmit}
               disabled={
                 isLoading ||
@@ -874,7 +875,7 @@ export default function UsersPage() {
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const { user, isLoading: authLoading } = useAuth();
   const canViewAll = !!user?.position?.position_access?.organizations?.view;
-  
+
   // Call all hooks unconditionally at the top
   const {
     data: usersData,
@@ -1255,14 +1256,14 @@ export default function UsersPage() {
   if (isError && canView) {
     return (
       <ErrorUI
-      resource="users"
-      onRetry={() => {
-       // re-fetch your data
-       window.location.reload()
-     }}
-      onBack={() => {
-       router.back()
-      }}
+        resource="users"
+        onRetry={() => {
+          // re-fetch your data
+          window.location.reload();
+        }}
+        onBack={() => {
+          router.back();
+        }}
       />
     );
   }
@@ -1479,7 +1480,8 @@ export default function UsersPage() {
                 No Access to View Users
               </h3>
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                You don&apos;t have permission to view existing users, but you can create new ones if you have the appropriate permissions.
+                You don&apos;t have permission to view existing users, but you
+                can create new ones if you have the appropriate permissions.
               </p>
               {canCreate && (
                 <button

@@ -58,7 +58,6 @@ const defaultPermissions = {
     viewOwn: false,
   },
   vehicleIssues: { report: false, view: false, update: false, delete: false },
-  history: { view: false },
 };
 
 export default function PositionDetailPage() {
@@ -91,8 +90,6 @@ export default function PositionDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [disActivateError, setDisActivateError] = useState<string | null>(null);
 
-
-  
   // Open edit modal and prefill form
   const handleEdit = () => {
     if (!position) return;
@@ -218,7 +215,9 @@ export default function PositionDetailPage() {
               >
                 <X className="w-5 h-5" />
               </button>
-              <h2 className="text-2xl font-bold mb-2 text-[#0872b3]">Edit Position</h2>
+              <h2 className="text-2xl font-bold mb-2 text-[#0872b3]">
+                Edit Position
+              </h2>
               <label className="text-sm font-medium">
                 Position Name
                 <input
@@ -255,11 +254,13 @@ export default function PositionDetailPage() {
                 <select
                   name="user_id"
                   value={editForm.user_id}
-                  onChange={e => setEditForm(f => ({ ...f, user_id: e.target.value }))}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, user_id: e.target.value }))
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
                 >
                   <option value="">Unassigned</option>
-                  {users.map(user => (
+                  {users.map((user) => (
                     <option key={user.user_id} value={user.user_id}>
                       {user.first_name} {user.last_name} ({user.email})
                     </option>
@@ -272,15 +273,32 @@ export default function PositionDetailPage() {
                   Permissions
                 </h3>
                 <div className="space-y-4">
-                  {Object.entries({ ...defaultPermissions, ...editForm.position_access })
-                    .filter(([module]) => module !== 'organizations')
+                  {Object.entries({
+                    ...defaultPermissions,
+                    ...editForm.position_access,
+                  })
+                    .filter(([module]) => module !== "organizations")
                     .map(([module]) => {
                       // Merge default perms for this module with current perms
-                      const defaultPerms: Record<string, boolean> = (defaultPermissions as Record<string, Record<string, boolean>>)[module] || {};
-                      const currentPerms: Record<string, boolean> = (editForm.position_access as Record<string, Record<string, boolean>>)[module] || {};
+                      const defaultPerms: Record<string, boolean> =
+                        (
+                          defaultPermissions as Record<
+                            string,
+                            Record<string, boolean>
+                          >
+                        )[module] || {};
+                      const currentPerms: Record<string, boolean> =
+                        (
+                          editForm.position_access as Record<
+                            string,
+                            Record<string, boolean>
+                          >
+                        )[module] || {};
                       const mergedPerms = { ...defaultPerms, ...currentPerms };
-                      const allSelected = Object.values(mergedPerms).every(Boolean);
-                      const someSelected = Object.values(mergedPerms).some(Boolean);
+                      const allSelected =
+                        Object.values(mergedPerms).every(Boolean);
+                      const someSelected =
+                        Object.values(mergedPerms).some(Boolean);
                       return (
                         <div
                           key={String(module)}
@@ -296,8 +314,13 @@ export default function PositionDetailPage() {
                               onClick={() => {
                                 setEditForm((prev) => {
                                   const prevModulePerms = { ...mergedPerms };
-                                  const all = Object.values(prevModulePerms).every(Boolean);
-                                  const newPerms = Object.keys(prevModulePerms).reduce((acc, perm) => {
+                                  const all =
+                                    Object.values(prevModulePerms).every(
+                                      Boolean
+                                    );
+                                  const newPerms = Object.keys(
+                                    prevModulePerms
+                                  ).reduce((acc, perm) => {
                                     acc[perm] = !all;
                                     return acc;
                                   }, {} as Record<string, boolean>);
@@ -312,13 +335,13 @@ export default function PositionDetailPage() {
                               }}
                               className={`px-3 py-1 text-xs font-medium rounded-full transition-colors duration-200 ${
                                 allSelected
-                                  ? 'bg-[#0872b3] text-white hover:bg-[#065a8f]'
+                                  ? "bg-[#0872b3] text-white hover:bg-[#065a8f]"
                                   : someSelected
-                                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
-                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
+                                  ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300"
                               }`}
                             >
-                              {allSelected ? 'Deselect All' : 'Select All'}
+                              {allSelected ? "Deselect All" : "Select All"}
                             </button>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -335,9 +358,15 @@ export default function PositionDetailPage() {
                                       onChange={() => {
                                         setEditForm((prev) => {
                                           const prevModulePerms = {
-                                            ...(prev.position_access as Record<string, Record<string, boolean>>)[module],
+                                            ...(
+                                              prev.position_access as Record<
+                                                string,
+                                                Record<string, boolean>
+                                              >
+                                            )[module],
                                           };
-                                          prevModulePerms[perm] = !prevModulePerms[perm];
+                                          prevModulePerms[perm] =
+                                            !prevModulePerms[perm];
                                           return {
                                             ...prev,
                                             position_access: {
@@ -386,8 +415,7 @@ export default function PositionDetailPage() {
                           </div>
                         </div>
                       );
-                    })
-                  }
+                    })}
                 </div>
               </div>
               <div className="flex gap-3 mt-4">

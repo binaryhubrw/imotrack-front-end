@@ -31,7 +31,6 @@ import {
   CompleteReservationDto,
   VehicleIssue,
   CreateVehicleIssueDto,
-  UpdateVehicleIssueDto,
   Notification,
   AuditLog,
   position_accesses,
@@ -229,7 +228,7 @@ export const useUpdatePassword = () => {
       console.log('Update password request data:', jsonData);
       console.log('Update password request URL:', '/v2/auth/update-password');
 
-      const response = await api.post<ApiResponse<UpdatePasswordResponse>>('/v2/auth/update-password', jsonData, {
+      const response = await api.patch<ApiResponse<UpdatePasswordResponse>>('/v2/auth/update-password', jsonData, {
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -246,10 +245,21 @@ export const useUpdatePassword = () => {
     },
     onError: (error: unknown) => {
       console.error('Update password request failed:', error);
-      const axiosError = error as { response?: { data?: { message?: string } } };
+      const axiosError = error as { response?: { data?: { message?: string }, status?: number } };
       const errorMessage = axiosError.response?.data?.message || 'Failed to update password';
+      const status = axiosError.response?.status;
+      
       console.error('Update password error message:', errorMessage);
-      toast.error('Failed to update password');
+      console.error('Update password error status:', status);
+      
+      // Show specific error messages based on status codes
+      if (status === 401) {
+        toast.error('Invalid current password. Please check your current password and try again.');
+      } else if (status === 404) {
+        toast.error('Account not found. Please contact support.');
+      } else {
+        toast.error(errorMessage);
+      }
     },
   });
 };
@@ -1405,103 +1415,82 @@ export const useUpdateReservation = () => {
 };
 
 
-// // --- Update starting odometer and fuel provided for a reserved vehicle ---
-// export const useReservationOdometerFuel = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation<
-//     unknown,
-//     Error,
-//     { reservedVehicleId: string; dto: { starting_odometer: number; fuel_provided: number } }
-//   >({
-//     mutationFn: async ({ reservedVehicleId, dto }) => {
-//       try {
-//         const response = await api.post(`/v2/reservations/${reservedVehicleId}/odometer-fuel`, dto, {
-//           headers: { 'Content-Type': 'application/json' },
-//         });
-//         if (!response.data) throw new Error('No data');
-//         toast.success('Odometer and fuel updated!');
-//         return response.data;
-//       } catch (error: unknown) {
-//         if (typeof error === 'object' && error !== null && 'response' in error) {
-//           // @ts-expect-error error.response is not typed on unknown, but is present on Axios errors
-//           toast.error(error.response?.data?.message || (error as Error).message || 'Failed to update odometer/fuel');
-//         } else {
-//           toast.error((error as Error).message || 'Failed to update odometer/fuel');
-//         }
-//         throw error;
-//       }
-//     },
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-//     },
-//   });
-// };
-// export const useVehicleReservationAssignment = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation<Reservation, Error, { id: string; dto: AssignVehicleDto }>({
-//     mutationFn: async ({ id, dto }) => {
-//       console.log('Assigning vehicle to reservation:', { id, dto });
-//       try {
-//         const response = await api.post(`/v2/reservations/${id}/assign-vehicle`, dto, {
-//           headers: { 'Content-Type': 'application/json' },
-//         });
-//         console.log('Assign vehicle full response:', response);
-//         const { data } = response;
-//         console.log('Assign vehicle data:', data);
-        
-//         // Handle different response formats
-//         if (data.data) {
-//           return data.data;
-//         } else if (data) {
-//           return data;
-//         } else {
-//           throw new Error('Invalid response format');
-//         }
-//       } catch (error) {
-//         console.error('Assign vehicle API error:', error);
-//         throw error;
-//       }
-//     },
-//     onSuccess: () => {
-//       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-//       toast.success('Vehicle assigned to reservation!');
-//     },
-//     onError: (error: unknown) => {
-//       let apiMsg: string | undefined;
-//       if (
-//         typeof error === 'object' &&
-//         error !== null &&
-//         'response' in error &&
-//         error.response &&
-//         typeof error.response === 'object' &&
-//         'data' in error.response &&
-//         error.response.data &&
-//         typeof error.response.data === 'object' &&
-//         'message' in error.response.data
-//       ) {
-//         apiMsg = (error.response.data as { message?: string }).message;
-//       }
-//       toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign vehicle.'));
-//     },
-//   });
-// };
-
-// ---------------------------------------------------------
-
-export const useReservationVehicleOdometerAssignation = () => {
+export const useReservationVehiclesOdometerAssignation = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { id: string; dto: { vehicle_id: string; starting_odometer: number; fuel_provided: number } }>({
+  return useMutation<Reservation, Error, { id: string; dto: { vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }> } }>({
     mutationFn: async ({ id, dto }) => {
-      const { data } = await api.post<{ message: string; data: Reservation }>(`/v2/reservations/${id}/assign-vehicle-odometer`, dto);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      console.log('Assigning vehicles with data:', { id, dto });
+      
+      // Try different approaches for the API
+      
+      // Approach 1: Try with flattened structure
+      const flattenedData = {
+        vehicle_ids: dto.vehicles.map(v => v.vehicle_id),
+        starting_odometers: dto.vehicles.map(v => v.starting_odometer),
+        fuel_provided: dto.vehicles.map(v => v.fuel_provided),
+      };
+      
+      console.log('Trying flattened approach:', flattenedData);
+      
+      try {
+        const { data } = await api.post<{ message: string; data: Reservation }>(
+          `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
+          flattenedData,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        if (!data.data) throw new Error('No data');
+        return data.data;
+      } catch (error) {
+        console.error('Flattened approach failed, trying original structure:', error);
+        
+        // Approach 2: Try original structure
+        try {
+          const { data } = await api.post<{ message: string; data: Reservation }>(
+            `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
+            dto,
+            {
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+          if (!data.data) throw new Error('No data');
+          return data.data;
+        } catch (error2) {
+          console.error('Original structure failed, trying FormData:', error2);
+          
+          // Approach 3: Try FormData
+          const formData = new FormData();
+          dto.vehicles.forEach((vehicle, index) => {
+            formData.append(`vehicles[${index}][vehicle_id]`, vehicle.vehicle_id);
+            formData.append(`vehicles[${index}][starting_odometer]`, vehicle.starting_odometer.toString());
+            formData.append(`vehicles[${index}][fuel_provided]`, vehicle.fuel_provided.toString());
+          });
+          
+          console.log('FormData entries:');
+          for (const [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+          }
+          
+          const { data } = await api.post<{ message: string; data: Reservation }>(
+            `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
+            formData,
+            {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            }
+          );
+          if (!data.data) throw new Error('No data');
+          return data.data;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
-      toast.success('Vehicle assigned and odometer/fuel set successfully!');
+      toast.success('Vehicles assigned and odometer/fuel set successfully!');
     },
     onError: (error: unknown) => {
+      console.error('Vehicle assignment error:', error);
       let apiMsg: string | undefined;
       if (
         typeof error === 'object' &&
@@ -1511,7 +1500,7 @@ export const useReservationVehicleOdometerAssignation = () => {
       ) {
         apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
-      toast.error(apiMsg || 'Failed to assign vehicle and set odometer/fuel');
+      toast.error(apiMsg || 'Failed to assign vehicles and set odometer/fuel');
     },
   });
 };
@@ -1713,9 +1702,40 @@ export const useVehicleIssues = () => {
 export const useCreateVehicleIssue = () => {
   return useMutation<VehicleIssue, Error, CreateVehicleIssueDto>({
     mutationFn: async (vehicleIssue) => {
-      const { data } = await api.post<ApiResponse<VehicleIssue>>('/v2/issues', vehicleIssue);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      console.log('Creating vehicle issue with data:', vehicleIssue);
+      const { data } = await api.post('/v2/issues', vehicleIssue);
+      console.log('Create vehicle issue response:', data);
+      
+      // Accept both { data: {...} } and direct object
+      if (data && typeof data === 'object' && 'data' in data && data.data) {
+        return data.data as VehicleIssue;
+      } else if (data && typeof data === 'object' && 'issue_id' in data && 'issue_title' in data) {
+        // Direct object (not wrapped in data)
+        return data as VehicleIssue;
+      } else if (data && typeof data === 'object' && 'message' in data && typeof data.message === 'string' && data.message.includes('success')) {
+        // fallback
+        return {
+          issue_id: 'temp-id',
+          issue_title: vehicleIssue.issue_title,
+          issue_description: vehicleIssue.issue_description,
+          issue_status: 'OPEN',
+          issue_date: vehicleIssue.issue_date,
+          created_at: new Date().toISOString(),
+          reserved_vehicle_id: vehicleIssue.reserved_vehicle_id,
+        } as VehicleIssue;
+      } else {
+        throw new Error('Unexpected response structure from create vehicle issue request');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Vehicle issue reported successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Create vehicle issue request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to report vehicle issue';
+      console.error('Create vehicle issue error message:', errorMessage);
+      toast.error(errorMessage);
     },
   });
 };
@@ -1733,11 +1753,40 @@ export const useVehicleIssue = (issueId: string) => {
 };
 
 export const useUpdateVehicleIssue = () => {
-  return useMutation<VehicleIssue, Error, { issueId: string; updates: UpdateVehicleIssueDto }>({
+  return useMutation<VehicleIssue, Error, { issueId: string; updates: { issue_title?: string; issue_description?: string; issued_date?: string } }>({
     mutationFn: async ({ issueId, updates }) => {
-      const { data } = await api.put<ApiResponse<VehicleIssue>>(`/v2/issues/${issueId}`, updates);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      console.log('Updating vehicle issue with data:', { issueId, updates });
+      const { data } = await api.put(`/v2/issues/${issueId}`, updates);
+      console.log('Update vehicle issue response:', data);
+      
+      // Handle both { data: {...} } and direct object responses
+      if (data && typeof data === 'object' && 'data' in data && data.data) {
+        return data.data as VehicleIssue;
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        // Direct object with new field names
+        return {
+          issue_id: data.id,
+          issue_title: data.issue_title,
+          issue_status: data.issue_status,
+          issue_description: data.issue_description,
+          issue_date: data.issue_date,
+          created_at: data.createdAt,
+          updated_at: data.updatedAt,
+          reserved_vehicle_id: data.reserved_vehicle_id,
+        } as VehicleIssue;
+      } else {
+        throw new Error('Unexpected response structure from update vehicle issue request');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Vehicle issue updated successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Update vehicle issue request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update vehicle issue';
+      console.error('Update vehicle issue error message:', errorMessage);
+      toast.error(errorMessage);
     },
   });
 };

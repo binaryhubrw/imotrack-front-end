@@ -1,14 +1,13 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Search, Eye, Plus, Clock, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Search, Eye, Plus, Clock } from 'lucide-react';
 import { useVehicleIssues } from '@/lib/queries';
 import ErrorUI from '@/components/ErrorUI';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import NoPermissionUI from '@/components/NoPermissionUI';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
 
 export default function VehicleIssuesPage() {
   const { data: issues = [], isLoading, isError, error } = useVehicleIssues();
@@ -41,27 +40,8 @@ export default function VehicleIssuesPage() {
     });
   }, [issues, searchTerm, filter]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Open</Badge>;
-      case 'CLOSED':
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Closed</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
-    }
-  };
+  
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
-      case 'CLOSED':
-        return <CheckCircle className="w-5 h-5 text-gray-500" />;
-      default:
-        return <AlertTriangle className="w-5 h-5 text-gray-500" />;
-    }
-  };
 
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
@@ -108,7 +88,7 @@ export default function VehicleIssuesPage() {
   const closedIssuesCount = issues.filter(issue => issue.issue_status === 'CLOSED').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div 
@@ -203,11 +183,6 @@ export default function VehicleIssuesPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {getStatusIcon(issue.issue_status)}
-                          {getStatusBadge(issue.issue_status)}
-                          <span className="text-sm text-gray-500">ID: {issue.issue_id}</span>
-                        </div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
                           {issue.issue_title}
                         </h3>
@@ -220,7 +195,6 @@ export default function VehicleIssuesPage() {
                             <span>{formatTimeAgo(issue.created_at)}</span>
                           </div>
                           <span className="text-gray-300">•</span>
-                          <span>Vehicle ID: {issue.reserved_vehicle_id}</span>
                           <span className="text-gray-300">•</span>
                           <span>{new Date(issue.issue_date).toLocaleDateString()}</span>
                         </div>

@@ -15,7 +15,6 @@ import {
 import {
   Plus,
   Edit,
-  Trash2,
   Search,
   X,
   ChevronLeft,
@@ -36,7 +35,6 @@ import {
 } from "@/components/ui/table";
 import {
   useVehicles,
-  useDeleteVehicle,
   useUpdateVehicle,
   useVehicleModels,
   useCreateVehicle,
@@ -737,7 +735,6 @@ export default function VehiclesPage() {
   
   // Move all data fetching hooks to the top
   const { data: vehicles = [], isLoading, isError } = useVehicles();
-  const deleteVehicle = useDeleteVehicle();
   const { data: vehicleModels = [] } = useVehicleModels();
   const updateVehicle = useUpdateVehicle();
   const createVehicle = useCreateVehicle();
@@ -747,7 +744,6 @@ export default function VehiclesPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -845,25 +841,11 @@ export default function VehiclesPage() {
                 <Edit className="w-4 h-4" />
               </Button>
             )}
-            {/* Only show Delete if user has delete permission */}
-            {canDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setVehicleToDelete(row.original);
-                }}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
           </div>
         ),
       },
     ],
-    [vehicleModels, canUpdate, canDelete]
+    [vehicleModels, canUpdate]
   );
   const table = useReactTable({
     data: vehicles,
@@ -923,21 +905,6 @@ export default function VehiclesPage() {
     return <NoPermissionUI resource="vehicles" />;
   }
 
-  // Always define helper functions before permission check
-  const handleDeleteVehicle = async () => {
-    if (!canDelete) {
-      toast.error('You do not have permission to delete vehicles');
-      return;
-    }
-    
-    if (!vehicleToDelete) return;
-    try {
-      await deleteVehicle.mutateAsync({ id: vehicleToDelete.vehicle_id });
-      setVehicleToDelete(null);
-    } catch (error) {
-      console.error("Error deleting vehicle:", error);
-    }
-  };
 
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {
     if (!canCreate) {
@@ -1258,63 +1225,6 @@ export default function VehiclesPage() {
             isLoading={updateVehicle.isPending}
             vehicleModels={vehicleModels}
           />
-        )}
-        {/* Delete Confirmation Modal */}
-        {vehicleToDelete && canDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-fade-in">
-              {/* Close Button */}
-              <button
-                onClick={() => setVehicleToDelete(null)}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition"
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Title */}
-              <h3 className="text-xl font-semibold text-red-600 mb-2">
-                Delete Vehicle
-              </h3>
-
-              {/* Description */}
-              <p className="text-gray-700 text-sm leading-relaxed mb-6">
-                Are you sure you want to delete the vehicle with plate number{" "}
-                <span className="font-semibold text-gray-900">
-                  {vehicleToDelete.plate_number}
-                </span>
-                ? <br />
-                <span className="text-red-500">
-                  This action cannot be undone.
-                </span>
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setVehicleToDelete(null)}
-                  disabled={deleteVehicle.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteVehicle}
-                  disabled={deleteVehicle.isPending}
-                >
-                  {deleteVehicle.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete"
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

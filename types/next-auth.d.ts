@@ -18,6 +18,7 @@ export interface position_accesses {
     view: boolean;
     update: boolean;
     delete: boolean;
+    assignUser: boolean;
   };
   users: {
     create: boolean;
@@ -502,12 +503,16 @@ export type ReservationStatus =
   | "IN_PROGRESS"
   | "COMPLETED";
 
+  export interface AuthRes{
+    email: string
+  }
+
 export interface ReservationUser {
   user_id: string;
   first_name: string;
   last_name: string;
   user_phone: string;
-  email: string;
+  auth: AuthRes;
 }
 
 export interface ReservedVehicle {
@@ -564,7 +569,11 @@ export interface UpdateReservationStatusDto {
 }
 
 export interface AssignVehicleDto {
-  vehicle_id: string;
+  vehicles: Array<{
+    vehicle_id: string;
+    starting_odometer: number;
+    fuel_provided: number;
+  }>;
 }
 
 export interface StartReservationDto {
@@ -586,15 +595,26 @@ export type VehicleIssue = {
   created_at: string;
   reserved_vehicle_id: string;
   reserved_vehicle?: unknown; // Use unknown instead of any
+  // Backend response fields
+  id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  updated_at?: string;
 };
+
 
 export type CreateVehicleIssueDto = {
   issue_title: string;
   issue_description: string;
   reserved_vehicle_id: string;
+  issue_date: string;
 };
 
-export type UpdateVehicleIssueDto = Partial<CreateVehicleIssueDto> & { issue_status?: 'OPEN' | 'CLOSED' | string };
+export type UpdateVehicleIssueDto = {
+  issue_title?: string;
+  issue_description?: string;
+  issued_date?: string;
+};
 
 export type Notification = {
   notification_id: string;
