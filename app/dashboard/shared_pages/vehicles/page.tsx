@@ -17,8 +17,6 @@ import {
   Edit,
   Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   Car,
   Image as ImageIcon,
@@ -829,25 +827,23 @@ export default function VehiclesPage() {
         header: "Actions",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            {/* Only show Edit if user has update permission */}
-            {canUpdate && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setVehicleToEdit(row.original);
-                  setEditModalOpen(true);
-                }}
-              >
-                <Edit className="w-4 h-4" />
-              </Button>
-            )}
+            <a
+              href={`/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`}
+              className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
+              onClick={e => {
+                e.stopPropagation();
+                router.push(`/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`);
+                e.preventDefault();
+              }}
+              tabIndex={0}
+            >
+              View
+            </a>
           </div>
         ),
       },
     ],
-    [vehicleModels, canUpdate]
+    [vehicleModels, canUpdate, router]
   );
   const table = useReactTable({
     data: vehicles,
@@ -1013,70 +1009,67 @@ export default function VehiclesPage() {
           </div>
         </div>
         {/* Stats Cards - make more compact */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3">
+        <div className="flex flex-row w-full gap-3 mb-2">
           {/* Total Vehicles */}
-          <Card className="bg-[#eaf6fb] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-[#0872b3]/10 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
-                <Car className="w-6 h-6 text-[#0872b3]" />
+          <Card className="bg-[#eaf6fb] border-0 shadow-none rounded flex-1 min-w-0 group hover:shadow transition-all duration-300">
+            <CardHeader className="py-2 px-2 flex flex-row items-center gap-2 min-w-0">
+              <div className="rounded-full bg-[#0872b3]/10 p-1 flex items-center justify-center">
+                <Car className="w-5 h-5 text-[#0872b3]" />
               </div>
-              <CardTitle className="text-xs font-semibold text-[#0872b3] uppercase tracking-wider">
+              <CardTitle className="text-xs font-semibold text-[#0872b3] uppercase tracking-wider truncate">
                 Total Vehicles
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-[#0872b3]">
+            <CardContent className="px-2 pb-2 pt-0">
+              <div className="text-lg font-bold text-[#0872b3]">
                 {stats.totalVehicles}
               </div>
             </CardContent>
           </Card>
-
-          {/* Active Vehicles (for now, just total) */}
-          <Card className="bg-[#f0f3f7] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-blue-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
-                <CheckCircle className="w-6 h-6 text-blue-600" />
+          {/* Active Vehicles */}
+          <Card className="bg-[#f0f3f7] border-0 shadow-none rounded flex-1 min-w-0 group hover:shadow transition-all duration-300">
+            <CardHeader className="py-2 px-2 flex flex-row items-center gap-2 min-w-0">
+              <div className="rounded-full bg-blue-100 p-1 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
               </div>
-              <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+              <CardTitle className="text-xs font-semibold text-blue-700 uppercase tracking-wider truncate">
                 Active Vehicles
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-blue-700">
+            <CardContent className="px-2 pb-2 pt-0">
+              <div className="text-lg font-bold text-blue-700">
                 {stats.totalVehicles}
               </div>
             </CardContent>
           </Card>
-
           {/* Available Vehicles */}
-          <Card className="bg-[#f7fbe9] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-green-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+          <Card className="bg-[#f7fbe9] border-0 shadow-none rounded flex-1 min-w-0 group hover:shadow transition-all duration-300">
+            <CardHeader className="py-2 px-2 flex flex-row items-center gap-2 min-w-0">
+              <div className="rounded-full bg-green-100 p-1 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-green-600" />
               </div>
-              <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider">
-                Available Vehicles
+              <CardTitle className="text-xs font-semibold text-green-700 uppercase tracking-wider truncate">
+                Available
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-green-700">
+            <CardContent className="px-2 pb-2 pt-0">
+              <div className="text-lg font-bold text-green-700">
                 {stats.availableCount}
               </div>
             </CardContent>
           </Card>
-
           {/* Occupied Vehicles */}
-          <Card className="bg-[#fbe9e9] border-0 shadow-none rounded-lg group hover:shadow-lg transition-all duration-300">
-            <CardHeader className="pb-1 px-3 pt-3 flex flex-row items-center gap-3">
-              <div className="rounded-full bg-red-100 p-3 flex items-center justify-center animate-bounce group-hover:scale-110 transition-transform">
-                <Car className="w-6 h-6 text-red-600" />
+          <Card className="bg-[#fbe9e9] border-0 shadow-none rounded flex-1 min-w-0 group hover:shadow transition-all duration-300">
+            <CardHeader className="py-2 px-2 flex flex-row items-center gap-2 min-w-0">
+              <div className="rounded-full bg-red-100 p-1 flex items-center justify-center">
+                <Car className="w-5 h-5 text-red-600" />
               </div>
-              <CardTitle className="text-xs font-semibold text-red-700 uppercase tracking-wider">
-                Occupied Vehicles
+              <CardTitle className="text-xs font-semibold text-red-700 uppercase tracking-wider truncate">
+                Occupied
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-3 pb-3">
-              <div className="text-2xl font-bold text-red-700">
+            <CardContent className="px-2 pb-2 pt-0">
+              <div className="text-lg font-bold text-red-700">
                 {stats.occupiedCount}
               </div>
             </CardContent>
@@ -1131,17 +1124,16 @@ export default function VehiclesPage() {
                       table.getRowModel().rows.map((row) => (
                         <TableRow
                           key={row.id}
-                          className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
+                          className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors group"
                           onClick={() =>
-                            router.push(
-                              `/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`
-                            )
+                            router.push(`/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`)
                           }
                         >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell
                               key={cell.id}
-                              className="px-4 py-4 whitespace-nowrap text-sm"
+                              className={`px-4 py-4 whitespace-nowrap text-sm ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
+                              onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
@@ -1168,20 +1160,23 @@ export default function VehiclesPage() {
                 </Table>
               </div>
               {/* Pagination */}
-              <div className="flex items-center justify-between mt-4 px-4 pb-4">
-                <div className="text-sm text-gray-500">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </div>
+              <div className="px-4 py-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2 bg-white">
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    {"<<"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                    Prev
+                    Previous
                   </Button>
                   <Button
                     variant="outline"
@@ -1190,9 +1185,47 @@ export default function VehiclesPage() {
                     disabled={!table.getCanNextPage()}
                   >
                     Next
-                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    {">>"}
                   </Button>
                 </div>
+                <span className="text-xs text-gray-700">
+                  Page <strong>{table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</strong>
+                </span>
+                <span className="text-xs text-gray-700">
+                  Go to page:{" "}
+                  <input
+                    type="number"
+                    min={1}
+                    max={table.getPageCount()}
+                    value={table.getState().pagination.pageIndex + 1}
+                    onChange={e => {
+                      const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                      table.setPageIndex(Math.max(0, Math.min(page, table.getPageCount() - 1)));
+                    }}
+                    className="w-16 border rounded px-2 py-1 text-xs"
+                  />
+                </span>
+                <select
+                  className="border rounded px-2 py-1 text-xs"
+                  value={table.getState().pagination.pageSize}
+                  onChange={e => {
+                    table.setPageSize(Number(e.target.value));
+                    table.setPageIndex(0);
+                  }}
+                >
+                  {[10, 20, 30, 40, 50].map((size) => (
+                    <option key={size} value={size}>
+                      Show {size}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

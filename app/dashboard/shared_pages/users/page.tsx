@@ -14,11 +14,8 @@ import {
 } from "@tanstack/react-table";
 import {
   Plus,
-  Edit,
   Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
 } from "lucide-react";
 import {
@@ -1185,16 +1182,18 @@ export default function UsersPage() {
         ),
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <button
-              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-              onClick={(e) => {
+            <a
+              href={`/dashboard/shared_pages/users/${row.original.user_id}`}
+              className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
+              onClick={e => {
                 e.stopPropagation();
-                setEditUserId(row.original.user_id);
+                router.push(`/dashboard/shared_pages/users/${row.original.user_id}`);
+                e.preventDefault();
               }}
-              aria-label="Edit"
+              tabIndex={0}
             >
-              <Edit className="w-4 h-4" />
-            </button>
+              View
+            </a>
           </div>
         ),
       },
@@ -1389,36 +1388,18 @@ export default function UsersPage() {
                         className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
                         onClick={() => {
                           setEditUserId(null);
-                          router.push(
-                            `/dashboard/shared_pages/users/${row.original.user_id}`
-                          );
+                          router.push(`/dashboard/shared_pages/users/${row.original.user_id}`);
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            className="px-3 py-6 whitespace-nowrap text-xs text-gray-900"
+                            className={`px-3 py-6 whitespace-nowrap text-xs text-gray-900 ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
+                            onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
                           >
-                            {cell.column.id === "actions" ? (
-                              <div className="flex items-center gap-1">
-                                {canUpdate && (
-                                  <button
-                                    className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditUserId(row.original.user_id);
-                                    }}
-                                    aria-label="Edit"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            ) : (
-                              flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
                             )}
                           </TableCell>
                         ))}
@@ -1438,22 +1419,23 @@ export default function UsersPage() {
               </Table>
             </div>
             {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="px-4 py-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2 bg-white">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-700">
-                  Page {table.getState().pagination.pageIndex + 1} of{" "}
-                  {table.getPageCount()}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  {"<<"}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  Prev
+                  Previous
                 </Button>
                 <Button
                   variant="outline"
@@ -1462,9 +1444,47 @@ export default function UsersPage() {
                   disabled={!table.getCanNextPage()}
                 >
                   Next
-                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  {">>"}
                 </Button>
               </div>
+              <span className="text-xs text-gray-700">
+                Page <strong>{table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</strong>
+              </span>
+              <span className="text-xs text-gray-700">
+                Go to page:{" "}
+                <input
+                  type="number"
+                  min={1}
+                  max={table.getPageCount()}
+                  value={table.getState().pagination.pageIndex + 1}
+                  onChange={e => {
+                    const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                    table.setPageIndex(Math.max(0, Math.min(page, table.getPageCount() - 1)));
+                  }}
+                  className="w-16 border rounded px-2 py-1 text-xs"
+                />
+              </span>
+              <select
+                className="border rounded px-2 py-1 text-xs"
+                value={table.getState().pagination.pageSize}
+                onChange={e => {
+                  table.setPageSize(Number(e.target.value));
+                  table.setPageIndex(0);
+                }}
+              >
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <option key={size} value={size}>
+                    Show {size}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

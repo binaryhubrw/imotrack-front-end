@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Plus, Info, UserPlus, View } from "lucide-react";
+import { Plus, Info, UserPlus } from "lucide-react";
 import {
   useUnitPositions,
   useCreatePosition,
@@ -29,6 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 
 // Assign User Modal Component
 function AssignUserModal({
@@ -214,6 +215,10 @@ export default function PositionsPage() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<{ id: string; name: string } | null>(null);
 
+  // Move pagination state to the top (before any early returns)
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
   // Call all hooks unconditionally at the top
   const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
   const {
@@ -226,6 +231,7 @@ export default function PositionsPage() {
   const unitPositionsHook = useUnitPositions(selectedUnitId);
   const createPosition = useCreatePosition();
   const assignPositionToUser = useAssignPositionToUser();
+  const router = useRouter();
 
   // Permission checks
   const canView = !!user?.position?.position_access?.positions?.view;
@@ -428,6 +434,13 @@ export default function PositionsPage() {
     );
   }
 
+  // Pagination state
+  const pageCount = Math.ceil(filteredPositions.length / pageSize);
+  const paginatedPositions = filteredPositions.slice(
+    pageIndex * pageSize,
+    pageIndex * pageSize + pageSize
+  );
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Org & Unit Selector */}
@@ -536,27 +549,35 @@ export default function PositionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold text-gray-900">Position Name</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900">Assigned User</TableHead>
-                    <TableHead className="font-semibold text-gray-900 text-right">Actions</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">#</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Position Name</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Status</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Assigned User</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPositions.map((pos) => (
-                    <TableRow key={pos.position_id} className="hover:bg-gray-50 border-b border-gray-100">
-                      <TableCell className="font-medium text-blue-800">
+                  {paginatedPositions.map((pos, idx) => (
+                    <TableRow
+                      key={pos.position_id}
+                      className="hover:bg-blue-50 border-b border-gray-100 cursor-pointer group"
+                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
+                    >
+                      <TableCell className="font-mono text-gray-500 px-3">
+                        {pageIndex * pageSize + idx + 1}
+                      </TableCell>
+                      <TableCell className="font-medium text-blue-800 px-3">
                         {pos.position_name}
                       </TableCell>
-                      <TableCell>
-                        <Badge 
+                      <TableCell className="px-3">
+                        <Badge
                           variant={pos.position_status === "ACTIVE" ? "default" : "secondary"}
                           className={pos.position_status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}
                         >
                           {pos.position_status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-3">
                         {pos.user ? (
                           <div className="flex flex-col">
                             <span className="font-medium text-gray-900">
@@ -570,18 +591,25 @@ export default function PositionsPage() {
                           <span className="text-gray-400 italic">Unassigned</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell
+                        className="text-right px-3 !cursor-default group-hover:bg-transparent"
+                        onClick={e => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/dashboard/shared_pages/positions/${pos.position_id}`}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
                             title="View position"
+                            onClick={e => e.stopPropagation()}
                           >
-                            <View className="w-4 h-4" />
+                            View
                           </Link>
                           {!pos.user && canAssignUser && (
                             <Button
-                              onClick={() => openAssignModal(pos.position_id, pos.position_name)}
+                              onClick={e => {
+                                e.stopPropagation();
+                                openAssignModal(pos.position_id, pos.position_name);
+                              }}
                               size="sm"
                               className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                               title="Assign user"
@@ -600,6 +628,76 @@ export default function PositionsPage() {
                   ))}
                 </TableBody>
               </Table>
+              {/* Pagination Controls */}
+              {filteredPositions.length > pageSize && (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageIndex(0)}
+                      disabled={pageIndex === 0}
+                    >
+                      {"<<"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                      disabled={pageIndex === 0}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                      disabled={pageIndex >= pageCount - 1}
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageIndex(pageCount - 1)}
+                      disabled={pageIndex >= pageCount - 1}
+                    >
+                      {">>"}
+                    </Button>
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    Page <strong>{pageIndex + 1} of {pageCount}</strong>
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    Go to page:{" "}
+                    <input
+                      type="number"
+                      min={1}
+                      max={pageCount}
+                      value={pageIndex + 1}
+                      onChange={(e) => {
+                        const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                        setPageIndex(Math.max(0, Math.min(page, pageCount - 1)));
+                      }}
+                      className="w-16 border rounded px-2 py-1 text-sm"
+                    />
+                  </span>
+                  <select
+                    className="border rounded px-2 py-1 text-sm"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPageIndex(0);
+                    }}
+                  >
+                    {[10, 20, 30, 40, 50].map((size) => (
+                      <option key={size} value={size}>
+                        Show {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>

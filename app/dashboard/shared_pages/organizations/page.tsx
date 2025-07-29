@@ -11,7 +11,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Plus, Search, Edit3, Filter } from "lucide-react";
+import { Download, Plus, Search, Filter } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -363,7 +363,7 @@ export default function OrganizationsPage() {
       accessorKey: "organization_name",
       header: "Name",
       cell: ({ row }) => (
-        <span className="font-medium text-gray-900">
+        <span className="font-medium text-gray-900 max-w-[140px] truncate block text-sm whitespace-nowrap overflow-ellipsis">
           {row.original.organization_name}
         </span>
       ),
@@ -372,7 +372,9 @@ export default function OrganizationsPage() {
       accessorKey: "organization_email",
       header: "Email",
       cell: ({ row }) => (
-        <span className="text-gray-700">{row.original.organization_email}</span>
+        <span className="text-gray-700 max-w-[180px] truncate block text-xs whitespace-nowrap overflow-ellipsis">
+          {row.original.organization_email}
+        </span>
       ),
     },
     {
@@ -384,23 +386,23 @@ export default function OrganizationsPage() {
     },
     {
       id: "actions",
-      header: "Edit",
-      cell: ({ row }) =>
-        canUpdate ? (
-          <div className="flex items-center gap-3">
-            <button
-              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setUpdateOrg(row.original);
-                setShowUpdate(true);
-              }}
-              aria-label="Update"
-            >
-              <Edit3 className="w-6 h-6" />
-            </button>
-          </div>
-        ) : null,
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <a
+            href={`/dashboard/shared_pages/organizations/${row.original.organization_id}`}
+            className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
+            onClick={e => {
+              e.stopPropagation();
+              router.push(`/dashboard/shared_pages/organizations/${row.original.organization_id}`);
+              e.preventDefault();
+            }}
+            tabIndex={0}
+          >
+            View
+          </a>
+        </div>
+      ),
     },
   ];
 
@@ -553,7 +555,7 @@ export default function OrganizationsPage() {
                           {headerGroup.headers.map((header) => (
                             <TableHead
                               key={header.id}
-                              className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                              className="px-2 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
                             >
                               {header.isPlaceholder
                                 ? null
@@ -585,7 +587,7 @@ export default function OrganizationsPage() {
                         .map((row) => (
                           <TableRow
                             key={row.original.organization_id}
-                            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100 group"
                             onClick={() =>
                               router.push(
                                 `/dashboard/shared_pages/organizations/${row.original.organization_id}`
@@ -597,7 +599,8 @@ export default function OrganizationsPage() {
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
                                 key={cell.id}
-                                className="px-4 py-4 whitespace-nowrap text-base"
+                                className={`px-2 py-3 whitespace-nowrap text-base ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
+                                onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
                               >
                                 {flexRender(
                                   cell.column.columnDef.cell,

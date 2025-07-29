@@ -12,7 +12,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Plus, Edit, Search, Filter } from "lucide-react";
+import { Download, Plus, Search, Filter } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -224,16 +224,6 @@ export default function UnitsPage() {
     ? filteredUnits.filter((u) => u.status === statusFilter)
     : filteredUnits;
 
-  const handleEdit = (unit: Unit, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingUnit(unit);
-    setEditForm({
-      unit_name: unit.unit_name || "",
-      status: unit.status || "",
-    });
-    setShowEdit(true);
-  };
-
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUnit) return;
@@ -338,19 +328,23 @@ export default function UnitsPage() {
     },
     {
       id: "actions",
-      header: "Actions",
-      cell: ({ row }) =>
-        canUpdate ? (
-          <div className="flex items-center">
-            <button
-              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-              onClick={(e) => handleEdit(row.original, e)}
-              aria-label="Edit"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-          </div>
-        ) : null,
+      header: "Action",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <a
+            href={`/dashboard/shared_pages/units/${row.original.unit_id}`}
+            className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
+            onClick={e => {
+              e.stopPropagation();
+              router.push(`/dashboard/shared_pages/units/${row.original.unit_id}`);
+              e.preventDefault();
+            }}
+            tabIndex={0}
+          >
+            View
+          </a>
+        </div>
+      ),
     },
   ];
 
@@ -403,6 +397,7 @@ export default function UnitsPage() {
         }}
       />
     );
+    
   }
   return (
     <div className="flex h-screen bg-gray-50">
@@ -556,7 +551,7 @@ export default function UnitsPage() {
                         .map((row) => (
                           <TableRow
                             key={row.original.unit_id}
-                            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100"
+                            className="transition-colors cursor-pointer hover:bg-blue-50 border-b border-gray-100 group"
                             onClick={() =>
                               router.push(
                                 `/dashboard/shared_pages/units/${row.original.unit_id}`
@@ -568,7 +563,8 @@ export default function UnitsPage() {
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
                                 key={cell.id}
-                                className="px-4 py-4 whitespace-nowrap text-sm"
+                                className={`px-4 py-4 whitespace-nowrap text-sm ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
+                                onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
                               >
                                 {flexRender(
                                   cell.column.columnDef.cell,
