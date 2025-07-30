@@ -1,16 +1,12 @@
 "use client";
 import React, { useState, useMemo } from "react";
-import { Plus, Search, Car, Square, User, X, CheckCircle } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import {
   useReservations,
   useMyReservations,
   useCreateReservation,
   useCancelReservation,
   useUpdateReservation,
-  useCompleteReservation,
-  useVehicles,
-  useReservationVehiclesOdometerAssignation,
-  useUpdateReservationReason,
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,9 +18,16 @@ import type {
 } from "@/types/next-auth";
 import { SkeletonReservationCard } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
-import type { Vehicle } from "@/types/next-auth";
 import ErrorUI from "@/components/ErrorUI";
 import { useRouter } from "next/navigation";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
 
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
@@ -322,457 +325,6 @@ function CreateReservationModal({
   );
 }
 
-function AssignVehicleModal({
-  open,
-  onClose,
-  reservation,
-}: {
-  open: boolean;
-  onClose: () => void;
-  reservation: Reservation | null;
-}) {
-  const [vehicleAssignments, setVehicleAssignments] = useState<
-    Array<{
-      vehicle_id: string;
-      starting_odometer: string;
-      fuel_provided: string;
-    }>
-  >([{ vehicle_id: "", starting_odometer: "", fuel_provided: "" }]);
-  const { data: vehicles } = useVehicles();
-  const assignVehicleOdometer = useReservationVehiclesOdometerAssignation();
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Get available vehicles with sufficient capacity
-  const suitableVehicles: Vehicle[] = useMemo(() => {
-    if (!vehicles || !reservation) return [];
-    return vehicles.filter((vehicle: Vehicle) => {
-      const capacity = vehicle.vehicle_capacity || 0;
-      const passengers = reservation.passengers || 0;
-      return vehicle.vehicle_status === "AVAILABLE" && capacity >= passengers;
-    });
-  }, [vehicles, reservation]);
-
-  // Get vehicles that are already assigned to this reservation
-  const assignedVehicleIds = useMemo(() => {
-    if (!reservation?.reserved_vehicles) return [];
-    return reservation.reserved_vehicles.map((rv) => rv.vehicle.vehicle_id);
-  }, [reservation]);
-
-  // Filter out already assigned vehicles
-  const availableVehicles = useMemo(() => {
-    return suitableVehicles.filter(
-      (vehicle) => !assignedVehicleIds.includes(vehicle.vehicle_id)
-    );
-  }, [suitableVehicles, assignedVehicleIds]);
-
-  const addVehicleAssignment = () => {
-    setVehicleAssignments((prev) => [
-      ...prev,
-      { vehicle_id: "", starting_odometer: "", fuel_provided: "" },
-    ]);
-  };
-
-  const removeVehicleAssignment = (index: number) => {
-    if (vehicleAssignments.length > 1) {
-      setVehicleAssignments((prev) => prev.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateVehicleAssignment = (
-    index: number,
-    field: string,
-    value: string
-  ) => {
-    setVehicleAssignments((prev) =>
-      prev.map((assignment, i) =>
-        i === index ? { ...assignment, [field]: value } : assignment
-      )
-    );
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-
-    // Validate all assignments
-    const validAssignments = vehicleAssignments.filter(
-      (assignment) =>
-        assignment.vehicle_id &&
-        assignment.starting_odometer &&
-        assignment.fuel_provided
-    );
-
-    if (validAssignments.length === 0) {
-      setError("Please add at least one vehicle assignment");
-      return;
-    }
-
-    // Check for duplicate vehicle selections
-    const vehicleIds = validAssignments.map((a) => a.vehicle_id);
-    const uniqueVehicleIds = new Set(vehicleIds);
-    if (vehicleIds.length !== uniqueVehicleIds.size) {
-      setError("Each vehicle can only be assigned once");
-      return;
-    }
-
-    // Validate odometer and fuel values
-    for (const assignment of validAssignments) {
-      const odometer = Number(assignment.starting_odometer);
-      const fuel = Number(assignment.fuel_provided);
-
-      if (odometer <= 0 || fuel < 0) {
-        setError(
-          "Please enter valid odometer and fuel values for all vehicles"
-        );
-        return;
-      }
-    }
-
-    setSubmitting(true);
-    try {
-      const requestData = {
-        id: reservation!.reservation_id,
-        dto: {
-          vehicles: validAssignments.map((assignment) => ({
-            vehicle_id: assignment.vehicle_id,
-            starting_odometer: Number(assignment.starting_odometer),
-            fuel_provided: Number(assignment.fuel_provided),
-          })),
-        },
-      };
-
-      console.log("Sending vehicle assignment request:", requestData);
-      console.log("Valid assignments:", validAssignments);
-
-      await assignVehicleOdometer.mutateAsync(requestData);
-      handleClose();
-    } catch (err) {
-      console.error("Vehicle assignment error in modal:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to assign vehicles"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleClose = () => {
-    setVehicleAssignments([
-      { vehicle_id: "", starting_odometer: "", fuel_provided: "" },
-    ]);
-    setError(null);
-    onClose();
-  };
-
-  if (!open || !reservation) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Assign Vehicles
-          </h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 p-1"
-            aria-label="Close modal"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {/* Passenger info */}
-          <div className="mb-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
-            <p className="text-sm text-blue-800">
-              <strong>Passengers:</strong> {reservation.passengers || 0}
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              <strong>Available Vehicles:</strong> {availableVehicles.length}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Vehicle Assignments */}
-            {vehicleAssignments.map((assignment, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    Vehicle {index + 1}
-                  </h3>
-                  {vehicleAssignments.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeVehicleAssignment(index)}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Vehicle Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Vehicle *
-                    </label>
-                    <select
-                      value={assignment.vehicle_id}
-                      onChange={(e) =>
-                        updateVehicleAssignment(
-                          index,
-                          "vehicle_id",
-                          e.target.value
-                        )
-                      }
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    >
-                      <option value="">Select a vehicle</option>
-                      {availableVehicles.length === 0 ? (
-                        <option disabled>No suitable vehicles available</option>
-                      ) : (
-                        availableVehicles.map((vehicle: Vehicle) => (
-                          <option
-                            key={vehicle.vehicle_id}
-                            value={vehicle.vehicle_id}
-                          >
-                            {vehicle.plate_number} -{" "}
-                            {vehicle.vehicle_model?.vehicle_model_name ||
-                              "Unknown"}{" "}
-                            (Capacity: {vehicle.vehicle_capacity || 0})
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
-
-                  {/* Odometer */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Starting Odometer *
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={assignment.starting_odometer}
-                      onChange={(e) =>
-                        updateVehicleAssignment(
-                          index,
-                          "starting_odometer",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Odometer reading"
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-
-                  {/* Fuel */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fuel Provided (L) *
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={assignment.fuel_provided}
-                      onChange={(e) =>
-                        updateVehicleAssignment(
-                          index,
-                          "fuel_provided",
-                          e.target.value
-                        )
-                      }
-                      placeholder="Fuel amount"
-                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Add Vehicle Button */}
-            {availableVehicles.length > vehicleAssignments.length && (
-              <button
-                type="button"
-                onClick={addVehicleAssignment}
-                className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-              >
-                + Add Another Vehicle
-              </button>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting || availableVehicles.length === 0}
-                className="flex-1 px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting
-                  ? "Assigning..."
-                  : `Assign ${vehicleAssignments.length} Vehicle${
-                      vehicleAssignments.length > 1 ? "s" : ""
-                    }`}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CompleteReservationModal({
-  open,
-  onClose,
-  reservation,
-  onComplete,
-  isLoading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  reservation: Reservation | null;
-  onComplete: (returnedOdometer: number) => void;
-  isLoading: boolean;
-}) {
-  const [returnedOdometer, setReturnedOdometer] = useState<string>("");
-  const [touched, setTouched] = useState(false);
-
-  const odometerNum = Number(returnedOdometer);
-  const valid = !isNaN(odometerNum) && odometerNum > 0;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setTouched(true);
-    if (!valid) return;
-    await onComplete(odometerNum);
-    setReturnedOdometer("");
-    setTouched(false);
-    onClose();
-  };
-
-  // Get the reserved vehicle for this reservation
-  const reservedVehicle = reservation?.reserved_vehicles?.[0];
-  const startingOdometer = reservedVehicle?.starting_odometer || 0;
-
-  if (!open || !reservation) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md animate-in slide-in-from-bottom-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Complete Journey
-              </h2>
-              <p className="text-sm text-gray-500">
-                Enter final odometer reading
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-4 space-y-4">
-          {/* Quick Info */}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">
-                {reservation.passengers || 1} passenger
-                {(reservation.passengers || 1) !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Car className="h-4 w-4 text-gray-500" />
-              <span className="text-gray-600">
-                {startingOdometer.toLocaleString()} km start
-              </span>
-            </div>
-          </div>
-
-          {/* Odometer Input */}
-          <div className="space-y-2">
-            <label
-              htmlFor="returnedOdometer"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Final Odometer Reading (km)
-            </label>
-            <input
-              id="returnedOdometer"
-              type="number"
-              min={startingOdometer + 1}
-              value={returnedOdometer}
-              onChange={(e) => setReturnedOdometer(e.target.value)}
-              placeholder={`Min: ${startingOdometer + 1}`}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg font-mono"
-              required
-            />
-            {touched && !valid && (
-              <p className="text-xs text-red-600">
-                Must be greater than {startingOdometer}
-              </p>
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading || !valid}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <CheckCircle className="h-4 w-4" />
-            {isLoading ? "Completing..." : "Complete Journey"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CancelReservationModal({
   open,
   onClose,
@@ -956,7 +508,6 @@ export default function ReservationsPage() {
   const canCancel = reservationAccess?.cancel;
   const canApprove = reservationAccess?.approve;
   const canAssignVehicle = reservationAccess?.assignVehicle;
-  const canUpdateReason = reservationAccess?.updateReason;
   const canStart = reservationAccess?.start;
   const canComplete = reservationAccess?.complete;
   const canViewPage =
@@ -972,16 +523,10 @@ export default function ReservationsPage() {
 
   // Always call hooks
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedReservation, setSelectedReservation] =
-    useState<Reservation | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showAssignVehicle, setShowAssignVehicle] = useState(false);
-  const [showCompleteReservation, setShowCompleteReservation] = useState(false);
   const [showCancelReservation, setShowCancelReservation] = useState(false);
-  const updateReservationReason = useUpdateReservationReason();
-  const [showEditReasonModal, setShowEditReasonModal] = useState(false);
-  const [editReasonValue, setEditReasonValue] = useState("");
-  const [editReasonReservation, setEditReasonReservation] =
+  const [showApproveRejectModal, setShowApproveRejectModal] = useState(false);
+  const [approveRejectReservation, setApproveRejectReservation] =
     useState<Reservation | null>(null);
 
   // Enhanced data fetching based on permissions
@@ -1020,12 +565,8 @@ export default function ReservationsPage() {
   const isError = canViewAll ? isErrorAll : canViewOwn ? isErrorMy : false;
 
   const createReservation = useCreateReservation();
-  const completeReservation = useCompleteReservation();
   const cancelReservation = useCancelReservation();
   const updateReservation = useUpdateReservation();
-  const [showApproveRejectModal, setShowApproveRejectModal] = useState(false);
-  const [approveRejectReservation, setApproveRejectReservation] =
-    useState<Reservation | null>(null);
 
   const filteredReservations = useMemo(() => {
     if (!reservations) return [];
@@ -1048,6 +589,14 @@ export default function ReservationsPage() {
           .includes(searchTerm.toLowerCase())
     );
   }, [reservations, searchTerm]);
+
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const pageCount = Math.ceil(filteredReservations.length / pageSize);
+  const paginatedReservations = filteredReservations.slice(
+    pageIndex * pageSize,
+    pageIndex * pageSize + pageSize
+  );
 
   if (!canViewPage) {
     return (
@@ -1081,68 +630,20 @@ export default function ReservationsPage() {
     }
   };
 
-  const handleCompleteReservation = async (returnedOdometer: number) => {
-    if (!canComplete) {
-      toast.error("You do not have permission to complete reservations");
-      return;
-    }
-
-    if (!selectedReservation) return;
-
-    // Get the reserved vehicle ID
-    const reservedVehicleId =
-      selectedReservation.reserved_vehicles &&
-      selectedReservation.reserved_vehicles.length > 0
-        ? selectedReservation.reserved_vehicles[0].reserved_vehicle_id
-        : undefined;
-
-    if (!reservedVehicleId) {
-      toast.error("No vehicle assigned to this reservation");
-      return;
-    }
-
-    try {
-      await completeReservation.mutateAsync({
-        reservedVehicleId: reservedVehicleId,
-        dto: { returned_odometer: returnedOdometer },
-      });
-    } catch {
-      // error handled by mutation
-    }
-  };
-
   const handleCancelReservation = async (rejectionComment: string) => {
     if (!canCancel) {
       toast.error("You do not have permission to cancel reservations");
       return;
     }
 
-    if (!selectedReservation) return;
+    if (!approveRejectReservation) return;
     try {
       await cancelReservation.mutateAsync({
-        id: selectedReservation.reservation_id,
+        id: approveRejectReservation.reservation_id,
         dto: { reason: rejectionComment },
       });
-    } catch {
-      // error handled by mutation
-    }
-  };
-
-  const handleUpdateReservationReason = async () => {
-    if (!canUpdateReason) {
-      toast.error("You do not have permission to update reservation reasons");
-      return;
-    }
-
-    if (!editReasonReservation) return;
-    try {
-      await updateReservationReason.mutateAsync({
-        id: editReasonReservation.reservation_id,
-        reason: editReasonValue,
-      });
-      setShowEditReasonModal(false);
-      setEditReasonReservation(null);
-      setEditReasonValue("");
+      setShowApproveRejectModal(false);
+      setApproveRejectReservation(null);
     } catch {
       // error handled by mutation
     }
@@ -1191,40 +692,6 @@ export default function ReservationsPage() {
     }
   };
 
-  const canAssignVehicleToReservation = (reservation: Reservation) => {
-    return (
-      canAssignVehicle &&
-      reservation.reservation_status === "APPROVED" &&
-      (!reservation.reserved_vehicles ||
-        reservation.reserved_vehicles.length === 0)
-    );
-  };
-
-  const canCompleteReservation = (reservation: Reservation) => {
-    return canComplete && reservation.reservation_status === "IN_PROGRESS";
-  };
-
-  const canApproveRejectReservation = (reservation: Reservation) => {
-    return canApprove && reservation.reservation_status === "UNDER_REVIEW";
-  };
-
-  const canCancelReservation = (reservation: Reservation) => {
-    return (
-      canCancel &&
-      (reservation.reservation_status === "UNDER_REVIEW" ||
-        reservation.reservation_status === "APPROVED")
-    );
-  };
-
-  const canEditReason = (reservation: Reservation) => {
-    return (
-      canUpdateReason &&
-      (reservation.reservation_status === "REJECTED" ||
-        reservation.reservation_status === "CANCELED" ||
-        reservation.reservation_status === "CANCELLED")
-    );
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
@@ -1240,7 +707,6 @@ export default function ReservationsPage() {
               className="pl-10 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
             />
           </div>
-          {/* Only show Add Reservation if user has create permission */}
           {canCreate && (
             <Button
               className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200"
@@ -1251,7 +717,6 @@ export default function ReservationsPage() {
           )}
         </div>
       </div>
-
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         {isLoading ? (
@@ -1260,181 +725,160 @@ export default function ReservationsPage() {
           <ErrorUI
             resource="reservations"
             onBack={() => router.back()}
-            onRetry={() => {
-              window.location.reload();
-            }}
+            onRetry={() => window.location.reload()}
           />
+        ) : filteredReservations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-96 bg-white rounded-xl border border-gray-100 shadow-md">
+            <svg
+              className="w-16 h-16 text-blue-200 mb-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="text-2xl font-bold text-gray-700 mb-2">No Reservations Found</h3>
+            <p className="text-gray-500 mb-4 text-center max-w-md">
+              There are no reservations. Try searching or create a new reservation if you have permission.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredReservations.map((reservation: Reservation) => (
-              <div
-                key={reservation.reservation_id}
-                className="bg-white rounded-xl shadow border border-gray-100 p-6 flex flex-col gap-2 relative"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-lg font-bold text-blue-800 flex items-center gap-2">
-                    {reservation.reservation_purpose}
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(
-                      reservation.reservation_status
-                    )}`}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">#</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Purpose</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">User</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Start</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Destination</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Departure</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Return</TableHead>
+                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedReservations.map((reservation, idx) => (
+                  <TableRow
+                    key={reservation.reservation_id}
+                    className="hover:bg-blue-50 border-b border-gray-100 cursor-pointer group"
+                    onClick={() => router.push(`/dashboard/shared_pages/reservations/${reservation.reservation_id}`)}
                   >
-                    {
-                      RESERVATION_STATUSES[
-                        reservation.reservation_status as ReservationStatus
-                      ]
-                    }
-                  </span>
-                </div>
-
-                <div className="text-gray-600 text-sm">
-                  From: {reservation.start_location}
-                </div>
-                <div className="text-gray-600 text-sm">
-                  To: {reservation.reservation_destination}
-                </div>
-                <div className="text-gray-600 text-sm">
-                  Departure:{" "}
-                  {reservation.departure_date
-                    ? new Date(reservation.departure_date).toLocaleString()
-                    : "N/A"}
-                </div>
-                <div className="text-gray-600 text-sm">
-                  Return:{" "}
-                  {reservation.expected_returning_date
-                    ? new Date(
-                        reservation.expected_returning_date
-                      ).toLocaleString()
-                    : "N/A"}
-                </div>
-
-                {/* Show rejection comment if reservation is cancelled or rejected */}
-                {(reservation.reservation_status === "CANCELED" ||
-                  reservation.reservation_status === "CANCELLED" ||
-                  reservation.reservation_status === "REJECTED") &&
-                  reservation.rejection_comment && (
-                    <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-200">
-                      <strong>Reason:</strong> {reservation.rejection_comment}
-                    </div>
-                  )}
-
-                <div className="text-xs text-gray-500 mt-2">
-                  Created:{" "}
-                  {reservation.created_at
-                    ? new Date(reservation.created_at).toLocaleString()
-                    : "N/A"}
-                </div>
-                <div className="text-xs text-gray-500">
-                  User:{" "}
-                  {reservation.user
-                    ? `${reservation.user.first_name} ${reservation.user.last_name}`
-                    : "N/A"}
-                </div>
-
-                {/* Action Buttons - Enhanced with proper permission checks */}
-                <div className="flex flex-wrap gap-1 mt-3">
-                  {/* View Button */}
+                    <TableCell className="font-mono text-gray-500 px-3">
+                      {pageIndex * pageSize + idx + 1}
+                    </TableCell>
+                    <TableCell className="font-medium text-blue-800 px-3">
+                      {reservation.reservation_purpose}
+                    </TableCell>
+                    <TableCell className="px-3">
+                      {reservation.user ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">
+                            {reservation.user.first_name} {reservation.user.last_name}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {reservation.user.auth?.email || "No email"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 italic">N/A</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-3">{reservation.start_location}</TableCell>
+                    <TableCell className="px-3">{reservation.reservation_destination}</TableCell>
+                    <TableCell className="px-3">
+                      {reservation.departure_date ? new Date(reservation.departure_date).toLocaleString() : "N/A"}
+                    </TableCell>
+                    <TableCell className="px-3">
+                      {reservation.expected_returning_date ? new Date(reservation.expected_returning_date).toLocaleString() : "N/A"}
+                    </TableCell>
+                    <TableCell className="px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(reservation.reservation_status)}`}>
+                        {RESERVATION_STATUSES[reservation.reservation_status as ReservationStatus]}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {/* Pagination Controls */}
+            {filteredReservations.length > pageSize && (
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
+                <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
                     variant="outline"
-                    className="text-[#0872b3] border-[#0872b3] hover:bg-[#0872b3] hover:text-white"
-                    onClick={() =>
-                      router.push(
-                        `/dashboard/shared_pages/reservations/${reservation.reservation_id}`
-                      )
-                    }
+                    size="sm"
+                    onClick={() => setPageIndex(0)}
+                    disabled={pageIndex === 0}
                   >
-                    View
+                    {"<<"}
                   </Button>
-
-                  {/* Approve/Reject Button */}
-                  {canApproveRejectReservation(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={() => {
-                        setApproveRejectReservation(reservation);
-                        setShowApproveRejectModal(true);
-                      }}
-                    >
-                      Approve/Reject
-                    </Button>
-                  )}
-
-                  {/* Assign Vehicle Button */}
-                  {canAssignVehicleToReservation(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedReservation(reservation);
-                        setShowAssignVehicle(true);
-                      }}
-                    >
-                      <Car className="w-3 h-3 mr-1" />
-                      Assign Vehicle
-                    </Button>
-                  )}
-
-                  {/* Complete Button */}
-                  {canCompleteReservation(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedReservation(reservation);
-                        setShowCompleteReservation(true);
-                      }}
-                    >
-                      <Square className="w-3 h-3 mr-1" />
-                      Complete
-                    </Button>
-                  )}
-
-                  {/* Cancel Button */}
-                  {canCancelReservation(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedReservation(reservation);
-                        setShowCancelReservation(true);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-
-                  {/* Edit Reason Button */}
-                  {canEditReason(reservation) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={() => {
-                        setEditReasonReservation(reservation);
-                        setEditReasonValue(reservation.rejection_comment || "");
-                        setShowEditReasonModal(true);
-                      }}
-                    >
-                      Edit Reason
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                    disabled={pageIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={pageIndex >= pageCount - 1}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageIndex(pageCount - 1)}
+                    disabled={pageIndex >= pageCount - 1}
+                  >
+                    {">>"}
+                  </Button>
                 </div>
+                <span className="text-sm text-gray-600">
+                  Page <strong>{pageIndex + 1} of {pageCount}</strong>
+                </span>
+                <span className="text-sm text-gray-600">
+                  Go to page:{" "}
+                  <input
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    value={pageIndex + 1}
+                    onChange={e => {
+                      const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                      setPageIndex(Math.max(0, Math.min(page, pageCount - 1)));
+                    }}
+                    className="w-16 border rounded px-2 py-1 text-sm"
+                  />
+                </span>
+                <select
+                  className="border rounded px-2 py-1 text-sm"
+                  value={pageSize}
+                  onChange={e => {
+                    setPageSize(Number(e.target.value));
+                    setPageIndex(0);
+                  }}
+                >
+                  {[10, 20, 30, 40, 50].map(size => (
+                    <option key={size} value={size}>
+                      Show {size}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
-
       {/* Modals */}
       <CreateReservationModal
         open={showCreate}
@@ -1442,75 +886,14 @@ export default function ReservationsPage() {
         onCreate={handleCreate}
         isLoading={createReservation.isPending}
       />
-
-      <AssignVehicleModal
-        open={showAssignVehicle}
-        onClose={() => setShowAssignVehicle(false)}
-        reservation={selectedReservation}
-      />
-
-      <CompleteReservationModal
-        open={showCompleteReservation}
-        onClose={() => setShowCompleteReservation(false)}
-        reservation={selectedReservation}
-        onComplete={handleCompleteReservation}
-        isLoading={completeReservation.isPending}
-      />
-
       <CancelReservationModal
         open={showCancelReservation}
         onClose={() => setShowCancelReservation(false)}
-        reservation={selectedReservation}
+        reservation={approveRejectReservation}
         onCancel={handleCancelReservation}
         isLoading={cancelReservation.isPending}
       />
-
-      {/* Edit Reason Modal */}
-      {showEditReasonModal && editReasonReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative">
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-              onClick={() => setShowEditReasonModal(false)}
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4">Edit Reason</h2>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                await handleUpdateReservationReason();
-              }}
-              className="space-y-4"
-            >
-              <textarea
-                className="w-full border rounded px-3 py-2"
-                rows={4}
-                value={editReasonValue}
-                onChange={(e) => setEditReasonValue(e.target.value)}
-                placeholder="Enter reason for rejection or cancellation"
-                required
-              />
-              <div className="flex gap-3 justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowEditReasonModal(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-blue-600 text-white"
-                  disabled={updateReservationReason.isPending}
-                >
-                  {updateReservationReason.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Approve/Reject Modal */}
       <ApproveRejectModal
         open={showApproveRejectModal}
         onClose={() => {
@@ -1521,6 +904,7 @@ export default function ReservationsPage() {
         onSubmit={handleApproveReject}
         isLoading={updateReservation.isPending}
       />
+      {/* Edit Reason, Assign Vehicle, Complete Reservation modals are now handled on [id] page only */}
     </div>
   );
 }

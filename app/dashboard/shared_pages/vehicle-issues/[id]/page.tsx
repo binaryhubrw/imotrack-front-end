@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { FC } from "react";
 import ErrorUI from "@/components/ErrorUI";
 import Image from "next/image";
+import { SkeletonVehicleIssueDetails } from "@/components/ui/skeleton";
 
 // All possible status values for vehicle issues
 const STATUS_LABELS: Record<string, string> = {
@@ -377,13 +378,7 @@ Generated on: ${new Date().toLocaleString()}
   }
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#e6f2fa] px-4 py-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0872B3]" />
-          </div>
-        </div>
-      </main>
+      <SkeletonVehicleIssueDetails />
     );
   }
   if (isError || !issue) {

@@ -17,7 +17,7 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, useCreateVehicleIssue, useCompleteReservation } from "@/lib/queries";
+import { useReservation, useCreateVehicleIssue, useCompleteReservation, useUpdateReservation, useCancelReservation, useReservationVehiclesOdometerAssignation, useUpdateReservationReason, useVehicles } from "@/lib/queries";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +46,11 @@ export default function ReservationDetailPage() {
   const { user, isLoading: authLoading } = useAuth();
   const createIssue = useCreateVehicleIssue();
   const completeReservation = useCompleteReservation();
+  const updateReservation = useUpdateReservation();
+  const cancelReservation = useCancelReservation();
+  const assignVehicleOdometer = useReservationVehiclesOdometerAssignation();
+  const updateReservationReason = useUpdateReservationReason();
+  const { data: vehicles = [] } = useVehicles();
 
   // Modal state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -58,12 +63,34 @@ export default function ReservationDetailPage() {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [returnedOdometer, setReturnedOdometer] = useState<number | null>(null);
 
+  // Modal state for new actions
+  const [showApproveRejectModal, setShowApproveRejectModal] = useState(false);
+  const [approveRejectAction, setApproveRejectAction] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
+  const [approveRejectReason, setApproveRejectReason] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showAssignVehicleModal, setShowAssignVehicleModal] = useState(false);
+  const [vehicleAssignments, setVehicleAssignments] = useState<Array<{
+    vehicle_id: string;
+    starting_odometer: string;
+    fuel_provided: string;
+  }>>([{ vehicle_id: '', starting_odometer: '', fuel_provided: '' }]);
+  const [showEditReasonModal, setShowEditReasonModal] = useState(false);
+  const [editReason, setEditReason] = useState('');
+
   // Permission checks
   const canView = !!user?.position?.position_access?.reservations?.view;
   const canReportIssue =
     !!user?.position?.position_access?.vehicleIssues?.report;
   const canCompleteReservation =
     !!user?.position?.position_access?.reservations?.complete;
+  const canApprove = !!user?.position?.position_access?.reservations?.approve;
+  const canCancel = !!user?.position?.position_access?.reservations?.cancel;
+  const canAssignVehicle = !!user?.position?.position_access?.reservations?.assignVehicle;
+  const canUpdateReason = !!user?.position?.position_access?.reservations?.updateReason;
+
+  // Helper: is reservation assigned a vehicle?
+  const hasAssignedVehicle = reservation?.reserved_vehicles && reservation.reserved_vehicles.length > 0;
 
   const handleReportIssue = (vehicle: ReservedVehicle) => {
     setSelectedVehicle(vehicle);
@@ -139,6 +166,83 @@ export default function ReservationDetailPage() {
   const handleCloseCompleteModal = () => {
     setShowCompleteModal(false);
     setReturnedOdometer(null);
+  };
+
+  // Action handlers
+  const handleApproveReject = async () => {
+    if (!reservation) return;
+    await updateReservation.mutateAsync({
+      id: reservation.reservation_id,
+      dto: { status: approveRejectAction, reason: approveRejectReason },
+    });
+    setShowApproveRejectModal(false);
+    setApproveRejectReason('');
+    setApproveRejectAction('APPROVED');
+    router.refresh();
+  };
+  const handleCancel = async () => {
+    if (!reservation) return;
+    await cancelReservation.mutateAsync({
+      id: reservation.reservation_id,
+      dto: { reason: cancelReason },
+    });
+    setShowCancelModal(false);
+    setCancelReason('');
+    router.refresh();
+  };
+  // Helper functions for vehicle assignments
+  const addVehicleAssignment = () => {
+    setVehicleAssignments(prev => [...prev, { vehicle_id: '', starting_odometer: '', fuel_provided: '' }]);
+  };
+
+  const removeVehicleAssignment = (index: number) => {
+    setVehicleAssignments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateVehicleAssignment = (index: number, field: string, value: string) => {
+    setVehicleAssignments(prev => 
+      prev.map((assignment, i) => 
+        i === index ? { ...assignment, [field]: value } : assignment
+      )
+    );
+  };
+
+  const handleAssignVehicle = async () => {
+    if (!reservation) return;
+    
+    // Validate that all assignments have required fields
+    const validAssignments = vehicleAssignments.filter(
+      assignment => assignment.vehicle_id && assignment.starting_odometer && assignment.fuel_provided
+    );
+    
+    if (validAssignments.length === 0) {
+      toast.error("Please fill in all required fields for at least one vehicle");
+      return;
+    }
+    
+    await assignVehicleOdometer.mutateAsync({
+      id: reservation.reservation_id,
+      dto: {
+        vehicles: validAssignments.map(assignment => ({
+          vehicle_id: assignment.vehicle_id,
+          starting_odometer: Number(assignment.starting_odometer),
+          fuel_provided: Number(assignment.fuel_provided),
+        })),
+      },
+    });
+    setShowAssignVehicleModal(false);
+    setVehicleAssignments([{ vehicle_id: '', starting_odometer: '', fuel_provided: '' }]);
+    router.refresh();
+  };
+  const handleEditReason = async () => {
+    if (!reservation) return;
+    await updateReservationReason.mutateAsync({
+      id: reservation.reservation_id,
+      reason: editReason,
+    });
+    setShowEditReasonModal(false);
+    setEditReason('');
+    router.refresh();
   };
 
   if (authLoading) {
@@ -220,6 +324,93 @@ export default function ReservationDetailPage() {
             <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
             Back
           </Button>
+        </div>
+        {/* Actions Section */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          {/* Approve/Reject */}
+          {canApprove && reservation.reservation_status === 'UNDER_REVIEW' && (
+            <Button
+              className="bg-green-600 text-white hover:bg-green-700"
+              onClick={() => setShowApproveRejectModal(true)}
+              disabled={updateReservation.isPending}
+            >
+              {updateReservation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Approve / Reject
+                </div>
+              )}
+            </Button>
+          )}
+          {/* Cancel */}
+          {canCancel &&
+            (reservation.reservation_status === 'UNDER_REVIEW' || reservation.reservation_status === 'APPROVED') && (
+              <Button
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => setShowCancelModal(true)}
+                disabled={cancelReservation.isPending}
+              >
+                {cancelReservation.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Canceling...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4" />
+                    Cancel Reservation
+                  </div>
+                )}
+              </Button>
+            )}
+          {/* Assign Vehicle */}
+          {canAssignVehicle &&
+            reservation.reservation_status === 'APPROVED' &&
+            !hasAssignedVehicle && (
+              <Button
+                className="bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => setShowAssignVehicleModal(true)}
+                disabled={assignVehicleOdometer.isPending}
+              >
+                {assignVehicleOdometer.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Assigning...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Car className="w-4 h-4" />
+                    Assign Vehicle
+                  </div>
+                )}
+              </Button>
+            )}
+          {/* Edit Reason */}
+          {canUpdateReason &&
+            ['REJECTED', 'CANCELED', 'CANCELLED'].includes(reservation.reservation_status) && (
+              <Button
+                className="bg-yellow-600 text-white hover:bg-yellow-700"
+                onClick={() => setShowEditReasonModal(true)}
+                disabled={updateReservationReason.isPending}
+              >
+                {updateReservationReason.isPending ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Updating...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Edit Reason
+                  </div>
+                )}
+              </Button>
+            )}
         </div>
 
         {/* Main Content */}
@@ -730,6 +921,360 @@ export default function ReservationDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Approve/Reject Modal */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 ${showApproveRejectModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Approve or Reject Reservation
+            </h2>
+            <button
+              onClick={() => setShowApproveRejectModal(false)}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleApproveReject(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Action *
+                </label>
+                <select
+                  value={approveRejectAction}
+                  onChange={e => setApproveRejectAction(e.target.value as 'APPROVED' | 'REJECTED')}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="APPROVED">Approve</option>
+                  <option value="REJECTED">Reject</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason {approveRejectAction === 'REJECTED' && <span className="text-red-500">*</span>}
+                </label>
+                <textarea
+                  value={approveRejectReason}
+                  onChange={e => setApproveRejectReason(e.target.value)}
+                  rows={3}
+                  required={approveRejectAction === 'REJECTED'}
+                  placeholder={approveRejectAction === 'REJECTED' ? 'Enter reason for rejection' : 'Optional reason for approval'}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowApproveRejectModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateReservation.isPending || (approveRejectAction === 'REJECTED' && !approveRejectReason.trim())}
+                  className="flex-1 px-4 py-2 text-white bg-green-600 border border-green-600 rounded-md hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateReservation.isPending ? 'Processing...' : 'Submit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {/* Cancel Modal */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 ${showCancelModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Cancel Reservation
+            </h2>
+            <button
+              onClick={() => setShowCancelModal(false)}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleCancel(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  rows={3}
+                  required
+                  placeholder="Enter reason for cancellation"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={cancelReservation.isPending || !cancelReason.trim()}
+                  className="flex-1 px-4 py-2 text-white bg-red-600 border border-red-600 rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelReservation.isPending ? 'Canceling...' : 'Submit'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {/* Assign Vehicle Modal */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 ${showAssignVehicleModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Assign Vehicles
+            </h2>
+            <button
+              onClick={() => setShowAssignVehicleModal(false)}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4">
+            {/* Passenger info */}
+            <div className="mb-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
+              <p className="text-sm text-blue-800">
+                <strong>Passengers:</strong> {reservation?.passengers || 0}
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                <strong>Available Vehicles:</strong> {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length}
+              </p>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleAssignVehicle(); }} className="space-y-4">
+              {/* Vehicle Assignments */}
+              {vehicleAssignments.map((assignment, index) => (
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      Vehicle {index + 1}
+                    </h3>
+                    {vehicleAssignments.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeVehicleAssignment(index)}
+                        className="text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Vehicle Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Vehicle *
+                      </label>
+                      <select
+                        value={assignment.vehicle_id}
+                        onChange={(e) =>
+                          updateVehicleAssignment(
+                            index,
+                            "vehicle_id",
+                            e.target.value
+                          )
+                        }
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      >
+                        <option value="">Select a vehicle</option>
+                        {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length === 0 ? (
+                          <option disabled>No suitable vehicles available</option>
+                        ) : (
+                          vehicles
+                            .filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1))
+                            .map((vehicle) => (
+                              <option
+                                key={vehicle.vehicle_id}
+                                value={vehicle.vehicle_id}
+                              >
+                                {vehicle.plate_number} -{" "}
+                                {vehicle.vehicle_model?.vehicle_model_name ||
+                                  "Unknown"}{" "}
+                                (Capacity: {vehicle.vehicle_capacity || 0})
+                              </option>
+                            ))
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Odometer */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Starting Odometer *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={assignment.starting_odometer}
+                        onChange={(e) =>
+                          updateVehicleAssignment(
+                            index,
+                            "starting_odometer",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Odometer reading"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Fuel */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fuel Provided (L) *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={assignment.fuel_provided}
+                        onChange={(e) =>
+                          updateVehicleAssignment(
+                            index,
+                            "fuel_provided",
+                            e.target.value
+                          )
+                        }
+                        placeholder="Fuel amount"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Vehicle Button */}
+              {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length > vehicleAssignments.length && (
+                <button
+                  type="button"
+                  onClick={addVehicleAssignment}
+                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  + Add Another Vehicle
+                </button>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignVehicleModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assignVehicleOdometer.isPending || vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length === 0}
+                  className="flex-1 px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {assignVehicleOdometer.isPending
+                    ? "Assigning..."
+                    : `Assign ${vehicleAssignments.length} Vehicle${
+                        vehicleAssignments.length > 1 ? "s" : ""
+                      }`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {/* Edit Reason Modal */}
+      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 ${showEditReasonModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Edit Reason
+            </h2>
+            <button
+              onClick={() => setShowEditReasonModal(false)}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleEditReason(); }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason *
+                </label>
+                <textarea
+                  value={editReason}
+                  onChange={e => setEditReason(e.target.value)}
+                  rows={3}
+                  required
+                  placeholder="Enter new reason"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowEditReasonModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateReservationReason.isPending || !editReason.trim()}
+                  className="flex-1 px-4 py-2 text-white bg-yellow-600 border border-yellow-600 rounded-md hover:bg-yellow-700 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateReservationReason.isPending ? 'Updating...' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

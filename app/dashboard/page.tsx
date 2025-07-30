@@ -155,7 +155,7 @@ export default function MainDashboard() {
     "Units": "/dashboard/shared_pages/units",
     "Positions": "/dashboard/shared_pages/positions",
     "Fleet Vehicles": "/dashboard/shared_pages/vehicles",
-    "Vehicle Models": "/dashboard/shared_pages/vehicle-models",
+    "Vehicle Models": "/dashboard/shared_pages/vehicle-model",
     "Reservations": "/dashboard/shared_pages/reservations",
     "Vehicle Issues": "/dashboard/shared_pages/vehicle-issues",
   };

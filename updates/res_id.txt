@@ -1014,3 +1014,188 @@ export default function ReservationDetailPage() {
     </div>
   );
 }
+
+
+//CompleteVehicle
+
+{/* Complete Reservation Modal */}
+
+      <Dialog open={showCompleteModal} onOpenChange={setShowCompleteModal}>
+        <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200 shadow-xl">
+          <DialogHeader className="pb-4 border-b border-gray-200">
+            <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+              <CheckSquare className="w-6 h-6 text-green-500" />
+              Return Vehicle
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-6">
+            {selectedVehicle && (
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Car className="w-4 h-4 text-green-600" />
+                  Vehicle Details
+                </h4>
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p>
+                    <span className="font-medium">Vehicle:</span>{" "}
+                    {selectedVehicle.vehicle.vehicle_name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Plate Number:</span>{" "}
+                    {selectedVehicle.vehicle.plate_number}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label
+                htmlFor="returned_odometer"
+                className="text-sm font-medium text-gray-700"
+              >
+                Returned Odometer (km) *
+              </Label>
+              <Input
+                id="returned_odometer"
+                type="number"
+                placeholder="Enter returned odometer reading"
+                value={returnedOdometer || ""}
+                onChange={(e) => setReturnedOdometer(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-gray-200">
+            <Button
+              variant="outline"
+              onClick={handleCloseCompleteModal}
+              className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCompleteReservation}
+              disabled={
+                completeReservation.isPending ||
+                returnedOdometer === null
+              }
+              className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
+            >
+              {completeReservation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Returning...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-4 h-4" />
+                  Return Vehicle
+                </div>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+
+
+      import 'package:flutter/material.dart';
+
+void main() => runApp(FormElementsDemo());
+
+class FormElementsDemo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: Text("Form Elements UI")),
+
+
+
+
+        
+        body: Padding(
+          padding: EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // 1. Text Field
+                Text("Full Name"),
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: "Enter your full name",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // 2. Email Field
+                Text("Email Address"),
+                TextField(
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: "Enter your email",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // 3. Dropdown
+                Text("Gender"),
+                DropdownButtonFormField<String>(
+                  items: ["Male", "Female", "Other"].map((value) {
+                    return DropdownMenuItem(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (_) {},
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // 4. Date Picker (UI Placeholder)
+                Text("Date of Birth"),
+                TextField(
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    hintText: "Select your date of birth",
+                    suffixIcon: Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // 5. Multi-line TextArea
+                Text("About You"),
+                TextField(
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: "Write something about yourself",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                SizedBox(height: 24),
+
+                // Submit Button
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    child: Text("Submit"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
