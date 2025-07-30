@@ -1,5 +1,4 @@
 export enum VehicleType {
-  AMBULANCE = "AMBULANCE",
   SEDAN = "SEDAN",
   SUV = "SUV",
   TRUCK = "TRUCK",
@@ -9,6 +8,12 @@ export enum VehicleType {
   OTHER = "OTHER"
 }
 
+export enum TransmissionMode {
+  MANUAL = "MANUAL",
+  AUTOMATIC = "AUTOMATIC",
+  SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
+}
+
 export enum VehicleStatus {
   AVAILABLE = "AVAILABLE",
   OCCUPIED = "OCCUPIED",
@@ -16,11 +21,7 @@ export enum VehicleStatus {
   OUT_OF_SERVICE = "OUT_OF_SERVICE"
 }
 
-export enum TransmissionMode {
-  MANUAL = "MANUAL",
-  AUTOMATIC = "AUTOMATIC",
-  SEMI_AUTOMATIC = "SEMI_AUTOMATIC"
-}
+
 
 export enum OrganizationStatusEnum {
   ACTIVE = 'ACTIVE',

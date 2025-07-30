@@ -185,9 +185,7 @@ function ReportIssueModal({
                  <p className="text-sm text-blue-800">
                    <strong>Vehicle:</strong> {selectedReservedVehicle.vehicle?.plate_number || selectedReservedVehicle.vehicle?.license_plate || 'Unknown'}
                  </p>
-                                   <p className="text-sm text-blue-700 mt-1">
-                    <strong>Model:</strong> {selectedReservedVehicle.vehicle?.vehicle_model || 'Unknown'}
-                  </p>
+                  
                  <p className="text-sm text-blue-700 mt-1">
                    <strong>Reservation Purpose:</strong> {selectedReservation?.reservation_purpose || 'Unknown'}
                  </p>

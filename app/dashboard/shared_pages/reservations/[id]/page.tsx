@@ -1071,7 +1071,7 @@ export default function ReservationDetailPage() {
                 <strong>Passengers:</strong> {reservation?.passengers || 0}
               </p>
               <p className="text-sm text-blue-700 mt-1">
-                <strong>Available Vehicles:</strong> {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length}
+                <strong>Available Vehicles:</strong> {vehicles.filter(v => v.vehicle_status === 'AVAILABLE').length}
               </p>
             </div>
 
@@ -1116,11 +1116,11 @@ export default function ReservationDetailPage() {
                         required
                       >
                         <option value="">Select a vehicle</option>
-                        {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length === 0 ? (
-                          <option disabled>No suitable vehicles available</option>
+                        {vehicles.filter(v => v.vehicle_status === 'AVAILABLE').length === 0 ? (
+                          <option disabled>No vehicles available</option>
                         ) : (
                           vehicles
-                            .filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1))
+                            .filter(v => v.vehicle_status === 'AVAILABLE')
                             .map((vehicle) => (
                               <option
                                 key={vehicle.vehicle_id}
@@ -1185,15 +1185,13 @@ export default function ReservationDetailPage() {
               ))}
 
               {/* Add Vehicle Button */}
-              {vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length > vehicleAssignments.length && (
-                <button
-                  type="button"
-                  onClick={addVehicleAssignment}
-                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  + Add Another Vehicle
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={addVehicleAssignment}
+                className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
+              >
+                + Add Another Vehicle
+              </button>
 
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t">
@@ -1206,7 +1204,7 @@ export default function ReservationDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={assignVehicleOdometer.isPending || vehicles.filter(v => v.vehicle_status === 'AVAILABLE' && v.vehicle_capacity >= (reservation?.passengers || 1)).length === 0}
+                  disabled={assignVehicleOdometer.isPending}
                   className="flex-1 px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {assignVehicleOdometer.isPending
