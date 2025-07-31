@@ -32,6 +32,7 @@ import {
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
   UNDER_REVIEW: "Under Review",
+  ACCEPTED: "Accepted",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   CANCELLED: "Cancelled",
@@ -660,9 +661,12 @@ export default function ReservationsPage() {
 
     if (!approveRejectReservation) return;
     try {
+      // Set status to ACCEPTED when approving, REJECTED when rejecting
+      const newStatus = action === 'APPROVED' ? 'ACCEPTED' : 'REJECTED';
+      
       await updateReservation.mutateAsync({
         id: approveRejectReservation.reservation_id,
-        dto: { status: action, reason },
+        dto: { status: newStatus, reason },
       });
       setShowApproveRejectModal(false);
       setApproveRejectReservation(null);
@@ -675,6 +679,8 @@ export default function ReservationsPage() {
     switch (status) {
       case "UNDER_REVIEW":
         return "bg-yellow-100 text-yellow-800";
+      case "ACCEPTED":
+        return "bg-blue-100 text-blue-800";
       case "APPROVED":
         return "bg-green-100 text-green-800";
       case "REJECTED":

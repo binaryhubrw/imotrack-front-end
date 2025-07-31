@@ -92,6 +92,11 @@ export default function ReservationDetailPage() {
   // Helper: is reservation assigned a vehicle?
   const hasAssignedVehicle = reservation?.reserved_vehicles && reservation.reserved_vehicles.length > 0;
 
+  // Helper: should show assign vehicle button (only for ACCEPTED status without vehicles)
+  const shouldShowAssignVehicle = canAssignVehicle && 
+    reservation?.reservation_status === 'ACCEPTED' && 
+    !hasAssignedVehicle;
+
   const handleReportIssue = (vehicle: ReservedVehicle) => {
     setSelectedVehicle(vehicle);
     setShowReportModal(true);
@@ -171,9 +176,13 @@ export default function ReservationDetailPage() {
   // Action handlers
   const handleApproveReject = async () => {
     if (!reservation) return;
+    
+    // Set status to ACCEPTED when approving, REJECTED when rejecting
+    const newStatus = approveRejectAction === 'APPROVED' ? 'ACCEPTED' : 'REJECTED';
+    
     await updateReservation.mutateAsync({
       id: reservation.reservation_id,
-      dto: { status: approveRejectAction, reason: approveRejectReason },
+      dto: { status: newStatus, reason: approveRejectReason },
     });
     setShowApproveRejectModal(false);
     setApproveRejectReason('');
@@ -220,16 +229,30 @@ export default function ReservationDetailPage() {
       return;
     }
     
-    await assignVehicleOdometer.mutateAsync({
-      id: reservation.reservation_id,
-      dto: {
-        vehicles: validAssignments.map(assignment => ({
-          vehicle_id: assignment.vehicle_id,
-          starting_odometer: Number(assignment.starting_odometer),
-          fuel_provided: Number(assignment.fuel_provided),
-        })),
-      },
-    });
+    try {
+      // First assign vehicles
+      await assignVehicleOdometer.mutateAsync({
+        id: reservation.reservation_id,
+        dto: {
+          vehicles: validAssignments.map(assignment => ({
+            vehicle_id: assignment.vehicle_id,
+            starting_odometer: Number(assignment.starting_odometer),
+            fuel_provided: Number(assignment.fuel_provided),
+          })),
+        },
+      });
+      
+      // Then update status to APPROVED
+      await updateReservation.mutateAsync({
+        id: reservation.reservation_id,
+        dto: { status: 'APPROVED' },
+      });
+      
+    } catch (error) {
+      console.error('Error in vehicle assignment process:', error);
+      throw error;
+    }
+    
     setShowAssignVehicleModal(false);
     setVehicleAssignments([{ vehicle_id: '', starting_odometer: '', fuel_provided: '' }]);
     router.refresh();
@@ -276,13 +299,13 @@ export default function ReservationDetailPage() {
     switch (status) {
       case "APPROVED":
         return "bg-green-100 text-green-800 border-green-200";
+      case "ACCEPTED":
+        return "bg-blue-100 text-blue-800 border-blue-200";
       case "REJECTED":
         return "bg-red-100 text-red-800 border-red-200";
       case "CANCELLED":
       case "CANCELED":
         return "bg-gray-100 text-gray-800 border-gray-200";
-      case "IN_PROGRESS":
-        return "bg-blue-100 text-blue-800 border-blue-200";
       case "COMPLETED":
         return "bg-purple-100 text-purple-800 border-purple-200";
       case "UNDER_REVIEW":
@@ -294,14 +317,20 @@ export default function ReservationDetailPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "UNDER_REVIEW":
+        return <Clock className="w-4 h-4" />;
       case "APPROVED":
+        return <CheckCircle className="w-4 h-4" />;
+      case "ACCEPTED":
         return <CheckCircle className="w-4 h-4" />;
       case "REJECTED":
         return <XCircle className="w-4 h-4" />;
-      case "IN_PROGRESS":
-        return <Clock className="w-4 h-4" />;
-      case "UNDER_REVIEW":
-        return <AlertTriangle className="w-4 h-4" />;
+      case "CANCELLED":
+      case "CANCELED":
+        return <XCircle className="w-4 h-4" />;
+
+      case "COMPLETED":
+        return <CheckCircle className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
@@ -369,27 +398,25 @@ export default function ReservationDetailPage() {
               </Button>
             )}
           {/* Assign Vehicle */}
-          {canAssignVehicle &&
-            reservation.reservation_status === 'APPROVED' &&
-            !hasAssignedVehicle && (
-              <Button
-                className="bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => setShowAssignVehicleModal(true)}
-                disabled={assignVehicleOdometer.isPending}
-              >
-                {assignVehicleOdometer.isPending ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Assigning...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Car className="w-4 h-4" />
-                    Assign Vehicle
-                  </div>
-                )}
-              </Button>
-            )}
+          {shouldShowAssignVehicle && (
+            <Button
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setShowAssignVehicleModal(true)}
+              disabled={assignVehicleOdometer.isPending}
+            >
+              {assignVehicleOdometer.isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Assigning...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Car className="w-4 h-4" />
+                  Assign Vehicle
+                </div>
+              )}
+            </Button>
+          )}
           {/* Edit Reason */}
           {canUpdateReason &&
             ['REJECTED', 'CANCELED', 'CANCELLED'].includes(reservation.reservation_status) && (

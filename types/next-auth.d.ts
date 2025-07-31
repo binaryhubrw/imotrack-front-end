@@ -496,6 +496,7 @@ export type UpdateVehicleDto = {
 // --- Reservation Types ---
 export type ReservationStatus =
   | "UNDER_REVIEW"
+  | "ACCEPTED"
   | "APPROVED"
   | "REJECTED"
   | "CANCELLED"
