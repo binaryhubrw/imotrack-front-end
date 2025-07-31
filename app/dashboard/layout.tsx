@@ -378,24 +378,14 @@ export default function DashboardLayout({
 <div className="p-4 border-t border-blue-900/20">
   <div className="text-center space-y-3">
     {/* Imotarak Logo */}
-    <div className="flex justify-center">
+    <div className="flex justify-center ">
       <Image 
       width={30}
       height={30}
         src="/logo/logo.png" 
         alt="Imotarak Logo" 
-        className="h-8 w-auto"
+        className="h-8 w-auto rounded-xs"
       />
-    </div>
-    
-    {/* Designed by text */}
-    <div>
-      <p className="text-xs text-blue-200 font-medium">
-        Designed by
-      </p>
-      <p className="text-sm text-white font-bold">
-        Imotarak System
-      </p>
     </div>
     
     {/* Powered by Binary Hub */}
