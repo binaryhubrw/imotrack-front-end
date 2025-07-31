@@ -599,12 +599,14 @@ export default function ReservationDetailPage() {
                     : "bg-green-50 border-green-200";
                   const canReportIssueForThisVehicle =
                     canReportIssue &&
-                    reservation.reservation_status === "APPROVED";
+                    (reservation.reservation_status === "APPROVED" || 
+                     reservation.reservation_status === "ACCEPTED");
                   const canCompleteThisReservation =
                     canCompleteReservation &&
                     isOccupied &&
                     (reservation.reservation_status === "IN_PROGRESS" || 
-                     reservation.reservation_status === "APPROVED");
+                     reservation.reservation_status === "APPROVED" ||
+                     reservation.reservation_status === "ACCEPTED");
 
                   return (
                     <div
