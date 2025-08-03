@@ -818,7 +818,7 @@ export const useUpdatePosition = () => {
 };
 
 // --- GET all users grouped by unit ---
-export const useUsers = () => {
+export const useOrganizationUsers = () => {
   return useQuery<UserWithPositions[], Error>({
     queryKey: ['users'],
     queryFn: async () => {
@@ -829,8 +829,20 @@ export const useUsers = () => {
   });
 };
 
+export const useOrganizationUser = (user_id: string) => {
+  return useQuery<UserWithPositions, Error>({
+    queryKey: ['user', user_id],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: UserWithPositions }>(`/v2/users/${user_id}`);
+      if (!data.data) throw new Error('No data');
+      return data.data;
+    },
+    enabled: !!user_id,
+  });
+};
+
 // --- Create user ---
-export const useCreateUser = () => {
+export const useOrganizationCreateUser = () => {
   const queryClient = useQueryClient();
   return useMutation<UserWithPositions, Error, CreateUserDto>({
     mutationFn: async (user) => {
@@ -864,18 +876,7 @@ export const useCreateUser = () => {
   });
 };
 
-export const useUser = (user_id: string) => {
-  return useQuery<UserWithPositions, Error>({
-    queryKey: ['user', user_id],
-    queryFn: async () => {
-      const { data } = await api.get<{ data: UserWithPositions }>(`/v2/users/${user_id}`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
-    },
-    enabled: !!user_id,
-  });
-};
-export const useUpdateUser = (user_id: string) => {
+export const useUpdateOrganizationUser = (user_id: string) => {
   const queryClient = useQueryClient();
   return useMutation<UserWithPositions, Error, UpdateUserDto>({
     mutationFn: async (updates) => {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   Loader2,
   CheckCircle,
+  ChevronDown,
 } from "lucide-react";
 import {
   Table,
@@ -54,6 +55,175 @@ import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { TransmissionMode, VehicleType } from "@/types/enums";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
+
+// Searchable Dropdown Component
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ [key: string]: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get the display field name (manufacturer_name, vehicle_model_name, etc.)
+  const displayField =
+    options.length > 0
+      ? Object.keys(options[0]).find((key) => key.includes("name")) ||
+        Object.keys(options[0])[0]
+      : "";
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option[displayField]?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find((option) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    return option[idField] === value;
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: { [key: string]: string }) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    onChange(option[idField]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white cursor-pointer ${
+          isOpen ? "ring-2 ring-blue-500 border-blue-500" : ""
+        }`}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) {
+            setTimeout(() => {
+              const searchInput = dropdownRef.current?.querySelector("input");
+              if (searchInput) {
+                (searchInput as HTMLInputElement).focus();
+              }
+            }, 100);
+          }
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span
+            className={`${
+              selectedOption
+                ? "text-gray-900"
+                : "text-gray-500"
+            }`}
+          >
+            {selectedOption
+              ? selectedOption[displayField]
+              : placeholder}
+          </span>
+          <div className="flex items-center gap-1">
+            {value && (
+              <button
+                onClick={handleClear}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-gray-400 transition-transform ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? `No ${placeholder.toLowerCase()} found`
+                  : `No ${placeholder.toLowerCase()} available`}
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => {
+                const idField =
+                  Object.keys(option).find((key) => key.includes("id")) ||
+                  Object.keys(option)[0];
+                return (
+                  <div
+                    key={option[idField] || index}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                      option[idField] === value
+                        ? "bg-blue-100 text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {option[displayField]}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length}{" "}
+              {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Extend CreateVehicleDto to make vehicle_type optional for form state
 type CreateVehicleDto = Omit<BaseCreateVehicleDto, "vehicle_type"> & {
@@ -382,11 +552,11 @@ function CreateVehicleModal({
 }) {
   const [form, setForm] = useState<CreateVehicleDto>({
     plate_number: "",
-    transmission_mode: "MANUAL",
+    transmission_mode: "",
     vehicle_model_id: "",
-    vehicle_year: new Date().getFullYear(),
-    vehicle_capacity: 1,
-    energy_type: "GASOLINE",
+    vehicle_year: 0,
+    vehicle_capacity: 0,
+    energy_type: "",
     organization_id: organizationId,
     vehicle_photo: undefined,
     vehicle_type: "", // not used, but required by type
@@ -396,14 +566,7 @@ function CreateVehicleModal({
   const [imgPreview, setImgPreview] = useState<string | null>(null);
   const [errorSummary, setErrorSummary] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (vehicleModels && vehicleModels.length > 0 && !form.vehicle_model_id) {
-      setForm((f) => ({
-        ...f,
-        vehicle_model_id: vehicleModels[0].vehicle_model_id,
-      }));
-    }
-  }, [vehicleModels, form.vehicle_model_id]);
+  // Removed auto-selection logic to let users choose their own values
   React.useEffect(() => {
     if (organizationId && form.organization_id !== organizationId) {
       setForm((f) => ({ ...f, organization_id: organizationId }));
@@ -470,11 +633,11 @@ function CreateVehicleModal({
   const handleClose = () => {
     setForm({
       plate_number: "",
-      transmission_mode: "MANUAL",
-      vehicle_model_id: vehicleModels?.[0]?.vehicle_model_id || "",
-      vehicle_year: new Date().getFullYear(),
-      vehicle_capacity: 1,
-      energy_type: "GASOLINE",
+      transmission_mode: "",
+      vehicle_model_id: "",
+      vehicle_year: 0,
+      vehicle_capacity: 0,
+      energy_type: "",
       organization_id: organizationId,
       vehicle_photo: undefined,
       vehicle_type: "",
@@ -519,10 +682,11 @@ function CreateVehicleModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Plate Number
+                    Plate Number <span className="text-red-500">*</span>
                   </label>
                   <Input
                     name="plate_number"
+                    placeholder="Enter plate number"
                     value={form.plate_number}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -542,28 +706,27 @@ function CreateVehicleModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Vehicle Model
+                    Vehicle Model <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="vehicle_model_id"
+                  <SearchableDropdown
+                    options={vehicleModels.map(model => ({
+                      vehicle_model_id: model.vehicle_model_id,
+                      display_name: `${model.manufacturer_name} - ${model.vehicle_model_name}`
+                    }))}
                     value={form.vehicle_model_id}
-                    onChange={handleChange}
-                    className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-700 focus:border-blue-700 bg-white ${
+                    onChange={(value) => {
+                      setForm(prev => ({ ...prev, vehicle_model_id: value }));
+                      if (errors.vehicle_model_id) {
+                        setErrors(prev => ({ ...prev, vehicle_model_id: "" }));
+                      }
+                    }}
+                    placeholder="Select vehicle model"
+                    className={`${
                       errors.vehicle_model_id && touched.vehicle_model_id
                         ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                         : ""
                     }`}
-                    disabled={isLoading}
-                  >
-                    {vehicleModels.map((model) => (
-                      <option
-                        key={model.vehicle_model_id}
-                        value={model.vehicle_model_id}
-                      >
-                        {model.manufacturer_name} - {model.vehicle_model_name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {errors.vehicle_model_id && touched.vehicle_model_id && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
@@ -575,30 +738,29 @@ function CreateVehicleModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Transmission Mode
+                    Transmission Mode <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="transmission_mode"
+                  <SearchableDropdown
+                    options={Object.values(TransmissionMode).map(mode => ({
+                      transmission_mode: mode,
+                      display_name: mode
+                    }))}
                     value={form.transmission_mode}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-700 focus:border-blue-700 bg-white"
-                    disabled={isLoading}
-                  >
-                    {Object.values(TransmissionMode).map((mode) => (
-                      <option key={mode} value={mode}>
-                        {mode}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => {
+                      setForm(prev => ({ ...prev, transmission_mode: value }));
+                    }}
+                    placeholder="Select transmission mode"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Year
+                    Year <span className="text-red-500">*</span>
                   </label>
                   <Input
                     name="vehicle_year"
                     type="number"
-                    value={form.vehicle_year}
+                    placeholder="Enter vehicle year"
+                    value={form.vehicle_year || ""}
                     onChange={handleChange}
                     min="1900"
                     max={new Date().getFullYear() + 1}
@@ -620,12 +782,13 @@ function CreateVehicleModal({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Capacity
+                    Capacity <span className="text-red-500">*</span>
                   </label>
                   <Input
                     name="vehicle_capacity"
                     type="number"
-                    value={form.vehicle_capacity}
+                    placeholder="Enter passenger capacity"
+                    value={form.vehicle_capacity || ""}
                     onChange={handleChange}
                     min="1"
                     className={
@@ -644,21 +807,22 @@ function CreateVehicleModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Energy Type
+                    Energy Type <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="energy_type"
+                  <SearchableDropdown
+                    options={[
+                      { energy_type: "GASOLINE", display_name: "Gasoline" },
+                      { energy_type: "DIESEL", display_name: "Diesel" },
+                      { energy_type: "ELECTRIC", display_name: "Electric" },
+                      { energy_type: "HYBRID", display_name: "Hybrid" },
+                      { energy_type: "LPG", display_name: "LPG" }
+                    ]}
                     value={form.energy_type}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-700 focus:border-blue-700 bg-white"
-                    disabled={isLoading}
-                  >
-                    <option value="GASOLINE">Gasoline</option>
-                    <option value="DIESEL">Diesel</option>
-                    <option value="ELECTRIC">Electric</option>
-                    <option value="HYBRID">Hybrid</option>
-                    <option value="LPG">LPG</option>
-                  </select>
+                    onChange={(value) => {
+                      setForm(prev => ({ ...prev, energy_type: value }));
+                    }}
+                    placeholder="Select energy type"
+                  />
                 </div>
               </div>
             </div>
@@ -757,6 +921,25 @@ export default function VehiclesPage() {
   // Table Columns - keep only essential ones (must be before early returns)
   const columns: ColumnDef<Vehicle>[] = useMemo(
     () => [
+      {
+        id: "number",
+        header: () => (
+          <span className="text-xs font-semibold uppercase tracking-wider px-3">
+            #
+          </span>
+        ),
+        cell: ({ row }) => {
+          // Calculate the row number based on pagination
+          const pageIndex = table.getState().pagination.pageIndex;
+          const pageSize = table.getState().pagination.pageSize;
+          return (
+            <span className="text-xs text-gray-700 font-semibold px-3">
+              {pageIndex * pageSize + row.index + 1}
+            </span>
+          );
+        },
+        size: 30,
+      },
       {
         accessorKey: "vehicle_photo",
         header: "Photo",

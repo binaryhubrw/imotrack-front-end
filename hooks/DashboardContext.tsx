@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   useOrganizations,
   useOrganizationUnits,
-  useUsers,
+  useOrganizationUsers,
   useVehicles,
   useVehicleModels,
   useReservations,
@@ -111,7 +111,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   // Always call all hooks to maintain consistent order
   const orgsHook = useOrganizations(1, 100);
   const unitsHook = useOrganizationUnits();
-  const usersHook = useUsers();
+  const usersHook = useOrganizationUsers();
   const vehiclesHook = useVehicles();
   const vehicleModelsHook = useVehicleModels();
   const reservationsHook = useReservations();
@@ -281,10 +281,10 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Add recent vehicle issues (last 2) if user has permission
     if (canViewVehicleIssues && Array.isArray(vehicleIssues)) {
-      vehicleIssues.slice(-2).forEach((issue: any) => {
+      vehicleIssues.slice(-2).forEach((issue: { issue_id?: string; id?: string; issue_title?: string; title?: string; created_at?: string }) => {
         activities.push({
           id: `vehicle_issue_${issue.issue_id || issue.id}`,
-          type: "vehicle_issue_reported" as any,
+          type: "vehicle_issue_reported" as "user_created" | "vehicle_added" | "organization_updated" | "position_assigned" | "unit_created",
           message: `Vehicle issue reported: ${issue.issue_title || issue.title || issue.issue_id || issue.id}`,
           timestamp: issue.created_at || new Date().toISOString(),
         });

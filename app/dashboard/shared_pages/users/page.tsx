@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -12,12 +12,7 @@ import {
   VisibilityState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import {
-  Plus,
-  Search,
-  X,
-  AlertCircle,
-} from "lucide-react";
+import { Plus, Search, X, AlertCircle, ChevronDown } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -27,14 +22,10 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import {
-  useUsers,
-  useCreateUser,
-  useUnitPositions,
-  useOrganizations,
-  useOrganizationUnitsByOrgId,
-  useUser,
-  useUpdateUser,
-  useOrganizationUnits,
+  useOrganizationUsers,
+  useOrganizationCreateUser,
+  useOrganizationUser,
+  // useOrganizationUpdateUser,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +44,163 @@ import type {
 import { SkeletonUsersTable } from "@/components/ui/skeleton";
 import ErrorUI from "@/components/ErrorUI";
 
+// Searchable Dropdown Component
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ [key: string]: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get the display field name (organization_name, unit_name, or position_name)
+  const displayField =
+    options.length > 0
+      ? Object.keys(options[0]).find((key) => key.includes("name")) ||
+        Object.keys(options[0])[0]
+      : "";
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option[displayField]?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find((option) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    return option[idField] === value;
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: { [key: string]: string }) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    onChange(option[idField]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer bg-white hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
+          {selectedOption ? selectedOption[displayField] : placeholder}
+        </span>
+        <div className="flex items-center gap-1">
+          {value && (
+            <button
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={`Search ${placeholder.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? `No ${placeholder.toLowerCase()} found`
+                  : `No ${placeholder.toLowerCase()} available`}
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => {
+                const idField =
+                  Object.keys(option).find((key) => key.includes("id")) ||
+                  Object.keys(option)[0];
+                return (
+                  <div
+                    key={option[idField] || index}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                      option[idField] === value
+                        ? "bg-blue-100 text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {option[displayField]}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Results count */}
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length}{" "}
+              {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CreateUserModal({
   open,
   onClose,
@@ -70,14 +218,76 @@ function CreateUserModal({
   const userOrganizationId = user?.organization?.organization_id;
   const userUnitId = user?.unit?.unit_id;
 
-  // For normal users, get all units in their organization
-  const { data: allUnitsInOrg = [] } = useOrganizationUnits();
-  const userOrgUnits = useMemo(() => {
-    if (!userOrganizationId) return [];
-    return allUnitsInOrg.filter(
-      (unit) => unit.organization_id === userOrganizationId
-    );
-  }, [allUnitsInOrg, userOrganizationId]);
+  // Get all users data to extract organizations, units, and positions
+  const { data: usersData } = useOrganizationUsers();
+
+  // Extract organizations from users data
+  const allOrganizations = useMemo(() => {
+    if (!usersData) return [];
+    const orgMap = new Map<
+      string,
+      { organization_id: string; organization_name: string }
+    >();
+    usersData.forEach((user: UserWithPositions) => {
+      user.positions?.forEach((position: PositionWithUnitOrg) => {
+        if (position.unit?.organization) {
+          const org = position.unit.organization;
+          if (!orgMap.has(org.organization_id)) {
+            orgMap.set(org.organization_id, {
+              organization_id: org.organization_id,
+              organization_name: org.organization_name,
+            });
+          }
+        }
+      });
+    });
+    return Array.from(orgMap.values());
+  }, [usersData]);
+
+  // Extract units from users data
+  const allUnits = useMemo(() => {
+    if (!usersData) return [];
+    const unitMap = new Map<
+      string,
+      { unit_id: string; unit_name: string; organization_id: string }
+    >();
+    usersData.forEach((user: UserWithPositions) => {
+      user.positions?.forEach((position: PositionWithUnitOrg) => {
+        if (position.unit) {
+          const unit = position.unit;
+          if (!unitMap.has(unit.unit_id)) {
+            unitMap.set(unit.unit_id, {
+              unit_id: unit.unit_id,
+              unit_name: unit.unit_name,
+              organization_id: unit.organization.organization_id,
+            });
+          }
+        }
+      });
+    });
+    return Array.from(unitMap.values());
+  }, [usersData]);
+
+  // Extract positions from users data
+  const allPositions = useMemo(() => {
+    if (!usersData) return [];
+    const positionMap = new Map<
+      string,
+      { position_id: string; position_name: string; unit_id: string }
+    >();
+    usersData.forEach((user: UserWithPositions) => {
+      user.positions?.forEach((position: PositionWithUnitOrg) => {
+        if (!positionMap.has(position.position_id)) {
+          positionMap.set(position.position_id, {
+            position_id: position.position_id,
+            position_name: position.position_name,
+            unit_id: position.unit.unit_id,
+          });
+        }
+      });
+    });
+    return Array.from(positionMap.values());
+  }, [usersData]);
 
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     canViewOrganizations ? "" : userOrganizationId || ""
@@ -87,21 +297,19 @@ function CreateUserModal({
   );
   const [selectedPositionId, setSelectedPositionId] = useState<string>("");
 
-  // Fetch orgs/units/positions
-  const { data: orgData, isLoading: orgsLoading } = useOrganizations(1, 100);
-  const allOrganizations = useMemo(
-    () => orgData?.organizations || [],
-    [orgData?.organizations]
-  );
-  const { data: orgUnitsRaw, isLoading: unitsLoading } =
-    useOrganizationUnitsByOrgId(selectedOrgId);
-  const orgUnits = useMemo(() => orgUnitsRaw || [], [orgUnitsRaw]);
-  // Use the appropriate unit ID for fetching positions
-  const effectiveUnitId = canViewOrganizations
-    ? selectedUnitId
-    : selectedUnitId || userUnitId || "";
-  const { data: positions, isLoading: loadingPositions } =
-    useUnitPositions(effectiveUnitId);
+  // Filter units by selected organization
+  const filteredUnits = useMemo(() => {
+    if (!selectedOrgId) return allUnits;
+    return allUnits.filter((unit) => unit.organization_id === selectedOrgId);
+  }, [allUnits, selectedOrgId]);
+
+  // Filter positions by selected unit
+  const filteredPositions = useMemo(() => {
+    if (!selectedUnitId) return allPositions;
+    return allPositions.filter(
+      (position) => position.unit_id === selectedUnitId
+    );
+  }, [allPositions, selectedUnitId]);
 
   // Set default org/unit/position if only one
   React.useEffect(() => {
@@ -115,22 +323,20 @@ function CreateUserModal({
   }, [canViewOrganizations, allOrganizations, selectedOrgId]);
 
   React.useEffect(() => {
-    if (canViewOrganizations && orgUnits.length === 1 && !selectedUnitId) {
-      setSelectedUnitId(orgUnits[0].unit_id);
-    } else if (
-      !canViewOrganizations &&
-      userOrgUnits.length === 1 &&
-      !selectedUnitId
-    ) {
-      setSelectedUnitId(userOrgUnits[0].unit_id);
+    if (canViewOrganizations && filteredUnits.length === 1 && !selectedUnitId) {
+      setSelectedUnitId(filteredUnits[0].unit_id);
     }
-  }, [canViewOrganizations, orgUnits, userOrgUnits, selectedUnitId]);
+  }, [canViewOrganizations, filteredUnits, selectedUnitId]);
 
   React.useEffect(() => {
-    if (positions && positions.length === 1 && !selectedPositionId) {
-      setSelectedPositionId(positions[0].position_id);
+    if (
+      filteredPositions &&
+      filteredPositions.length === 1 &&
+      !selectedPositionId
+    ) {
+      setSelectedPositionId(filteredPositions[0].position_id);
     }
-  }, [positions, selectedPositionId]);
+  }, [filteredPositions, selectedPositionId]);
 
   // Auto-select user's unit and organization for non-super admin users
   React.useEffect(() => {
@@ -180,7 +386,7 @@ function CreateUserModal({
     if (!form.street_address.trim())
       newErrors.street_address = "Street address is required";
     if (!selectedOrgId) newErrors.organization_id = "Organization is required";
-    if (!effectiveUnitId) newErrors.unit_id = "Unit is required";
+    if (!selectedUnitId) newErrors.unit_id = "Unit is required";
     if (!selectedPositionId) newErrors.position_id = "Position is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -287,28 +493,19 @@ function CreateUserModal({
               {canViewOrganizations && (
                 <div>
                   <label className="block text-sm font-medium text-[#0872b3] mb-2">
-                    Organization
+                    Organization <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <SearchableDropdown
+                    options={allOrganizations}
                     value={selectedOrgId}
-                    onChange={(e) => {
-                      setSelectedOrgId(e.target.value);
+                    onChange={(value) => {
+                      setSelectedOrgId(value);
                       setSelectedUnitId("");
                       setSelectedPositionId("");
                     }}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
-                    disabled={orgsLoading || isLoading}
-                  >
-                    <option value="">Select organization</option>
-                    {allOrganizations.map((org) => (
-                      <option
-                        key={org.organization_id}
-                        value={org.organization_id}
-                      >
-                        {org.organization_name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select organization"
+                    className="w-full"
+                  />
                   {errors.organization_id && touched.organization_id && (
                     <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
@@ -332,35 +529,18 @@ function CreateUserModal({
               )}
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-2">
-                  Unit
+                  Unit <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableDropdown
+                  options={filteredUnits}
                   value={selectedUnitId}
-                  onChange={(e) => {
-                    setSelectedUnitId(e.target.value);
+                  onChange={(value) => {
+                    setSelectedUnitId(value);
                     setSelectedPositionId("");
                   }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
-                  disabled={
-                    isLoading ||
-                    (canViewOrganizations
-                      ? unitsLoading || !selectedOrgId || orgUnits.length === 0
-                      : userOrgUnits.length === 0)
-                  }
-                >
-                  <option value="">Select unit</option>
-                  {canViewOrganizations
-                    ? orgUnits.map((unit) => (
-                        <option key={unit.unit_id} value={unit.unit_id}>
-                          {unit.unit_name}
-                        </option>
-                      ))
-                    : userOrgUnits.map((unit) => (
-                        <option key={unit.unit_id} value={unit.unit_id}>
-                          {unit.unit_name}
-                        </option>
-                      ))}
-                </select>
+                  placeholder="Select unit"
+                  className="w-full"
+                />
                 {errors.unit_id && touched.unit_id && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
@@ -370,31 +550,15 @@ function CreateUserModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-2">
-                  Position
+                  Position <span className="text-red-500">*</span>
                 </label>
-                <select
+                <SearchableDropdown
+                  options={filteredPositions}
                   value={selectedPositionId}
-                  onChange={(e) => setSelectedPositionId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
-                  disabled={
-                    loadingPositions ||
-                    isLoading ||
-                    !effectiveUnitId ||
-                    !positions ||
-                    positions.length === 0
-                  }
-                >
-                  <option value="">Select position</option>
-                  {positions && positions.length > 0
-                    ? positions.map((pos) => (
-                        <option key={pos.position_id} value={pos.position_id}>
-                          {pos.position_name}
-                        </option>
-                      ))
-                    : !loadingPositions && (
-                        <option value="">No positions available</option>
-                      )}
-                </select>
+                  onChange={setSelectedPositionId}
+                  placeholder="Select position"
+                  className="w-full"
+                />
                 {errors.position_id && touched.position_id && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
@@ -625,21 +789,19 @@ function CreateUserModal({
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white"
                   disabled={
                     isLoading ||
-                    loadingPositions ||
-                    !positions ||
-                    positions.length === 0
+                    !selectedUnitId ||
+                    filteredPositions.length === 0
                   }
                 >
-                  {loadingPositions && <option>Loading positions...</option>}
-                  {positions && positions.length > 0
-                    ? positions.map((pos) => (
-                        <option key={pos.position_id} value={pos.position_id}>
-                          {pos.position_name}
-                        </option>
-                      ))
-                    : !loadingPositions && (
-                        <option value="">No positions available</option>
-                      )}
+                  {filteredPositions.length > 0 ? (
+                    filteredPositions.map((pos) => (
+                      <option key={pos.position_id} value={pos.position_id}>
+                        {pos.position_name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No positions available</option>
+                  )}
                 </select>
                 {errors.position_id && touched.position_id && (
                   <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -668,10 +830,7 @@ function CreateUserModal({
               type="submit"
               onClick={handleSubmit}
               disabled={
-                isLoading ||
-                loadingPositions ||
-                !positions ||
-                positions.length === 0
+                isLoading || !selectedUnitId || filteredPositions.length === 0
               }
               className="min-w-[120px] bg-[#0872b3] hover:bg-[#065a8f] text-white transition-colors duration-200"
             >
@@ -702,8 +861,8 @@ function EditUserModal({
   userId: string | null;
   onUpdated: () => void;
 }) {
-  const { data: user, isLoading } = useUser(userId || "");
-  const updateUser = useUpdateUser(userId || "");
+  const { data: user, isLoading } = useOrganizationUser(userId || "");
+  // const updateUser = useOrganizationUpdateUser(userId || "");
   const [form, setForm] = useState<UpdateUserDto>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -732,7 +891,7 @@ function EditUserModal({
     e.preventDefault();
     setSubmitting(true);
     try {
-      await updateUser.mutateAsync(form);
+      // await updateUser.mutateAsync(form);
       onClose();
       onUpdated();
     } finally {
@@ -871,19 +1030,18 @@ export default function UsersPage() {
   const [organizationFilter, setOrganizationFilter] = useState<string>("");
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const { user, isLoading: authLoading } = useAuth();
-  const canViewAll = !!user?.position?.position_access?.organizations?.view;
 
   // Call all hooks unconditionally at the top
   const {
     data: usersData,
     isLoading,
     isError,
-  } = useUsers() as {
+  } = useOrganizationUsers() as {
     data: UserWithPositions[] | undefined;
     isLoading: boolean;
     isError: boolean;
   };
-  const createUser = useCreateUser();
+  const createUser = useOrganizationCreateUser();
   const router = useRouter();
 
   // Permission checks
@@ -891,12 +1049,93 @@ export default function UsersPage() {
   const canCreate = !!user?.position?.position_access?.users?.create;
   const canUpdate = !!user?.position?.position_access?.users?.update;
 
-  // Flatten users: one row per user-position
+  const allOrganizations = useMemo(() => {
+    if (!usersData) return [];
+    const orgMap = new Map<
+      string,
+      { organization_id: string; organization_name: string }
+    >();
+
+    // Process ALL users in the dataset, including those with empty positions
+    usersData.forEach((user: UserWithPositions) => {
+      // Handle users with positions
+      if (user.positions && user.positions.length > 0) {
+        user.positions.forEach((position: PositionWithUnitOrg) => {
+          if (position.unit?.organization) {
+            const org = position.unit.organization;
+            if (!orgMap.has(org.organization_id)) {
+              orgMap.set(org.organization_id, {
+                organization_id: org.organization_id,
+                organization_name: org.organization_name,
+              });
+            }
+          }
+        });
+      }
+    });
+    return Array.from(orgMap.values());
+  }, [usersData]);
+
+  const allUnits = useMemo(() => {
+    if (!usersData) return [];
+    const unitMap = new Map<
+      string,
+      { unit_id: string; unit_name: string; organization_id: string }
+    >();
+
+    usersData.forEach((user: UserWithPositions) => {
+      if (user.positions && user.positions.length > 0) {
+        user.positions.forEach((position: PositionWithUnitOrg) => {
+          if (position.unit) {
+            const unit = position.unit;
+            if (!unitMap.has(unit.unit_id)) {
+              unitMap.set(unit.unit_id, {
+                unit_id: unit.unit_id,
+                unit_name: unit.unit_name,
+                organization_id: unit.organization.organization_id,
+              });
+            }
+          }
+        });
+      }
+    });
+    return Array.from(unitMap.values());
+  }, [usersData]);
+
+  const allPositions = useMemo(() => {
+    if (!usersData) return [];
+    const positionMap = new Map<
+      string,
+      { position_id: string; position_name: string; unit_id: string }
+    >();
+
+    usersData.forEach((user: UserWithPositions) => {
+      if (user.positions && user.positions.length > 0) {
+        user.positions.forEach((position: PositionWithUnitOrg) => {
+          if (!positionMap.has(position.position_id)) {
+            positionMap.set(position.position_id, {
+              position_id: position.position_id,
+              position_name: position.position_name,
+              unit_id: position.unit.unit_id,
+            });
+          }
+        });
+      }
+    });
+    return Array.from(positionMap.values());
+  }, [usersData]);
+
+  // Process users for display - this can be restricted based on permissions
   const users: UserRow[] = useMemo(() => {
     if (!usersData) return [];
     const rows: UserRow[] = [];
+
     usersData.forEach((user: UserWithPositions) => {
-      (user.positions || []).forEach((position: PositionWithUnitOrg) => {
+      // Apply any user-level restrictions here if needed
+      // For example, if you need to filter users based on current user's permissions:
+      // if (!canViewThisUser(user)) return; // Skip this user
+
+      if (!user.positions || user.positions.length === 0) {
         rows.push({
           user_id: user.user_id,
           first_name: user.first_name,
@@ -904,133 +1143,88 @@ export default function UsersPage() {
           email: user.email,
           user_gender: user.user_gender,
           user_phone: user.user_phone,
-          position_id: position.position_id,
-          position_name: position.position_name,
-          unit_id: position.unit?.unit_id,
-          unit_name: position.unit?.unit_name,
-          organization_id: position.unit?.organization?.organization_id,
-          organization_name: position.unit?.organization?.organization_name,
+          position_id: "",
+          position_name: "No Position Assigned",
+          unit_id: "",
+          unit_name: "No Unit Assigned",
+          organization_id: "",
+          organization_name: "No Organization Assigned",
         });
-      });
+      } else {
+        const firstPosition = user.positions[0];
+        const positionNames = user.positions
+          .map((p) => p.position_name)
+          .join(", ");
+        const unitNames = [
+          ...new Set(
+            user.positions.map((p) => p.unit?.unit_name).filter(Boolean)
+          ),
+        ].join(", ");
+        const orgNames = [
+          ...new Set(
+            user.positions
+              .map((p) => p.unit?.organization?.organization_name)
+              .filter(Boolean)
+          ),
+        ].join(", ");
+
+        rows.push({
+          user_id: user.user_id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          user_gender: user.user_gender,
+          user_phone: user.user_phone,
+          position_id: firstPosition.position_id,
+          position_name: positionNames,
+          unit_id: firstPosition.unit?.unit_id || "",
+          unit_name: unitNames || "No Unit Assigned",
+          organization_id:
+            firstPosition.unit?.organization?.organization_id || "",
+          organization_name: orgNames || "No Organization Assigned",
+        });
+      }
     });
     return rows;
   }, [usersData]);
 
-  // For dropdowns
-  const allUnits = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((u: UserRow) => {
-      if (u.unit_id && u.unit_name && !map.has(u.unit_id)) {
-        map.set(u.unit_id, u.unit_name);
-      }
-    });
-    return Array.from(map, ([unit_id, unit_name]: [string, string]) => ({
-      unit_id,
-      unit_name,
-    }));
-  }, [users]);
-
-  const allPositions = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((u: UserRow) => {
-      if (u.position_id && u.position_name && !map.has(u.position_id)) {
-        map.set(u.position_id, u.position_name);
-      }
-    });
-    return Array.from(
-      map,
-      ([position_id, position_name]: [string, string]) => ({
-        position_id,
-        position_name,
-      })
-    );
-  }, [users]);
-
-  // Compute all organizations from users
-  const allOrganizations = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((u: UserRow) => {
-      if (
-        u.organization_id &&
-        u.organization_name &&
-        !map.has(u.organization_id)
-      ) {
-        map.set(u.organization_id, u.organization_name);
-      }
-    });
-    return Array.from(
-      map,
-      ([organization_id, organization_name]: [string, string]) => ({
-        organization_id,
-        organization_name,
-      })
-    );
-  }, [users]);
-
-  // Filter units by selected organization
+  // Filter dropdown options based on selections
   const filteredUnits = useMemo(() => {
     if (!organizationFilter) return allUnits;
-    return users
-      .filter((u: UserRow) => u.organization_id === organizationFilter)
-      .reduce((acc: { unit_id: string; unit_name: string }[], u: UserRow) => {
-        if (
-          u.unit_id &&
-          u.unit_name &&
-          !acc.some((unit: { unit_id: string }) => unit.unit_id === u.unit_id)
-        ) {
-          acc.push({ unit_id: u.unit_id, unit_name: u.unit_name });
-        }
-        return acc;
-      }, []);
-  }, [users, allUnits, organizationFilter]);
+    return allUnits.filter(
+      (unit) => unit.organization_id === organizationFilter
+    );
+  }, [allUnits, organizationFilter]);
 
-  // Filter positions by selected unit
   const filteredPositions = useMemo(() => {
     if (!unitFilter) return allPositions;
-    return users
-      .filter((u: UserRow) => u.unit_id === unitFilter)
-      .reduce(
-        (acc: { position_id: string; position_name: string }[], u: UserRow) => {
-          if (
-            u.position_id &&
-            u.position_name &&
-            !acc.some(
-              (pos: { position_id: string }) =>
-                pos.position_id === u.position_id
-            )
-          ) {
-            acc.push({
-              position_id: u.position_id,
-              position_name: u.position_name,
-            });
-          }
-          return acc;
-        },
-        []
-      );
-  }, [users, allPositions, unitFilter]);
+    return allPositions.filter((position) => position.unit_id === unitFilter);
+  }, [allPositions, unitFilter]);
 
-  // Filtering
+  // Apply filters to displayed users
   const filteredUsers = useMemo(() => {
     let filtered = users;
-    if (!canViewAll && user?.organization?.organization_id) {
-      filtered = filtered.filter(
-        (u: UserRow) => u.organization_id === user.organization.organization_id
-      );
-    }
+
+    // Filter by organization
     if (organizationFilter) {
       filtered = filtered.filter(
         (u: UserRow) => u.organization_id === organizationFilter
       );
     }
+
+    // Filter by unit
     if (unitFilter) {
       filtered = filtered.filter((u: UserRow) => u.unit_id === unitFilter);
     }
+
+    // Filter by position
     if (positionFilter) {
       filtered = filtered.filter(
         (u: UserRow) => u.position_id === positionFilter
       );
     }
+
+    // Global search filter
     if (globalFilter) {
       const search = globalFilter.toLowerCase();
       filtered = filtered.filter((u: UserRow) =>
@@ -1052,15 +1246,7 @@ export default function UsersPage() {
       );
     }
     return filtered;
-  }, [
-    users,
-    canViewAll,
-    user,
-    organizationFilter,
-    unitFilter,
-    positionFilter,
-    globalFilter,
-  ]);
+  }, [users, organizationFilter, unitFilter, positionFilter, globalFilter]);
 
   const columns: ColumnDef<UserRow>[] = useMemo(
     () => [
@@ -1154,11 +1340,22 @@ export default function UsersPage() {
             Position
           </span>
         ),
-        cell: ({ row }) => (
-          <span className="px-2 py-0.5 text-[10px] bg-gray-100 text-gray-800 rounded-full">
-            {row.getValue("position_name")}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const positionName = row.getValue("position_name") as string;
+          const positions = positionName.split(", ");
+          return (
+            <div className="flex flex-wrap gap-1">
+              {positions.map((pos, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-0.5 text-[10px] bg-gray-100 text-gray-800 rounded-full"
+                >
+                  {pos}
+                </span>
+              ))}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "unit_name",
@@ -1167,11 +1364,22 @@ export default function UsersPage() {
             Unit
           </span>
         ),
-        cell: ({ row }) => (
-          <span className="px-2 py-0.5 text-[10px] bg-green-100 text-green-800 rounded-full">
-            {row.getValue("unit_name")}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const unitName = row.getValue("unit_name") as string;
+          const units = unitName.split(", ");
+          return (
+            <div className="flex flex-wrap gap-1">
+              {units.map((unit, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-0.5 text-[10px] bg-green-100 text-green-800 rounded-full"
+                >
+                  {unit}
+                </span>
+              ))}
+            </div>
+          );
+        },
       },
       {
         id: "actions",
@@ -1185,9 +1393,11 @@ export default function UsersPage() {
             <a
               href={`/dashboard/shared_pages/users/${row.original.user_id}`}
               className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
-              onClick={e => {
+              onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/dashboard/shared_pages/users/${row.original.user_id}`);
+                router.push(
+                  `/dashboard/shared_pages/users/${row.original.user_id}`
+                );
                 e.preventDefault();
               }}
               tabIndex={0}
@@ -1304,54 +1514,34 @@ export default function UsersPage() {
               </div>
               {/* Filters */}
               <div className="flex items-center gap-2 mb-2">
-                {canViewAll && (
-                  <select
-                    className="border rounded px-2 py-2 text-xs text-gray-700"
-                    value={organizationFilter}
-                    onChange={(e) => {
-                      setOrganizationFilter(e.target.value);
-                      setUnitFilter("");
-                      setPositionFilter("");
-                    }}
-                  >
-                    <option value="">All Organizations</option>
-                    {allOrganizations.map((org) => (
-                      <option
-                        key={org.organization_id}
-                        value={org.organization_id}
-                      >
-                        {org.organization_name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select
-                  className="border rounded px-2 py-2 text-xs text-gray-700"
-                  value={unitFilter}
-                  onChange={(e) => {
-                    setUnitFilter(e.target.value);
+                <SearchableDropdown
+                  options={allOrganizations}
+                  value={organizationFilter}
+                  onChange={(value) => {
+                    setOrganizationFilter(value);
+                    setUnitFilter("");
                     setPositionFilter("");
                   }}
-                >
-                  <option value="">All Units</option>
-                  {filteredUnits.map((unit) => (
-                    <option key={unit.unit_id} value={unit.unit_id}>
-                      {unit.unit_name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="border rounded px-2 py-2 text-xs text-gray-700"
+                  placeholder="All Organizations"
+                  className="w-48"
+                />
+                <SearchableDropdown
+                  options={filteredUnits}
+                  value={unitFilter}
+                  onChange={(value) => {
+                    setUnitFilter(value);
+                    setPositionFilter("");
+                  }}
+                  placeholder="All Units"
+                  className="w-48"
+                />
+                <SearchableDropdown
+                  options={filteredPositions}
                   value={positionFilter}
-                  onChange={(e) => setPositionFilter(e.target.value)}
-                >
-                  <option value="">All Positions</option>
-                  {filteredPositions.map((pos) => (
-                    <option key={pos.position_id} value={pos.position_id}>
-                      {pos.position_name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setPositionFilter}
+                  placeholder="All Positions"
+                  className="w-48"
+                />
                 <span className="text-xs text-gray-500">
                   {table.getFilteredRowModel().rows.length} of{" "}
                   {filteredUsers.length} users
@@ -1388,14 +1578,24 @@ export default function UsersPage() {
                         className="hover:bg-blue-50 cursor-pointer border-b border-gray-100 transition-colors"
                         onClick={() => {
                           setEditUserId(null);
-                          router.push(`/dashboard/shared_pages/users/${row.original.user_id}`);
+                          router.push(
+                            `/dashboard/shared_pages/users/${row.original.user_id}`
+                          );
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell
                             key={cell.id}
-                            className={`px-3 py-6 whitespace-nowrap text-xs text-gray-900 ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
-                            onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
+                            className={`px-3 py-6 whitespace-nowrap text-xs text-gray-900 ${
+                              cell.column.id === "actions"
+                                ? "!cursor-default group-hover:bg-transparent"
+                                : ""
+                            }`}
+                            onClick={
+                              cell.column.id === "actions"
+                                ? (e) => e.stopPropagation()
+                                : undefined
+                            }
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
@@ -1455,7 +1655,11 @@ export default function UsersPage() {
                 </Button>
               </div>
               <span className="text-xs text-gray-700">
-                Page <strong>{table.getState().pagination.pageIndex + 1} of {table.getPageCount()}</strong>
+                Page{" "}
+                <strong>
+                  {table.getState().pagination.pageIndex + 1} of{" "}
+                  {table.getPageCount()}
+                </strong>
               </span>
               <span className="text-xs text-gray-700">
                 Go to page:{" "}
@@ -1464,9 +1668,13 @@ export default function UsersPage() {
                   min={1}
                   max={table.getPageCount()}
                   value={table.getState().pagination.pageIndex + 1}
-                  onChange={e => {
-                    const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                    table.setPageIndex(Math.max(0, Math.min(page, table.getPageCount() - 1)));
+                  onChange={(e) => {
+                    const page = e.target.value
+                      ? Number(e.target.value) - 1
+                      : 0;
+                    table.setPageIndex(
+                      Math.max(0, Math.min(page, table.getPageCount() - 1))
+                    );
                   }}
                   className="w-16 border rounded px-2 py-1 text-xs"
                 />
@@ -1474,7 +1682,7 @@ export default function UsersPage() {
               <select
                 className="border rounded px-2 py-1 text-xs"
                 value={table.getState().pagination.pageSize}
-                onChange={e => {
+                onChange={(e) => {
                   table.setPageSize(Number(e.target.value));
                   table.setPageIndex(0);
                 }}

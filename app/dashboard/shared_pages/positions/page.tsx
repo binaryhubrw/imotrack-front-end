@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Plus, Info, UserPlus } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Plus, Info, UserPlus, Search, ChevronDown, X } from "lucide-react";
 import {
   useUnitPositions,
   useCreatePosition,
@@ -30,6 +30,163 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
+
+// Searchable Dropdown Component
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ [key: string]: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get the display field name (organization_name or unit_name)
+  const displayField =
+    options.length > 0
+      ? Object.keys(options[0]).find((key) => key.includes("name")) ||
+        Object.keys(options[0])[0]
+      : "";
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option[displayField]?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find((option) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    return option[idField] === value;
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: { [key: string]: string }) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    onChange(option[idField]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer bg-white hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
+          {selectedOption ? selectedOption[displayField] : placeholder}
+        </span>
+        <div className="flex items-center gap-1">
+          {value && (
+            <button
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={`Search ${placeholder.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? `No ${placeholder.toLowerCase()} found`
+                  : `No ${placeholder.toLowerCase()} available`}
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => {
+                const idField =
+                  Object.keys(option).find((key) => key.includes("id")) ||
+                  Object.keys(option)[0];
+                return (
+                  <div
+                    key={option[idField] || index}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                      option[idField] === value
+                        ? "bg-blue-100 text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {option[displayField]}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Results count */}
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length}{" "}
+              {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Assign User Modal Component
 function AssignUserModal({
@@ -62,7 +219,7 @@ function AssignUserModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
+
     try {
       await onAssign(email);
       setEmail("");
@@ -95,16 +252,27 @@ function AssignUserModal({
               disabled={isLoading}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            Assign a user to the position: <span className="font-medium text-gray-900">{positionName}</span>
+            Assign a user to the position:{" "}
+            <span className="font-medium text-gray-900">{positionName}</span>
           </p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -116,18 +284,22 @@ function AssignUserModal({
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (errors.email) {
-                  setErrors(prev => ({ ...prev, email: "" }));
+                  setErrors((prev) => ({ ...prev, email: "" }));
                 }
               }}
               placeholder="Enter user's email address"
-              className={`w-full ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              className={`w-full ${
+                errors.email
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                  : ""
+              }`}
               disabled={isLoading}
             />
             {errors.email && (
               <p className="text-red-500 text-sm mt-1">{errors.email}</p>
             )}
           </div>
-          
+
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -213,7 +385,10 @@ export default function PositionsPage() {
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [showCreate, setShowCreate] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState<{ id: string; name: string } | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Move pagination state to the top (before any early returns)
   const [pageIndex, setPageIndex] = useState(0);
@@ -238,7 +413,8 @@ export default function PositionsPage() {
   const canCreate = !!user?.position?.position_access?.positions?.create;
   const canViewOrganizations =
     !!user?.position?.position_access?.organizations?.view;
-  const canAssignUser = !!user?.position?.position_access?.positions?.assignUser;
+  const canAssignUser =
+    !!user?.position?.position_access?.positions?.assignUser;
 
   // Fetch all organizations (for dropdown) but only use if canViewOrganizations
   const allOrganizations = orgData?.organizations || [];
@@ -450,39 +626,35 @@ export default function PositionsPage() {
             <label className="text-sm font-medium text-gray-700">
               Organization:
             </label>
-            <select
+            <SearchableDropdown
+              options={organizations.map((org) => ({
+                organization_id: org.organization_id,
+                organization_name: org.organization_name,
+              }))}
               value={selectedOrgId}
-              onChange={(e) => {
-                setSelectedOrgId(e.target.value);
+              onChange={(value) => {
+                setSelectedOrgId(value);
                 setSelectedUnitId("");
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Organizations</option>
-              {organizations.map((org) => (
-                <option key={org.organization_id} value={org.organization_id}>
-                  {org.organization_name}
-                </option>
-              ))}
-            </select>
+              placeholder="All Organizations"
+              className="w-64"
+            />
           </div>
         )}
         {/* Always show unit dropdown for all units in org */}
         {orgUnits && orgUnits.length > 0 && (
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">Unit:</label>
-            <select
+            <SearchableDropdown
+              options={orgUnits.map((unit) => ({
+                unit_id: unit.unit_id,
+                unit_name: unit.unit_name,
+              }))}
               value={selectedUnitId}
-              onChange={(e) => setSelectedUnitId(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Units</option>
-              {orgUnits.map((unit) => (
-                <option key={unit.unit_id} value={unit.unit_id}>
-                  {unit.unit_name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedUnitId}
+              placeholder="All Units"
+              className="w-64"
+            />
           </div>
         )}
         {canCreate && selectedUnitId && isSelectedUnitActive && (
@@ -549,11 +721,21 @@ export default function PositionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold text-gray-900 px-3 py-4">#</TableHead>
-                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Position Name</TableHead>
-                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Status</TableHead>
-                    <TableHead className="font-semibold text-gray-900 px-3 py-4">Assigned User</TableHead>
-                    <TableHead className="font-semibold text-gray-900 px-3 py-4 text-right">Actions</TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">
+                      #
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">
+                      Position Name
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4">
+                      Assigned User
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-900 px-3 py-4 text-right">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -561,7 +743,11 @@ export default function PositionsPage() {
                     <TableRow
                       key={pos.position_id}
                       className="hover:bg-blue-50 border-b border-gray-100 cursor-pointer group"
-                      onClick={() => router.push(`/dashboard/shared_pages/positions/${pos.position_id}`)}
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/shared_pages/positions/${pos.position_id}`
+                        )
+                      }
                     >
                       <TableCell className="font-mono text-gray-500 px-3">
                         {pageIndex * pageSize + idx + 1}
@@ -571,8 +757,16 @@ export default function PositionsPage() {
                       </TableCell>
                       <TableCell className="px-3">
                         <Badge
-                          variant={pos.position_status === "ACTIVE" ? "default" : "secondary"}
-                          className={pos.position_status === "ACTIVE" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}
+                          variant={
+                            pos.position_status === "ACTIVE"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className={
+                            pos.position_status === "ACTIVE"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-600"
+                          }
                         >
                           {pos.position_status}
                         </Badge>
@@ -588,27 +782,32 @@ export default function PositionsPage() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">Unassigned</span>
+                          <span className="text-gray-400 italic">
+                            Unassigned
+                          </span>
                         )}
                       </TableCell>
                       <TableCell
                         className="text-right px-3 !cursor-default group-hover:bg-transparent"
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex items-center justify-end gap-2">
                           <Link
                             href={`/dashboard/shared_pages/positions/${pos.position_id}`}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-semibold"
                             title="View position"
-                            onClick={e => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             View
                           </Link>
                           {!pos.user && canAssignUser && (
                             <Button
-                              onClick={e => {
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                openAssignModal(pos.position_id, pos.position_name);
+                                openAssignModal(
+                                  pos.position_id,
+                                  pos.position_name
+                                );
                               }}
                               size="sm"
                               className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
@@ -651,7 +850,9 @@ export default function PositionsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                      onClick={() =>
+                        setPageIndex((p) => Math.min(pageCount - 1, p + 1))
+                      }
                       disabled={pageIndex >= pageCount - 1}
                     >
                       Next
@@ -666,7 +867,10 @@ export default function PositionsPage() {
                     </Button>
                   </div>
                   <span className="text-sm text-gray-600">
-                    Page <strong>{pageIndex + 1} of {pageCount}</strong>
+                    Page{" "}
+                    <strong>
+                      {pageIndex + 1} of {pageCount}
+                    </strong>
                   </span>
                   <span className="text-sm text-gray-600">
                     Go to page:{" "}
@@ -676,8 +880,12 @@ export default function PositionsPage() {
                       max={pageCount}
                       value={pageIndex + 1}
                       onChange={(e) => {
-                        const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                        setPageIndex(Math.max(0, Math.min(page, pageCount - 1)));
+                        const page = e.target.value
+                          ? Number(e.target.value) - 1
+                          : 0;
+                        setPageIndex(
+                          Math.max(0, Math.min(page, pageCount - 1))
+                        );
                       }}
                       className="w-16 border rounded px-2 py-1 text-sm"
                     />

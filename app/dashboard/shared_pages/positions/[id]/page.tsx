@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faEdit } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
-import { usePosition, useUpdatePosition, useUsers } from "@/lib/queries";
+import { usePosition, useUpdatePosition, useOrganizationUsers } from "@/lib/queries";
 import { useDeletePosition } from "@/lib/queries";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -71,7 +71,7 @@ export default function PositionDetailPage() {
   const { data: position, isLoading, isError, refetch } = usePosition(id);
   const updatePosition = useUpdatePosition();
   const deletePosition = useDeletePosition();
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useOrganizationUsers();
 
   // Permission checks
   const canView = !!user?.position?.position_access?.positions?.view;

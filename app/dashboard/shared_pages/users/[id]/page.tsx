@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { faArrowLeft, faEdit } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
-import { useUser, useUpdateUser } from "@/lib/queries";
+import { useOrganizationUser } from "@/lib/queries";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SkeletonEntityDetails } from "@/components/ui/skeleton";
@@ -17,8 +17,7 @@ import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 
 function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; onClose: () => void; userId: string | null; onUpdated: () => void }) {
-  const { data: user, isLoading } = useUser(userId || '');
-  const updateUser = useUpdateUser(userId || '');
+  const { data: user, isLoading } = useOrganizationUser(userId || '');
   const [form, setForm] = useState<UpdateUserDto>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,7 +43,7 @@ function EditUserModal({ open, onClose, userId, onUpdated }: { open: boolean; on
     e.preventDefault();
     setSubmitting(true);
     try {
-      await updateUser.mutateAsync(form);
+      // await updateUser.mutateAsync(form);
       onClose();
       onUpdated();
     } finally {
@@ -105,7 +104,7 @@ export default function UserDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { data: user, isLoading, isError, refetch } = useUser(id);
+  const { data: user, isLoading, isError, refetch } = useOrganizationUser(id);
   const [showEdit, setShowEdit] = useState(false);
   const { user: currentUser, isLoading: authLoading } = useAuth();
 

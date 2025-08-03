@@ -16,12 +16,8 @@ import {
   Plus,
   Search,
   X,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   Car,
-  Eye,
-  Edit,
 } from "lucide-react";
 import {
   Table,
@@ -311,23 +307,7 @@ export default function VehicleModelsPage() {
   const canUpdate = !!user?.position?.position_access?.vehicleModels?.update;
   const canDelete = !!user?.position?.position_access?.vehicleModels?.delete;
 
-  // Open edit modal and prefill form
-  const openEditModal = useCallback(
-    (model: VehicleModel) => {
-      if (!canUpdate) {
-        toast.error("You do not have permission to update vehicle models");
-        return;
-      }
-      setModelToEdit(model);
-      setEditForm({
-        vehicle_model_name: model.vehicle_model_name,
-        vehicle_type: model.vehicle_type as VehicleType,
-        manufacturer_name: model.manufacturer_name,
-      });
-      setEditModalOpen(true);
-    },
-    [canUpdate]
-  );
+
   const closeEditModal = useCallback(() => {
     setEditModalOpen(false);
     setModelToEdit(null);

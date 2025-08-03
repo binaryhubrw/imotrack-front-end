@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { Plus, Search, Filter, X, ChevronDown } from "lucide-react";
 import {
   useReservations,
   useMyReservations,
@@ -40,6 +40,163 @@ const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
 };
+
+// Searchable Dropdown Component (same as users page)
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ [key: string]: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get the display field name
+  const displayField =
+    options.length > 0
+      ? Object.keys(options[0]).find((key) => key.includes("name")) ||
+        Object.keys(options[0])[0]
+      : "";
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option[displayField]?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find((option) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    return option[idField] === value;
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: { [key: string]: string }) => {
+    const idField =
+      Object.keys(option).find((key) => key.includes("id")) ||
+      Object.keys(option)[0];
+    onChange(option[idField]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer bg-white hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
+          {selectedOption ? selectedOption[displayField] : placeholder}
+        </span>
+        <div className="flex items-center gap-1">
+          {value && (
+            <button
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder={`Search ${placeholder.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? `No ${placeholder.toLowerCase()} found`
+                  : `No ${placeholder.toLowerCase()} available`}
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => {
+                const idField =
+                  Object.keys(option).find((key) => key.includes("id")) ||
+                  Object.keys(option)[0];
+                return (
+                  <div
+                    key={option[idField] || index}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                      option[idField] === value
+                        ? "bg-blue-100 text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {option[displayField]}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Results count */}
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length}{" "}
+              {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CreateReservationModal({
   open,
@@ -524,6 +681,11 @@ export default function ReservationsPage() {
 
   // Always call hooks
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [showFilters, setShowFilters] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCancelReservation, setShowCancelReservation] = useState(false);
   const [showApproveRejectModal, setShowApproveRejectModal] = useState(false);
@@ -571,8 +733,9 @@ export default function ReservationsPage() {
 
   const filteredReservations = useMemo(() => {
     if (!reservations) return [];
-    return reservations.filter(
-      (reservation: Reservation) =>
+    return reservations.filter((reservation: Reservation) => {
+      // Text search filter
+      const matchesSearch = 
         reservation.reservation_purpose
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
@@ -587,9 +750,48 @@ export default function ReservationsPage() {
           .includes(searchTerm.toLowerCase()) ||
         reservation.user?.last_name
           ?.toLowerCase()
-          .includes(searchTerm.toLowerCase())
-    );
-  }, [reservations, searchTerm]);
+          .includes(searchTerm.toLowerCase());
+
+      // Status filter
+      const matchesStatus = statusFilter === "all" || reservation.reservation_status === statusFilter;
+
+      // Date filter
+      let matchesDate = true;
+      if (dateFilter !== "all" && reservation.departure_date) {
+        const departureDate = new Date(reservation.departure_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        switch (dateFilter) {
+          case "today":
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            matchesDate = departureDate >= today && departureDate < tomorrow;
+            break;
+          case "week":
+            const weekFromNow = new Date(today);
+            weekFromNow.setDate(weekFromNow.getDate() + 7);
+            matchesDate = departureDate >= today && departureDate < weekFromNow;
+            break;
+          case "month":
+            const monthFromNow = new Date(today);
+            monthFromNow.setMonth(monthFromNow.getMonth() + 1);
+            matchesDate = departureDate >= today && departureDate < monthFromNow;
+            break;
+          case "custom":
+            if (startDate && endDate) {
+              const start = new Date(startDate);
+              const end = new Date(endDate);
+              end.setHours(23, 59, 59, 999);
+              matchesDate = departureDate >= start && departureDate <= end;
+            }
+            break;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [reservations, searchTerm, statusFilter, dateFilter, startDate, endDate]);
 
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -701,27 +903,186 @@ export default function ReservationsPage() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <h1 className="text-xl font-bold text-[#0872b3]">Reservations</h1>
-        <div className="flex flex-1 gap-3 items-center justify-end">
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search reservations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-            />
-          </div>
-          {canCreate && (
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h1 className="text-xl font-bold text-[#0872b3]">Reservations</h1>
+          <div className="flex flex-1 gap-3 items-center justify-end">
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search reservations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+              />
+            </div>
             <Button
-              className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200"
-              onClick={() => setShowCreate(true)}
+              variant="outline"
+              className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+              onClick={() => setShowFilters(!showFilters)}
             >
-              <Plus className="w-4 h-4" /> Add Reservation
+              <Filter className="w-4 h-4" />
+              Filters
             </Button>
-          )}
+            {canCreate && (
+              <Button
+                className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200"
+                onClick={() => setShowCreate(true)}
+              >
+                <Plus className="w-4 h-4" /> Add Reservation
+              </Button>
+            )}
+          </div>
         </div>
+        
+        {/* Filter Panel */}
+        {showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+              {/* Status Filter */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <SearchableDropdown
+                  options={[
+                    { status_id: "all", status_name: "All Statuses" },
+                    ...Object.entries(RESERVATION_STATUSES).map(([key, value]) => ({
+                      status_id: key,
+                      status_name: value,
+                    })),
+                  ]}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  placeholder="All Statuses"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Date Filter */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date Range
+                </label>
+                <SearchableDropdown
+                  options={[
+                    { date_id: "all", date_name: "All Dates" },
+                    { date_id: "today", date_name: "Today" },
+                    { date_id: "week", date_name: "This Week" },
+                    { date_id: "month", date_name: "This Month" },
+                    { date_id: "custom", date_name: "Custom Range" },
+                  ]}
+                  value={dateFilter}
+                  onChange={setDateFilter}
+                  placeholder="All Dates"
+                  className="w-full"
+                />
+              </div>
+
+              {/* Custom Date Range */}
+              {dateFilter === "custom" && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Clear Filters */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setDateFilter("all");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Active Filters Summary */}
+        {(statusFilter !== "all" || dateFilter !== "all" || searchTerm) && (
+          <div className="mt-3 px-4 py-2 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-medium text-blue-800">Active Filters:</span>
+              {statusFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                  Status: {RESERVATION_STATUSES[statusFilter as ReservationStatus]}
+                  <button
+                    onClick={() => setStatusFilter("all")}
+                    className="ml-1 hover:text-blue-900"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {dateFilter !== "all" && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                  Date: {dateFilter === "custom" ? "Custom Range" : dateFilter.charAt(0).toUpperCase() + dateFilter.slice(1)}
+                  <button
+                    onClick={() => {
+                      setDateFilter("all");
+                      setStartDate("");
+                      setEndDate("");
+                    }}
+                    className="ml-1 hover:text-blue-900"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                  Search: &ldquo;{searchTerm}&rdquo;
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="ml-1 hover:text-blue-900"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setStatusFilter("all");
+                  setDateFilter("all");
+                  setStartDate("");
+                  setEndDate("");
+                  setSearchTerm("");
+                }}
+                className="text-blue-600 hover:text-blue-800 underline text-xs"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">

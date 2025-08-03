@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useUsers } from "@/lib/queries";
+import { useOrganizationUsers } from "@/lib/queries";
 import type { position_accesses } from "@/types/next-auth";
 
 // Define defaultPermissions at the top of the file
@@ -77,7 +77,7 @@ export function CreatePositionModal({
     user_ids: [] as string[],
   });
   const [submitting, setSubmitting] = useState(false);
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useOrganizationUsers();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>

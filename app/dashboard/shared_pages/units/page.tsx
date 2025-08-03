@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -12,7 +12,7 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Plus, Search, Filter } from "lucide-react";
+import { Download, Plus, Search, Filter, ChevronDown, X } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -90,10 +90,12 @@ function CreateUnitModal({
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleOrganizationChange = (organization_id: string) => {
+    setForm({ ...form, organization_id });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,20 +140,18 @@ function CreateUnitModal({
             className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
           />
           {canViewOrganizations ? (
-            <select
-              name="organization_id"
-              value={form.organization_id}
-              onChange={handleChange}
-              required
-              className="h-12 text-base px-4 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] rounded w-full"
-            >
-              <option value="">Select Organization</option>
-              {organizations.map((org) => (
-                <option key={org.organization_id} value={org.organization_id}>
-                  {org.organization_name}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Organization *
+              </label>
+              <SearchableDropdown
+                options={organizations}
+                value={form.organization_id}
+                onChange={handleOrganizationChange}
+                placeholder="Select Organization"
+                className="w-full"
+              />
+            </div>
           ) : null}
           <Button
             type="submit"
@@ -162,6 +162,147 @@ function CreateUnitModal({
           </Button>
         </form>
       </div>
+    </div>
+  );
+}
+
+// Searchable Dropdown Component
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ organization_id: string; organization_name: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option.organization_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find(
+    (option) => option.organization_id === value
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: {
+    organization_id: string;
+    organization_name: string;
+  }) => {
+    onChange(option.organization_id);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className="flex items-center justify-between w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer bg-white hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
+          {selectedOption ? selectedOption.organization_name : placeholder}
+        </span>
+        <div className="flex items-center gap-1">
+          {value && (
+            <button
+              onClick={handleClear}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-2 border-b border-gray-200">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search organizations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? "No organizations found"
+                  : "No organizations available"}
+              </div>
+            ) : (
+              filteredOptions.map((option) => (
+                <div
+                  key={option.organization_id}
+                  className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                    option.organization_id === value
+                      ? "bg-blue-100 text-blue-900"
+                      : "text-gray-900"
+                  }`}
+                  onClick={() => handleSelect(option)}
+                >
+                  {option.organization_name}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Results count */}
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length} organizations
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -334,9 +475,11 @@ export default function UnitsPage() {
           <a
             href={`/dashboard/shared_pages/units/${row.original.unit_id}`}
             className="text-blue-600 font-semibold hover:underline px-2 py-1 rounded"
-            onClick={e => {
+            onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/shared_pages/units/${row.original.unit_id}`);
+              router.push(
+                `/dashboard/shared_pages/units/${row.original.unit_id}`
+              );
               e.preventDefault();
             }}
             tabIndex={0}
@@ -397,7 +540,6 @@ export default function UnitsPage() {
         }}
       />
     );
-    
   }
   return (
     <div className="flex h-screen bg-gray-50">
@@ -455,21 +597,13 @@ export default function UnitsPage() {
                     <p className="m-0">Filter By</p>
                   </span>
                   {canViewOrganizations && (
-                    <select
-                      className="border rounded px-2 py-2 text-sm text-gray-700"
+                    <SearchableDropdown
+                      options={organizations}
                       value={selectedOrg}
-                      onChange={(e) => setSelectedOrg(e.target.value)}
-                    >
-                      <option value="">All Organizations</option>
-                      {organizations.map((org) => (
-                        <option
-                          key={org.organization_id}
-                          value={org.organization_id}
-                        >
-                          {org.organization_name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedOrg}
+                      placeholder="All Organizations"
+                      className="w-64"
+                    />
                   )}
                   <select
                     className="border rounded px-2 py-2 text-sm text-gray-700"
@@ -563,8 +697,16 @@ export default function UnitsPage() {
                             {row.getVisibleCells().map((cell) => (
                               <TableCell
                                 key={cell.id}
-                                className={`px-4 py-4 whitespace-nowrap text-sm ${cell.column.id === 'actions' ? '!cursor-default group-hover:bg-transparent' : ''}`}
-                                onClick={cell.column.id === 'actions' ? e => e.stopPropagation() : undefined}
+                                className={`px-4 py-4 whitespace-nowrap text-sm ${
+                                  cell.column.id === "actions"
+                                    ? "!cursor-default group-hover:bg-transparent"
+                                    : ""
+                                }`}
+                                onClick={
+                                  cell.column.id === "actions"
+                                    ? (e) => e.stopPropagation()
+                                    : undefined
+                                }
                               >
                                 {flexRender(
                                   cell.column.columnDef.cell,
