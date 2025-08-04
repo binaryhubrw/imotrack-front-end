@@ -302,7 +302,7 @@ export default function ReservationDetailPage() {
       case "ACCEPTED":
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "REJECTED":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "CANCELLED":
       case "CANCELED":
         return "bg-gray-100 text-gray-800 border-gray-200";
@@ -380,7 +380,7 @@ export default function ReservationDetailPage() {
           {canCancel &&
             (reservation.reservation_status === 'UNDER_REVIEW' || reservation.reservation_status === 'APPROVED') && (
               <Button
-                className="bg-red-600 text-white hover:bg-red-700"
+                className="bg-orange-600 text-white hover:bg-orange-700"
                 onClick={() => setShowCancelModal(true)}
                 disabled={cancelReservation.isPending}
               >
@@ -595,7 +595,7 @@ export default function ReservationDetailPage() {
                   const isOccupied =
                     reservedVehicle.vehicle.vehicle_status === "OCCUPIED";
                   const cardColor = isOccupied
-                    ? "bg-red-50 border-red-200"
+                    ? "bg-orange-50 border-orange-200"
                     : "bg-green-50 border-green-200";
                   const canReportIssueForThisVehicle =
                     canReportIssue &&
@@ -620,7 +620,7 @@ export default function ReservationDetailPage() {
                         <Badge
                           className={`text-xs ${
                             isOccupied
-                              ? "bg-red-100 text-red-800"
+                              ? "bg-orange-100 text-orange-800"
                               : "bg-green-100 text-green-800"
                           }`}
                         >
@@ -689,7 +689,7 @@ export default function ReservationDetailPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                            className="w-full text-orange-500 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
                             onClick={() => handleReportIssue(reservedVehicle)}
                           >
                             <AlertCircle className="w-4 h-4 mr-2" />
@@ -769,7 +769,7 @@ export default function ReservationDetailPage() {
         <DialogContent className="sm:max-w-[500px] bg-white border border-gray-200 shadow-xl">
           <DialogHeader className="pb-4 border-b border-gray-200">
             <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-              <AlertCircle className="w-6 h-6 text-red-500" />
+              <AlertCircle className="w-6 h-6 text-orange-500" />
               Report Vehicle Issue
             </DialogTitle>
           </DialogHeader>
@@ -811,7 +811,7 @@ export default function ReservationDetailPage() {
                     issue_title: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
             </div>
 
@@ -833,7 +833,7 @@ export default function ReservationDetailPage() {
                     issue_description: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
               />
             </div>
           </div>
@@ -853,7 +853,7 @@ export default function ReservationDetailPage() {
                 !issueForm.issue_title.trim() ||
                 !issueForm.issue_description.trim()
               }
-              className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed"
             >
               {createIssue.isPending ? (
                 <div className="flex items-center gap-2">
@@ -987,7 +987,7 @@ export default function ReservationDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reason {approveRejectAction === 'REJECTED' && <span className="text-red-500">*</span>}
+                  Reason {approveRejectAction === 'REJECTED' && <span className="text-orange-500">*</span>}
                 </label>
                 <textarea
                   value={approveRejectReason}
@@ -1042,7 +1042,7 @@ export default function ReservationDetailPage() {
             <form onSubmit={(e) => { e.preventDefault(); handleCancel(); }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reason <span className="text-red-500">*</span>
+                  Reason <span className="text-orange-500">*</span>
                 </label>
                 <textarea
                   value={cancelReason}
@@ -1066,7 +1066,7 @@ export default function ReservationDetailPage() {
                 <button
                   type="submit"
                   disabled={cancelReservation.isPending || !cancelReason.trim()}
-                  className="flex-1 px-4 py-2 text-white bg-red-600 border border-red-600 rounded-md hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 text-white bg-orange-600 border border-orange-600 rounded-md hover:bg-orange-700 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {cancelReservation.isPending ? 'Canceling...' : 'Submit'}
                 </button>
@@ -1119,7 +1119,7 @@ export default function ReservationDetailPage() {
                       <button
                         type="button"
                         onClick={() => removeVehicleAssignment(index)}
-                        className="text-red-500 hover:text-red-700 text-sm"
+                        className="text-orange-500 hover:text-orange-700 text-sm"
                       >
                         Remove
                       </button>
