@@ -1,6 +1,7 @@
 services:
   imotrack-frontend:
-    build: .
+    # build: .
+    image: ghcr.io/programmerdatch/imotrack-frontend:latest
     ports:
       - "3000:3000"
     env_file:
