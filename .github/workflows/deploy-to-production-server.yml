@@ -3,12 +3,12 @@ name: publish
 on:
   push:
     branches:
-      - main
+      - production
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: programmerdatch/imotrack-frontend:latest
-  BRANCH_NAME: main
+  BRANCH_NAME: production
 
 jobs:
 
