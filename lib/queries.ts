@@ -871,7 +871,7 @@ export const useOrganizationCreateUser = () => {
   });
 };
 
-export const useUpdateOrganizationUser = (user_id: string) => {
+export const useOrganizationUpdateUser = (user_id: string) => {
   const queryClient = useQueryClient();
   return useMutation<UserWithPositions, Error, UpdateUserDto>({
     mutationFn: async (updates) => {

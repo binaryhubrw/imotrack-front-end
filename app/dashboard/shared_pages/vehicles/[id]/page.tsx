@@ -233,7 +233,7 @@ export default function VehicleDetailPage() {
                 className="bg-red-400 hover:bg-red-500"
               >
                 <Ban className="w-4 h-4 mr-2" />
-                DisActivate Issue
+                DisActivate Vehicle
               </Button>
             )}
           </div>
