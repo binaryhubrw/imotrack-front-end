@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy": "docker build . -t ghcr.io/programmerdatch/imotrack-frontend:latest && docker push ghcr.io/programmerdatch/imotrack-frontend:latest"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
