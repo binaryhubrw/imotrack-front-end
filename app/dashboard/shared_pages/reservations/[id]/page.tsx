@@ -17,8 +17,21 @@ import {
   CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useReservation, useUpdateReservation, useCancelReservation, useUpdateReservationReason, useReservationVehiclesOdometerAssignation, useCompleteReservation, useAssignMultipleVehicles, useVehicles, useCreateVehicleIssue } from "@/lib/queries";
-import { SkeletonEntityDetails, SkeletonReservationCard } from "@/components/ui/skeleton";
+import {
+  useReservation,
+  useUpdateReservation,
+  useCancelReservation,
+  useUpdateReservationReason,
+  useReservationVehiclesOdometerAssignation,
+  useCompleteReservation,
+  useAssignMultipleVehicles,
+  useVehicles,
+  useCreateVehicleIssue,
+} from "@/lib/queries";
+import {
+  SkeletonEntityDetails,
+  SkeletonReservationCard,
+} from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
@@ -49,19 +62,20 @@ export default function ReservationDetailPage() {
   // Modal states - must be before early returns
   const [showAcceptRejectModal, setShowAcceptRejectModal] = useState(false);
   const [showAssignVehiclesModal, setShowAssignVehiclesModal] = useState(false);
-  const [showApproveWithOdometerModal, setShowApproveWithOdometerModal] = useState(false);
+  const [showApproveWithOdometerModal, setShowApproveWithOdometerModal] =
+    useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showEditReasonModal, setShowEditReasonModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<ReservedVehicle | null>(null);
-  const [vehicleToComplete, setVehicleToComplete] = useState<ReservedVehicle | null>(null);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<ReservedVehicle | null>(null);
+  const [vehicleToComplete, setVehicleToComplete] =
+    useState<ReservedVehicle | null>(null);
 
   // Show loading state while data is being fetched
   if (isLoading || authLoading) {
-    return (
-      <SkeletonReservationCard />
-    );
+    return <SkeletonReservationCard />;
   }
 
   // Show error state if data fetch failed
@@ -81,156 +95,205 @@ export default function ReservationDetailPage() {
   }
 
   // Permission checks
+  //User//requester checks
+  const canCreate = !!user?.position?.position_access?.reservations?.create;
+  const canViewOwn = !!user?.position?.position_access?.reservations?.viewOwn;
+  const canCancel = !!user?.position?.position_access?.reservations?.cancel;
+  const canUpdateReason =
+    !!user?.position?.position_access?.reservations?.updateReason;
+
+  //Fleet-manager//Approver checks
   const canView = !!user?.position?.position_access?.reservations?.view;
   const canUpdate = !!user?.position?.position_access?.reservations?.update;
   // const canDelete = !!user?.position?.position_access?.reservations?.delete;
+  // const canApprove = !!user?.position?.position_access?.reservations?.approve;
+  // const canAssignVehicle =
+  //   !!user?.position?.position_access?.reservations?.assignVehicle;
+  const canComplete = !!user?.position?.position_access?.reservations?.complete;
 
-  // Determine which actions to show based on reservation status and user permissions
-  // const shouldShowAcceptReject = reservation?.reservation_status === 'UNDER_REVIEW' && canUpdate;
-  // const shouldShowApproveWithOdometer = reservation?.reservation_status === 'ACCEPTED' && canUpdate;
-  const shouldShowComplete = reservation?.reservation_status === 'APPROVED' && canUpdate;
-  // const shouldShowCancel = reservation?.reservation_status !== 'COMPLETED' && reservation?.reservation_status !== 'CANCELLED' && canUpdate;
-  // const shouldShowEditReason = reservation?.reservation_status === 'CANCELLED' && canUpdate;
-  const shouldShowReportIssue = reservation?.reservation_status !== 'COMPLETED' && canUpdate;
+  // Check if user can access this reservation
+  const isOwner = reservation?.user?.user_id === user?.user?.first_name;
+  const canAccessReservation = 
+    canView || // Fleet manager can view all
+    (canViewOwn && isOwner) || // Requester can view own
+    canCreate; // Anyone who can create can view
+
+  // Early return if user cannot access this reservation
+  if (!canAccessReservation) {
+    return <NoPermissionUI resource="reservations" />;
+  }
+
+  const shouldShowComplete =
+    reservation?.reservation_status === "APPROVED" && 
+    (canComplete || canUpdate);
+
+  const shouldShowReportIssue =
+    ["APPROVED", "ACCEPTED"].includes(reservation?.reservation_status || "") && 
+    (canUpdate || (isOwner && (canViewOwn || canCancel || canUpdateReason || canCreate)));
 
   // Action handlers
-  const handleAcceptReject = async (action: 'ACCEPT' | 'REJECT', reason: string, selectedVehicleIds?: string[]) => {
+  const handleAcceptReject = async (
+    action: "ACCEPT" | "REJECT",
+    reason: string,
+    selectedVehicleIds?: string[]
+  ) => {
     if (!reservation) return;
-    
+
     try {
-      if (action === 'ACCEPT') {
+      if (action === "ACCEPT") {
         // Assign vehicles which automatically sets status to ACCEPTED
         if (selectedVehicleIds && selectedVehicleIds.length > 0) {
           await assignMultipleVehicles.mutateAsync({
             reservationId: reservation.reservation_id,
-            vehicleIds: selectedVehicleIds
+            vehicleIds: selectedVehicleIds,
           });
         } else {
           // If no vehicles selected, just update status to ACCEPTED
           await updateReservation.mutateAsync({
             id: reservation.reservation_id,
             dto: {
-              status: 'ACCEPTED',
-              reason: reason || 'Reservation accepted'
-            }
-          });
+              status: "ACCEPTED",
+              reason: reason || "Reservation accepted",
+      },
+    });
         }
       } else {
         // For rejection, just update the status
         await updateReservation.mutateAsync({
           id: reservation.reservation_id,
       dto: {
-            status: 'REJECTED',
-            reason: reason
-          }
-        });
+            status: "REJECTED",
+            reason: reason,
+      },
+    });
       }
-      
+
       // Close modal immediately after success
       setShowAcceptRejectModal(false);
     } catch (error) {
-      console.error('Error handling accept/reject:', error);
+      console.error("Error handling accept/reject:", error);
     }
   };
 
-  const handleAssignVehicles = async (vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }>) => {
+  const handleAssignVehicles = async (
+    vehicles: Array<{
+      vehicle_id: string;
+      starting_odometer: number;
+      fuel_provided: number;
+    }>
+  ) => {
     if (!reservation) return;
     
     try {
       // Update vehicles with odometer and fuel data (this should also update status to ACCEPTED)
       await assignVehicleOdometer.mutateAsync({
       id: reservation.reservation_id,
-        dto: { vehicles }
+        dto: { vehicles },
       });
-      
+
       // Close modal immediately after success
       setShowAssignVehiclesModal(false);
     } catch (error) {
-      console.error('Error assigning vehicles:', error);
+      console.error("Error assigning vehicles:", error);
     }
   };
 
-  const handleApproveWithOdometer = async (vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }>) => {
+  const handleApproveWithOdometer = async (
+    vehicles: Array<{
+      vehicle_id: string;
+      starting_odometer: number;
+      fuel_provided: number;
+    }>
+  ) => {
     if (!reservation) return;
-    
+
     try {
       // Update vehicles with odometer and fuel data (this should also update status to APPROVED)
       await assignVehicleOdometer.mutateAsync({
       id: reservation.reservation_id,
-        dto: { vehicles }
+        dto: { vehicles },
       });
-      
+
       // Close modal immediately after success
       setShowApproveWithOdometerModal(false);
     } catch (error) {
-      console.error('Error approving with odometer:', error);
+      console.error("Error approving with odometer:", error);
     }
   };
 
-  const handleCompleteReservation = async (reservedVehicleId: string, returnedOdometer: number) => {
+  const handleCompleteReservation = async (
+    reservedVehicleId: string,
+    returnedOdometer: number
+  ) => {
     if (!reservation) return;
     
     try {
       await completeReservation.mutateAsync({
         reservedVehicleId,
-        dto: { returned_odometer: returnedOdometer }
+        dto: { returned_odometer: returnedOdometer },
       });
-      
+
       // Close modal immediately after success
       setShowCompleteModal(false);
       setVehicleToComplete(null);
     } catch (error) {
-      console.error('Error completing reservation:', error);
+      console.error("Error completing reservation:", error);
     }
   };
 
   const handleCancelReservation = async (reason: string) => {
     if (!reservation) return;
-    
+
     try {
       await cancelReservation.mutateAsync({
         id: reservation.reservation_id,
-        dto: { reason }
+        dto: { reason },
       });
-      
+
       // Close modal immediately after success
       setShowCancelModal(false);
     } catch (error) {
-      console.error('Error cancelling reservation:', error);
+      console.error("Error cancelling reservation:", error);
     }
   };
 
   const handleEditReason = async (reason: string) => {
     if (!reservation) return;
-    
+
     try {
     await updateReservationReason.mutateAsync({
       id: reservation.reservation_id,
-        dto: { reason }
+        dto: { reason },
     });
-      
+
       // Close modal immediately after success
     setShowEditReasonModal(false);
     } catch (error) {
-      console.error('Error updating reason:', error);
+      console.error("Error updating reason:", error);
     }
   };
 
-  const handleReportIssue = async (issueData: { issue_title: string; issue_description: string; reserved_vehicle_id: string; issue_date: string }) => {
+  const handleReportIssue = async (issueData: {
+    issue_title: string;
+    issue_description: string;
+    reserved_vehicle_id: string;
+    issue_date: string;
+  }) => {
     try {
       await createVehicleIssue.mutateAsync(issueData);
       setShowReportIssueModal(false);
       setSelectedVehicle(null);
-      router.push('/dashboard/shared_pages/vehicle-issues');
+      router.push("/dashboard/shared_pages/vehicle-issues");
     } catch (error) {
-      console.error('Error reporting issue:', error);
+      console.error("Error reporting issue:", error);
     }
   };
 
   // Modal close handlers
   const onCloseAcceptReject = () => setShowAcceptRejectModal(false);
   const onCloseAssignVehicles = () => setShowAssignVehiclesModal(false);
-  const onCloseApproveWithOdometer = () => setShowApproveWithOdometerModal(false);
+  const onCloseApproveWithOdometer = () =>
+    setShowApproveWithOdometerModal(false);
   const onCloseComplete = () => {
     setShowCompleteModal(false);
     setVehicleToComplete(null);
@@ -241,10 +304,6 @@ export default function ReservationDetailPage() {
     setShowReportIssueModal(false);
     setSelectedVehicle(null);
   };
-
-  if (!canView) {
-    return <NoPermissionUI resource="reservations" />;
-  }
 
   if (isLoading) {
     return <SkeletonEntityDetails />;
@@ -328,7 +387,9 @@ export default function ReservationDetailPage() {
           reservation={reservation}
           onOpenAcceptRejectModal={() => setShowAcceptRejectModal(true)}
           onOpenAssignVehiclesModal={() => setShowAssignVehiclesModal(true)}
-          onOpenApproveWithOdometerModal={() => setShowApproveWithOdometerModal(true)}
+          onOpenApproveWithOdometerModal={() =>
+            setShowApproveWithOdometerModal(true)
+          }
           onOpenCancelModal={() => setShowCancelModal(true)}
           onOpenEditReasonModal={() => setShowEditReasonModal(true)}
           isApproveRejectLoading={updateReservation.isPending}
@@ -464,7 +525,7 @@ export default function ReservationDetailPage() {
                   Email
                 </div>
                 <div className="font-medium text-gray-900">
-                  {reservation.user?.auth?.email || 'N/A'}
+                  {reservation.user?.auth?.email || "N/A"}
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -472,7 +533,7 @@ export default function ReservationDetailPage() {
                   User Telephone
                 </div>
                 <div className="font-medium text-gray-900 text-sm">
-                  {reservation.user?.user_phone || 'N/A'}
+                  {reservation.user?.user_phone || "N/A"}
                 </div>
               </div>
             </div>
@@ -487,15 +548,18 @@ export default function ReservationDetailPage() {
               </h2>
             </div>
 
-            {reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0 ? (
+            {reservation.reserved_vehicles &&
+            reservation.reserved_vehicles.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {reservation.reserved_vehicles.map((reservedVehicle: ReservedVehicle) => {
-                  const isOccupied = reservedVehicle.vehicle.vehicle_status === "OCCUPIED";
+                {reservation.reserved_vehicles.map(
+                  (reservedVehicle: ReservedVehicle) => {
+                  const isOccupied =
+                    reservedVehicle.vehicle.vehicle_status === "OCCUPIED";
                   const cardColor = isOccupied
                     ? "bg-orange-50 border-orange-200"
                     : "bg-green-50 border-green-200";
-                  const canReportIssueForThisVehicle = shouldShowReportIssue;
-                  const canCompleteThisReservation = shouldShowComplete;
+                    const canReportIssueForThisVehicle = shouldShowReportIssue;
+                    const canCompleteThisReservation = shouldShowComplete;
 
                   return (
                     <div
@@ -579,10 +643,10 @@ export default function ReservationDetailPage() {
                             variant="outline"
                             size="sm"
                             className="w-full text-orange-500 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
-                            onClick={() => {
-                              setSelectedVehicle(reservedVehicle);
-                              setShowReportIssueModal(true);
-                            }}
+                              onClick={() => {
+                                setSelectedVehicle(reservedVehicle);
+                                setShowReportIssueModal(true);
+                              }}
                           >
                             <AlertCircle className="w-4 h-4 mr-2" />
                             Report Issue
@@ -598,7 +662,7 @@ export default function ReservationDetailPage() {
                             size="sm"
                             className="w-full text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300"
                             onClick={() => {
-                              setVehicleToComplete(reservedVehicle);
+                                setVehicleToComplete(reservedVehicle);
                               setShowCompleteModal(true);
                             }}
                           >
@@ -609,7 +673,8 @@ export default function ReservationDetailPage() {
                       )}
                     </div>
                   );
-                })}
+                  }
+                )}
               </div>
             ) : (
               <div className="text-center py-12 text-gray-500">
@@ -686,7 +751,9 @@ export default function ReservationDetailPage() {
         isAcceptRejectLoading={updateReservation.isPending}
         isAssignVehiclesLoading={assignVehicleOdometer.isPending}
         isApproveWithOdometerLoading={assignVehicleOdometer.isPending}
-        isCompleteLoading={completeReservation.isPending || updateReservation.isPending}
+        isCompleteLoading={
+          completeReservation.isPending || updateReservation.isPending
+        }
         isCancelLoading={cancelReservation.isPending}
         isEditReasonLoading={updateReservationReason.isPending}
         isReportIssueLoading={createVehicleIssue.isPending}

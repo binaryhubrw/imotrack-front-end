@@ -1302,7 +1302,7 @@ export const useCancelReservation = () => {
   return useMutation<Reservation, Error, { id: string; dto: { reason: string } }>({
     mutationFn: async ({ id, dto }) => {
       console.log('Cancelling reservation:', { id, dto });
-      const { data } = await api.patch<{ message: string; data: Reservation }>(
+      const { data } = await api.post<{ message: string; data: Reservation }>(
         `/v2/reservations/${id}/cancel`,
         dto,
         {
@@ -1345,7 +1345,7 @@ export const useUpdateReservation = () => {
     mutationFn: async ({ id, dto }) => {
       console.log('Updating reservation:', { id, dto });
       const { data } = await api.patch<{ message: string; data: Reservation }>(
-        `/v2/reservations/${id}`,
+        `/v2/reservations/${id}/status`,
         dto,
         {
           headers: { 'Content-Type': 'application/json' },
