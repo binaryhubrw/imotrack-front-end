@@ -245,7 +245,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
         activities.push({
           id: `vehicle_${vehicle.vehicle_id}`,
           type: "vehicle_added",
-          message: `Vehicle ${vehicle.plate_number} (${vehicle.vehicle_model}) added to fleet`,
+          message: `Vehicle ${vehicle.plate_number} (${vehicle.vehicle_model?.vehicle_type || 'N/A'}) added to fleet`,
           timestamp: vehicle.created_at,
         });
       });
