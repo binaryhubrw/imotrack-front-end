@@ -888,14 +888,8 @@ export default function ReservationsPage() {
             </div>
             <h3 className="text-3xl font-bold text-gray-800 mb-3">No Reservations Found</h3>
             <p className="text-lg text-gray-600 mb-6 text-center max-w-md leading-relaxed">
-              There are no reservations matching your criteria. Try adjusting your filters or create a new reservation.
+              There are no reservations matching your criteria. Try adjusting your filters or create a new reservation at top right.
             </p>
-            {canCreate && (
-              <button className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3">
-                <Plus className="w-5 h-5" />
-                Create New Reservation
-              </button>
-            )}
           </div>
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
