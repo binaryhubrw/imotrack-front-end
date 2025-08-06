@@ -20,7 +20,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-import { VehicleType } from "@/types/enums";
+import { ModelType } from "@/types/enums";
 import { Ban } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
@@ -41,7 +41,7 @@ export default function VehicleModelDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editForm, setEditForm] = useState({
     vehicle_model_name: '',
-    vehicle_type: undefined as VehicleType | undefined,
+    vehicle_type: undefined as ModelType | undefined,
     manufacturer_name: '',
     vehicle_capacity: 0,
   });
@@ -74,7 +74,7 @@ export default function VehicleModelDetailPage() {
     if (model) {
       setEditForm({
         vehicle_model_name: model.vehicle_model_name || '',
-        vehicle_type: (model.vehicle_type as VehicleType | undefined),
+        vehicle_type: (model.vehicle_type as ModelType | undefined),
         manufacturer_name: model.manufacturer_name || '',
         vehicle_capacity: model.vehicle_capacity || 0,
       });
@@ -91,7 +91,7 @@ export default function VehicleModelDetailPage() {
     if (!model) return;
     setEditForm({
       vehicle_model_name: model.vehicle_model_name || '',
-      vehicle_type: (model.vehicle_type as VehicleType | undefined),
+      vehicle_type: (model.vehicle_type as ModelType | undefined),
       manufacturer_name: model.manufacturer_name || '',
       vehicle_capacity: model.vehicle_capacity || 0,
     });
@@ -140,7 +140,7 @@ export default function VehicleModelDetailPage() {
     }
   };
 
-  const getVehicleTypeLabel = (type: string) => {
+  const getModelTypeLabel = (type: string) => {
     return VEHICLE_TYPE_OPTIONS.find(option => option.value === type)?.label || type;
   };
 
@@ -235,7 +235,7 @@ export default function VehicleModelDetailPage() {
                 <select
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
                   value={editForm.vehicle_type}
-                  onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value as VehicleType }))}
+                  onChange={e => setEditForm(f => ({ ...f, vehicle_type: e.target.value as ModelType }))}
                   required
                 >
                   <option value="">Select vehicle type</option>
@@ -297,7 +297,7 @@ export default function VehicleModelDetailPage() {
                 <h1 className="text-2xl font-bold">Vehicle Model Details</h1>
               </div>
               <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                {getVehicleTypeLabel(model.vehicle_type)}
+                {getModelTypeLabel(model.vehicle_type)}
               </div>
             </div>
           </div>
@@ -313,7 +313,7 @@ export default function VehicleModelDetailPage() {
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Type</div>
                 <div className="font-medium text-gray-900">
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {getVehicleTypeLabel(model.vehicle_type)}
+                    {getModelTypeLabel(model.vehicle_type)}
                   </span>
                 </div>
               </div>
@@ -347,7 +347,7 @@ export default function VehicleModelDetailPage() {
                       {model.manufacturer_name} {model.vehicle_model_name}
                     </div>
                     <div className="text-blue-700 text-sm">
-                      This is a {getVehicleTypeLabel(model.vehicle_type).toLowerCase()} model manufactured by {model.manufacturer_name}.
+                      This is a {getModelTypeLabel(model.vehicle_type).toLowerCase()} model manufactured by {model.manufacturer_name}.
                     </div>
                   </div>
                 </div>
