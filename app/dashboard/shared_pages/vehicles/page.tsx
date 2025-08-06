@@ -52,7 +52,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
-import { TransmissionMode, VehicleType } from "@/types/enums";
+import { TransmissionMode } from "@/types/enums";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 
@@ -225,10 +225,8 @@ function SearchableDropdown({
   );
 }
 
-// Extend CreateVehicleDto to make vehicle_type optional for form state
-type CreateVehicleDto = Omit<BaseCreateVehicleDto, "vehicle_type"> & {
-  vehicle_type?: string;
-};
+// Use the base CreateVehicleDto type
+type CreateVehicleDto = BaseCreateVehicleDto;
 
 // Edit Vehicle Modal Component
 function EditVehicleModal({
@@ -253,11 +251,9 @@ function EditVehicleModal({
     if (vehicle) {
       setForm({
         plate_number: vehicle.plate_number,
-        vehicle_type: vehicle.vehicle_type as string,
         transmission_mode: vehicle.transmission_mode as string,
         vehicle_model_id: vehicle.vehicle_model_id,
         vehicle_year: vehicle.vehicle_year,
-        vehicle_capacity: vehicle.vehicle_capacity,
         energy_type: vehicle.energy_type,
         organization_id: vehicle.organization_id,
         vehicle_photo: undefined,
@@ -278,8 +274,6 @@ function EditVehicleModal({
     ) {
       newErrors.vehicle_year = "Invalid year";
     }
-    if (form.vehicle_capacity < 1)
-      newErrors.vehicle_capacity = "Capacity must be at least 1";
     if (!form.energy_type.trim())
       newErrors.energy_type = "Energy type is required";
     setErrors(newErrors);
@@ -361,23 +355,6 @@ function EditVehicleModal({
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Type *
-                </label>
-                <select
-                  name="vehicle_type"
-                  value={form.vehicle_type}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  {Object.values(VehicleType).map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -431,7 +408,7 @@ function EditVehicleModal({
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
               Technical Details
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Year *
@@ -448,24 +425,6 @@ function EditVehicleModal({
                 {errors.vehicle_year && (
                   <p className="text-red-500 text-xs mt-1">
                     {errors.vehicle_year}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Capacity *
-                </label>
-                <Input
-                  name="vehicle_capacity"
-                  type="number"
-                  value={form.vehicle_capacity}
-                  onChange={handleChange}
-                  min="1"
-                  className={errors.vehicle_capacity ? "border-red-500" : ""}
-                />
-                {errors.vehicle_capacity && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.vehicle_capacity}
                   </p>
                 )}
               </div>
@@ -555,11 +514,9 @@ function CreateVehicleModal({
     transmission_mode: "",
     vehicle_model_id: "",
     vehicle_year: 0,
-    vehicle_capacity: 0,
     energy_type: "",
     organization_id: organizationId,
     vehicle_photo: undefined,
-    vehicle_type: "", // not used, but required by type
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -584,8 +541,6 @@ function CreateVehicleModal({
       form.vehicle_year > new Date().getFullYear() + 1
     )
       newErrors.vehicle_year = "Invalid year";
-    if (form.vehicle_capacity < 1)
-      newErrors.vehicle_capacity = "Capacity must be at least 1";
     if (!form.energy_type.trim())
       newErrors.energy_type = "Energy type is required";
     if (!form.organization_id)
@@ -636,11 +591,9 @@ function CreateVehicleModal({
       transmission_mode: "",
       vehicle_model_id: "",
       vehicle_year: 0,
-      vehicle_capacity: 0,
       energy_type: "",
       organization_id: organizationId,
       vehicle_photo: undefined,
-      vehicle_type: "",
     });
     setErrors({});
     setTouched({});
@@ -779,32 +732,7 @@ function CreateVehicleModal({
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Capacity <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    name="vehicle_capacity"
-                    type="number"
-                    placeholder="Enter passenger capacity"
-                    value={form.vehicle_capacity || ""}
-                    onChange={handleChange}
-                    min="1"
-                    className={
-                      errors.vehicle_capacity && touched.vehicle_capacity
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                        : ""
-                    }
-                    disabled={isLoading}
-                  />
-                  {errors.vehicle_capacity && touched.vehicle_capacity && (
-                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      {errors.vehicle_capacity}
-                    </p>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
                     Energy Type <span className="text-red-500">*</span>
@@ -1057,7 +985,9 @@ export default function VehiclesPage() {
   const stats = useMemo(() => {
     const totalVehicles = vehicles.length;
     const vehiclesByType = vehicles.reduce((acc, vehicle) => {
-      acc[vehicle.vehicle_type] = (acc[vehicle.vehicle_type] || 0) + 1;
+      // Access vehicle_type through the vehicle model
+      const vehicleType = vehicle.vehicle_model?.vehicle_type || 'Unknown';
+      acc[vehicleType] = (acc[vehicleType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -1100,7 +1030,6 @@ export default function VehiclesPage() {
       // Fix type casting for API compatibility
       const apiData = {
         ...formData,
-        vehicle_type: formData.vehicle_type as VehicleType,
         transmission_mode: formData.transmission_mode as TransmissionMode,
         vehicle_photo: formData.vehicle_photo || undefined,
       };
@@ -1121,10 +1050,9 @@ export default function VehiclesPage() {
     }
 
     try {
-      // Fix type for vehicle_type and transmission_mode
+      // Fix type for transmission_mode
       const updateData = {
         ...data,
-        vehicle_type: data.vehicle_type as VehicleType | undefined,
         transmission_mode: data.transmission_mode as
           | TransmissionMode
           | undefined,

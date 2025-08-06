@@ -48,13 +48,12 @@ export default function VehicleDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Remove vehicle_type from editForm and edit modal
+  // Remove vehicle_type and vehicle_capacity from editForm and edit modal
   const [editForm, setEditForm] = useState({
     plate_number: "",
     transmission_mode: "",
     vehicle_model_id: "",
     vehicle_year: 2020,
-    vehicle_capacity: 1,
     energy_type: "",
     organization_id: "",
     vehicle_photo: undefined as File | undefined,
@@ -67,7 +66,6 @@ export default function VehicleDetailPage() {
         transmission_mode: vehicle.transmission_mode || "",
         vehicle_model_id: vehicle.vehicle_model_id || "",
         vehicle_year: vehicle.vehicle_year || 2020,
-        vehicle_capacity: vehicle.vehicle_capacity || 1,
         energy_type: vehicle.energy_type || "",
         organization_id: vehicle.organization_id || "",
         vehicle_photo: undefined,
@@ -110,7 +108,6 @@ export default function VehicleDetailPage() {
       transmission_mode: vehicle.transmission_mode || "",
       vehicle_model_id: vehicle.vehicle_model_id || "",
       vehicle_year: vehicle.vehicle_year || 2020,
-      vehicle_capacity: vehicle.vehicle_capacity || 1,
       energy_type: vehicle.energy_type || "",
       organization_id: vehicle.organization_id || "",
       vehicle_photo: undefined,
@@ -389,15 +386,7 @@ export default function VehicleDetailPage() {
                   {vehicle.vehicle_year}
                 </div>
               </div>
-              {/* Vehicle Capacity */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Capacity
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.vehicle_capacity}
-                </div>
-              </div>
+              
               {/* Energy Type */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">

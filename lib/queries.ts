@@ -25,10 +25,8 @@ import {
   Vehicle,
   Reservation,
   CreateReservationDto,
-  CancelReservationDto,
   UpdateReservationStatusDto,
   StartReservationDto,
-  CompleteReservationDto,
   VehicleIssue,
   CreateVehicleIssueDto,
   Notification,
@@ -36,10 +34,7 @@ import {
   position_accesses,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
-import { TransmissionMode, VehicleType } from '@/types/enums';
-
-// Define Unit type matching API response
-
+import { TransmissionMode } from '@/types/enums';
 
 // 1. AUTH
 export const useLogin = () => {
@@ -1076,26 +1071,22 @@ export const useCreateVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation<Vehicle, Error, {
     plate_number: string;
-    vehicle_type: VehicleType;
     transmission_mode: TransmissionMode;
     vehicle_model_id: string;
     vehicle_photo?: File;
     vehicle_year: number;
-    vehicle_capacity: number;
     energy_type: string;
     organization_id: string;
   }>({
     mutationFn: async (vehicle) => {
       const formData = new FormData();
       formData.append('plate_number', vehicle.plate_number);
-      formData.append('vehicle_type', vehicle.vehicle_type);
       formData.append('transmission_mode', vehicle.transmission_mode);
       formData.append('vehicle_model_id', vehicle.vehicle_model_id);
       if (vehicle.vehicle_photo) {
         formData.append('vehicle_photo', vehicle.vehicle_photo);
       }
       formData.append('vehicle_year', String(vehicle.vehicle_year));
-      formData.append('vehicle_capacity', String(vehicle.vehicle_capacity));
       formData.append('energy_type', vehicle.energy_type);
       formData.append('organization_id', vehicle.organization_id);
       const { data } = await api.post<{ data: Vehicle }>('/v2/vehicles', formData);
@@ -1131,11 +1122,9 @@ export const useUpdateVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation<Vehicle, Error, { id: string; updates: {
     plate_number?: string;
-    vehicle_type?: VehicleType;
     transmission_mode?: TransmissionMode;
     vehicle_model_id?: string;
     vehicle_year?: number;
-    vehicle_capacity?: number;
     energy_type?: string;
     organization_id?: string;
     vehicle_photo?: File;
@@ -1144,11 +1133,9 @@ export const useUpdateVehicle = () => {
       // Only send allowed fields
       const allowed: Record<string, unknown> = {};
       if (updates.plate_number) allowed.plate_number = updates.plate_number;
-      if (updates.vehicle_type) allowed.vehicle_type = updates.vehicle_type;
       if (updates.transmission_mode) allowed.transmission_mode = updates.transmission_mode;
       if (updates.vehicle_model_id) allowed.vehicle_model_id = updates.vehicle_model_id;
       if (updates.vehicle_year) allowed.vehicle_year = updates.vehicle_year;
-      if (updates.vehicle_capacity) allowed.vehicle_capacity = updates.vehicle_capacity;
       if (updates.energy_type) allowed.energy_type = updates.energy_type;
       if (updates.organization_id) allowed.organization_id = updates.organization_id;
       // For photo, you may need to use FormData if updating image
@@ -1221,14 +1208,15 @@ export const useDeleteVehicle = () => {
 // --- Reservations ---
 
 export const useReservation = (id: string) => {
-  return useQuery<Reservation, Error>({
+  return useQuery({
     queryKey: ['reservation', id],
     queryFn: async () => {
-      const { data } = await api.get<{ data: Reservation }>(`/v2/reservations/${id}`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      const response = await api.get(`/v2/reservations/${id}`);
+      return response.data.data;
     },
     enabled: !!id,
+    staleTime: 0, // Always consider data stale to ensure fresh data
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 };
 
@@ -1311,50 +1299,42 @@ export const useCreateReservation = () => {
 
 export const useCancelReservation = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { id: string; dto: CancelReservationDto }>({
+  return useMutation<Reservation, Error, { id: string; dto: { reason: string } }>({
     mutationFn: async ({ id, dto }) => {
       console.log('Cancelling reservation:', { id, dto });
-      try {
-        const response = await api.post(`/v2/reservations/${id}/cancel`, dto, {
+      const { data } = await api.patch<{ message: string; data: Reservation }>(
+        `/v2/reservations/${id}/cancel`,
+        dto,
+        {
           headers: { 'Content-Type': 'application/json' },
-        });
-        console.log('Cancel reservation full response:', response);
-        const { data } = response;
-        console.log('Cancel reservation data:', data);
-        
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('Invalid response format');
         }
-      } catch (error) {
-        console.error('Cancel reservation API error:', error);
-        throw error;
-      }
+      );
+      if (!data.data) throw new Error('No data received');
+      return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Invalidate all reservation-related queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      // Update the specific reservation in cache
+      queryClient.setQueryData(['reservation', variables.id], data);
+      
       toast.success('Reservation cancelled successfully!');
     },
     onError: (error: unknown) => {
+      console.error('Reservation cancellation error:', error);
       let apiMsg: string | undefined;
       if (
         typeof error === 'object' &&
         error !== null &&
         'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
       ) {
-        apiMsg = (error.response.data as { message?: string }).message;
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to cancel reservation.'));
+      toast.error(apiMsg || 'Failed to cancel reservation');
     },
   });
 };
@@ -1363,127 +1343,87 @@ export const useUpdateReservation = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { id: string; dto: UpdateReservationStatusDto }>({
     mutationFn: async ({ id, dto }) => {
-      console.log('Updating reservation status:', { id, dto });
-      try {
-        const response = await api.patch(`/v2/reservations/${id}/status`, dto, {
+      console.log('Updating reservation:', { id, dto });
+      const { data } = await api.patch<{ message: string; data: Reservation }>(
+        `/v2/reservations/${id}`,
+        dto,
+        {
           headers: { 'Content-Type': 'application/json' },
-        });
-        console.log('Update reservation full response:', response);
-        const { data } = response;
-        console.log('Update reservation data:', data);
-        
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('Invalid response format');
         }
-      } catch (error) {
-        console.error('Update reservation API error:', error);
-        throw error;
-      }
+      );
+      if (!data.data) throw new Error('No data received');
+      return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Invalidate all reservation-related queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Reservation status updated!');
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      // Update the specific reservation in cache
+      queryClient.setQueryData(['reservation', variables.id], data);
+      
+      toast.success('Reservation updated successfully!');
     },
     onError: (error: unknown) => {
-      console.error('Update reservation error:', error);
+      console.error('Reservation update error:', error);
       let apiMsg: string | undefined;
       if (
         typeof error === 'object' &&
         error !== null &&
         'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
       ) {
-        apiMsg = (error.response.data as { message?: string }).message;
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update reservation.'));
+      toast.error(apiMsg || 'Failed to update reservation');
     },
   });
 };
 
-
-export const useReservationVehiclesOdometerAssignation = () => {
-  const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { id: string; dto: { vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }> } }>({
-    mutationFn: async ({ id, dto }) => {
-      console.log('Assigning vehicles with data:', { id, dto });
-      
-      // Try different approaches for the API
-      
-      // Approach 1: Try with flattened structure
-      const flattenedData = {
-        vehicle_ids: dto.vehicles.map(v => v.vehicle_id),
-        starting_odometers: dto.vehicles.map(v => v.starting_odometer),
-        fuel_provided: dto.vehicles.map(v => v.fuel_provided),
-      };
-      
-      console.log('Trying flattened approach:', flattenedData);
-      
-      try {
-        const { data } = await api.post<{ message: string; data: Reservation }>(
-          `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
-          flattenedData,
-          {
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        if (!data.data) throw new Error('No data');
-        return data.data;
-      } catch (error) {
-        console.error('Flattened approach failed, trying original structure:', error);
-        
-        // Approach 2: Try original structure
-        try {
-          const { data } = await api.post<{ message: string; data: Reservation }>(
-            `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
-            dto,
-            {
-              headers: { 'Content-Type': 'application/json' },
-            }
-          );
-          if (!data.data) throw new Error('No data');
-          return data.data;
-        } catch (error2) {
-          console.error('Original structure failed, trying FormData:', error2);
-          
-          // Approach 3: Try FormData
-          const formData = new FormData();
-          dto.vehicles.forEach((vehicle, index) => {
-            formData.append(`vehicles[${index}][vehicle_id]`, vehicle.vehicle_id);
-            formData.append(`vehicles[${index}][starting_odometer]`, vehicle.starting_odometer.toString());
-            formData.append(`vehicles[${index}][fuel_provided]`, vehicle.fuel_provided.toString());
-          });
-          
-          console.log('FormData entries:');
-          for (const [key, value] of formData.entries()) {
-            console.log(`${key}: ${value}`);
-          }
-          
-          const { data } = await api.post<{ message: string; data: Reservation }>(
-            `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
-            formData,
-            {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            }
-          );
-          if (!data.data) throw new Error('No data');
-          return data.data;
-        }
-      }
+// Get available vehicles for a specific date range
+export const useGetAvailableVehicles = (departureDate: string, expectedReturningDate: string) => {
+  return useQuery({
+    queryKey: ['available-vehicles', departureDate, expectedReturningDate],
+    queryFn: async () => {
+      const response = await api.post('/v2/reservations/available-vehicles', {
+        departure_date: departureDate,
+        expected_returning_date: expectedReturningDate,
+      });
+      return response.data;
     },
-    onSuccess: () => {
+    enabled: !!departureDate && !!expectedReturningDate,
+  });
+};
+
+
+export const useAssignMultipleVehicles = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ 
+      reservationId, 
+      vehicleIds 
+    }: { 
+      reservationId: string; 
+      vehicleIds: string[] 
+    }) => {
+      const response = await api.post(`/v2/reservations/${reservationId}/assign-multiple-vehicles`, {
+        vehicle_ids: vehicleIds
+      });
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate all reservation-related queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
       queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
-      toast.success('Vehicles assigned and odometer/fuel set successfully!');
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.reservationId] });
+      
+      // Update the specific reservation in cache if data is available
+      if (data?.data) {
+        queryClient.setQueryData(['reservation', variables.reservationId], data.data);
+      }
+      
+      toast.success('Vehicles assigned successfully!');
     },
     onError: (error: unknown) => {
       console.error('Vehicle assignment error:', error);
@@ -1496,7 +1436,51 @@ export const useReservationVehiclesOdometerAssignation = () => {
       ) {
         apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
-      toast.error(apiMsg || 'Failed to assign vehicles and set odometer/fuel');
+      toast.error(apiMsg || 'Failed to assign vehicles');
+    },
+  });
+};
+
+export const useReservationVehiclesOdometerAssignation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Reservation, Error, { id: string; dto: { vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }> } }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Assigning vehicles with odometer/fuel data:', { id, dto });
+      
+      const { data } = await api.patch<{ message: string; data: Reservation }>(
+        `/v2/reservations/${id}/assign-multiple-vehicles-odometer`, 
+        dto,
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      
+      if (!data.data) throw new Error('No data received');
+      return data.data;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate all reservation-related queries
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      // Update the specific reservation in cache
+      queryClient.setQueryData(['reservation', variables.id], data);
+      
+      toast.success('Vehicles updated with odometer/fuel and status updated successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Vehicle odometer/fuel update error:', error);
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      }
+      toast.error(apiMsg || 'Failed to update vehicles with odometer/fuel');
     },
   });
 };
@@ -1504,17 +1488,32 @@ export const useReservationVehiclesOdometerAssignation = () => {
 
 export const useUpdateReservationReason = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { id: string; reason: string }>({
-    mutationFn: async ({ id, reason }) => {
-      const { data } = await api.patch<{ message: string; data: Reservation }>(`/v2/reservations/${id}/reason`, { reason });
-      if (!data.data) throw new Error('No data');
+  return useMutation<Reservation, Error, { id: string; dto: { reason: string } }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Updating reservation reason:', { id, dto });
+      const { data } = await api.patch<{ message: string; data: Reservation }>(
+        `/v2/reservations/${id}/reason`,
+        dto,
+        {
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+      if (!data.data) throw new Error('No data received');
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Invalidate all reservation-related queries
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      // Update the specific reservation in cache
+      queryClient.setQueryData(['reservation', variables.id], data);
+      
       toast.success('Reservation reason updated successfully!');
     },
     onError: (error: unknown) => {
+      console.error('Reservation reason update error:', error);
       let apiMsg: string | undefined;
       if (
         typeof error === 'object' &&
@@ -1579,48 +1578,62 @@ export const useStartReservation = () => {
 
 export const useCompleteReservation = () => {
   const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { reservedVehicleId: string; dto: CompleteReservationDto }>({
+  return useMutation<void, Error, { reservedVehicleId: string; dto: { returned_odometer: number } }>({
     mutationFn: async ({ reservedVehicleId, dto }) => {
-      console.log('Completing reservation:', { reservedVehicleId, dto });
+      console.log('Completing reserved vehicle:', { reservedVehicleId, dto });
+      
       try {
-        const response = await api.post(`/v2/reservations/${reservedVehicleId}/complete`, { returned_odometer: dto.returned_odometer });
-        console.log('Complete reservation full response:', response);
-        const { data } = response;
-        console.log('Complete reservation data:', data);
+        const { data } = await api.post<{ message: string }>(
+          `/v2/reservations/${reservedVehicleId}/complete`,
+          dto,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        console.log('API Response:', data);
         
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('Invalid response format');
-        }
+        // Check if we have a valid response
+        if (!data) throw new Error('No response received from server');
+        
+        // The API returns just a success message, which is fine
+        // We don't need to return anything since we'll invalidate the cache
       } catch (error) {
-        console.error('Complete reservation API error:', error);
+        console.error('API call error:', error);
         throw error;
       }
     },
     onSuccess: () => {
+      console.log('Vehicle completion successful');
+      
+      // Since the API only returns a message, we need to invalidate the cache
+      // to fetch the updated reservation data
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Reservation completed!');
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      
+      toast.success('Vehicle returned successfully!');
     },
     onError: (error: unknown) => {
+      console.error('Vehicle return error:', error);
+      
       let apiMsg: string | undefined;
+      
+      // Try to extract error message from different response formats
       if (
         typeof error === 'object' &&
         error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
+        'response' in error
       ) {
-        apiMsg = (error.response.data as { message?: string }).message;
+        const response = (error as { response?: { data?: { message?: string; error?: string }; statusText?: string } }).response;
+        if (response?.data?.message) {
+          apiMsg = response.data.message;
+        } else if (response?.data?.error) {
+          apiMsg = response.data.error;
+        } else if (response?.statusText) {
+          apiMsg = response.statusText;
+        }
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to complete reservation.'));
+      
+      toast.error(apiMsg || 'Failed to return vehicle');
     },
   });
 };
@@ -1849,3 +1862,4 @@ export const useAuditLogs = (filters: {
     },
   });
 };
+

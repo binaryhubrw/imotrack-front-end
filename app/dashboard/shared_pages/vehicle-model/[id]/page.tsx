@@ -43,6 +43,7 @@ export default function VehicleModelDetailPage() {
     vehicle_model_name: '',
     vehicle_type: undefined as VehicleType | undefined,
     manufacturer_name: '',
+    vehicle_capacity: 0,
   });
 
   // Permission checks
@@ -75,6 +76,7 @@ export default function VehicleModelDetailPage() {
         vehicle_model_name: model.vehicle_model_name || '',
         vehicle_type: (model.vehicle_type as VehicleType | undefined),
         manufacturer_name: model.manufacturer_name || '',
+        vehicle_capacity: model.vehicle_capacity || 0,
       });
     }
   }, [model]);
@@ -91,6 +93,7 @@ export default function VehicleModelDetailPage() {
       vehicle_model_name: model.vehicle_model_name || '',
       vehicle_type: (model.vehicle_type as VehicleType | undefined),
       manufacturer_name: model.manufacturer_name || '',
+      vehicle_capacity: model.vehicle_capacity || 0,
     });
     setShowEdit(true);
   };
@@ -253,6 +256,17 @@ export default function VehicleModelDetailPage() {
                 />
               </label>
 
+              <label className="text-sm font-medium">Vehicle Capacity
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
+                  value={editForm.vehicle_capacity}
+                  onChange={e => setEditForm(f => ({ ...f, vehicle_capacity: parseInt(e.target.value) || 0 }))}
+                  required
+                />
+              </label>
+
               <div className="flex gap-3 mt-4">
                 <button
                   type="button"
@@ -307,6 +321,11 @@ export default function VehicleModelDetailPage() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">Manufacturer</div>
                 <div className="font-medium text-gray-900">{model.manufacturer_name}</div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Capacity</div>
+                <div className="font-medium text-gray-900">{model.vehicle_capacity} passengers</div>
               </div>
               
               <div className="bg-gray-50 rounded-lg p-4">

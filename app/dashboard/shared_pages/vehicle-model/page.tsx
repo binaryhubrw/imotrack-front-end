@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import type { VehicleModel, CreateVehicleModelDto } from "@/types/next-auth";
 import { SkeletonVehicleModelsTable } from "@/components/ui/skeleton";
-import { VehicleType } from "@/types/enums";
+import { ModelType   } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
@@ -63,8 +63,9 @@ function CreateVehicleModal({
 }) {
   const [form, setForm] = useState<CreateVehicleModelDto>({
     vehicle_model_name: "",
-    vehicle_type: VehicleType.SEDAN,
+    vehicle_type: ModelType.SEDAN,
     manufacturer_name: "",
+    vehicle_capacity: 0,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -76,6 +77,8 @@ function CreateVehicleModal({
     if (!form.vehicle_type) newErrors.vehicle_type = "Vehicle type is required";
     if (!form.manufacturer_name.trim())
       newErrors.manufacturer_name = "Manufacturer name is required";
+    if (form.vehicle_capacity < 1)
+      newErrors.vehicle_capacity = "Capacity must be at least 1";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -108,8 +111,9 @@ function CreateVehicleModal({
       await onCreate(form);
       setForm({
         vehicle_model_name: "",
-        vehicle_type: VehicleType.SEDAN,
+        vehicle_type: ModelType.SEDAN,
         manufacturer_name: "",
+        vehicle_capacity: 0,
       });
       setErrors({});
       setTouched({});
@@ -121,8 +125,9 @@ function CreateVehicleModal({
   const handleClose = () => {
     setForm({
       vehicle_model_name: "",
-      vehicle_type: VehicleType.SEDAN,
+      vehicle_type: ModelType.SEDAN,
       manufacturer_name: "",
+      vehicle_capacity: 0,
     });
     setErrors({});
     setTouched({});
@@ -196,7 +201,7 @@ function CreateVehicleModal({
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    vehicle_type: e.target.value as VehicleType,
+                    vehicle_type: e.target.value as ModelType,
                   }))
                 }
                 onBlur={handleBlur}
@@ -207,13 +212,13 @@ function CreateVehicleModal({
                 }`}
                 disabled={isLoading}
               >
-                <option value={VehicleType.SEDAN}>SEDAN</option>
-                <option value={VehicleType.SUV}>SUV</option>
-                <option value={VehicleType.TRUCK}>TRUCK</option>
-                <option value={VehicleType.VAN}>VAN</option>
-                <option value={VehicleType.MOTORCYCLE}>MOTORCYCLE</option>
-                <option value={VehicleType.BUS}>BUS</option>
-                <option value={VehicleType.OTHER}>OTHER</option>
+                <option value={ModelType.SEDAN}>SEDAN</option>
+                <option value={ModelType.SUV}>SUV</option>
+                <option value={ModelType.TRUCK}>TRUCK</option>
+                <option value={ModelType.VAN}>VAN</option>
+                <option value={ModelType.MOTORCYCLE}>MOTORCYCLE</option>
+                <option value={ModelType.BUS}>BUS</option>
+                <option value={ModelType.OTHER}>OTHER</option>
               </select>
               {errors.vehicle_type && touched.vehicle_type && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
@@ -244,6 +249,33 @@ function CreateVehicleModal({
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {errors.manufacturer_name}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vehicle Capacity <span className="text-red-500">*</span>
+              </label>
+              <Input
+                name="vehicle_capacity"
+                type="number"
+                placeholder="e.g., 5, 15, 50"
+                value={form.vehicle_capacity || ""}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                min="1"
+                className={`transition-colors duration-200 ${
+                  errors.vehicle_capacity && touched.vehicle_capacity
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+                }`}
+                disabled={isLoading}
+              />
+              {errors.vehicle_capacity && touched.vehicle_capacity && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.vehicle_capacity}
                 </p>
               )}
             </div>
@@ -297,8 +329,9 @@ export default function VehicleModelsPage() {
   const [modelToEdit, setModelToEdit] = useState<VehicleModel | null>(null);
   const [editForm, setEditForm] = useState({
     vehicle_model_name: "",
-    vehicle_type: VehicleType.SEDAN as VehicleType,
+    vehicle_type: ModelType.SEDAN as ModelType,
     manufacturer_name: "",
+    vehicle_capacity: 0,
   });
 
   const { user, isLoading: authLoading } = useAuth();
@@ -392,6 +425,15 @@ export default function VehicleModelsPage() {
         header: "Manufacturer",
         cell: ({ row }) => (
           <div className="font-medium">{row.getValue("manufacturer_name")}</div>
+        ),
+      },
+      {
+        accessorKey: "vehicle_capacity",
+        header: "Capacity",
+        cell: ({ row }) => (
+          <div className="text-sm text-gray-600">
+            {row.getValue("vehicle_capacity")} passengers
+          </div>
         ),
       },
       {
@@ -743,19 +785,19 @@ export default function VehicleModelsPage() {
                 onChange={(e) =>
                   setEditForm((f) => ({
                     ...f,
-                    vehicle_type: e.target.value as VehicleType,
+                    vehicle_type: e.target.value as ModelType,
                   }))
                 }
                 required
               >
                 <option value="">Select vehicle type</option>
-                <option value={VehicleType.SEDAN}>SEDAN</option>
-                <option value={VehicleType.SUV}>SUV</option>
-                <option value={VehicleType.TRUCK}>TRUCK</option>
-                <option value={VehicleType.VAN}>VAN</option>
-                <option value={VehicleType.MOTORCYCLE}>MOTORCYCLE</option>
-                <option value={VehicleType.BUS}>BUS</option>
-                <option value={VehicleType.OTHER}>OTHER</option>
+                <option value={ModelType.SEDAN}>SEDAN</option>
+                <option value={ModelType.SUV}>SUV</option>
+                <option value={ModelType.TRUCK}>TRUCK</option>
+                <option value={ModelType.VAN}>VAN</option>
+                <option value={ModelType.MOTORCYCLE}>MOTORCYCLE</option>
+                <option value={ModelType.BUS}>BUS</option>
+                <option value={ModelType.OTHER}>OTHER</option>
               </select>
             </label>
             <label className="text-sm font-medium">
@@ -767,6 +809,22 @@ export default function VehicleModelsPage() {
                   setEditForm((f) => ({
                     ...f,
                     manufacturer_name: e.target.value,
+                  }))
+                }
+                required
+              />
+            </label>
+            <label className="text-sm font-medium">
+              Vehicle Capacity
+              <input
+                type="number"
+                min="1"
+                className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
+                value={editForm.vehicle_capacity}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    vehicle_capacity: parseInt(e.target.value) || 0,
                   }))
                 }
                 required

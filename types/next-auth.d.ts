@@ -423,6 +423,7 @@ export type VehicleModel = {
   vehicle_model_name: string;
   vehicle_type: string;
   manufacturer_name: string;
+  vehicle_capacity: number;
   created_at: string;
 };
 
@@ -430,18 +431,17 @@ export type CreateVehicleModelDto = {
   vehicle_model_name: string;
   vehicle_type: VehicleType;
   manufacturer_name: string;
+  vehicle_capacity: number;
 };
 
 // --- Vehicle Types ---
 export type Vehicle = {
   vehicle_id: string;
   plate_number: string;
-  vehicle_type: string;
   transmission_mode: string;
   vehicle_model_id: string;
-  vehicle_photo: string;
+  vehicle_photo?: string;
   vehicle_year: number;
-  vehicle_capacity: number;
   vehicle_status: string;
   energy_type: string;
   last_service_date: string;
@@ -453,6 +453,7 @@ export type Vehicle = {
     vehicle_model_name: string;
     vehicle_type: string;
     manufacturer_name: string;
+    vehicle_capacity: number;
     created_at: string;
   };
   organization?: {
@@ -470,24 +471,20 @@ export type Vehicle = {
 
 export type CreateVehicleDto = {
   plate_number: string;
-  vehicle_type: string;
   transmission_mode: string;
   vehicle_model_id: string;
   vehicle_photo?: File | null;
   vehicle_year: number;
-  vehicle_capacity: number;
   energy_type: string;
   organization_id: string;
 };
 
 export type UpdateVehicleDto = {
   plate_number?: string;
-  vehicle_type?: string;
   transmission_mode?: string;
   vehicle_model_id?: string;
   vehicle_photo?: string; // URL or base64 string (not file)
   vehicle_year?: number;
-  vehicle_capacity?: number;
   vehicle_status?: string;
   energy_type?: string;
   organization_id?: string;
@@ -501,7 +498,6 @@ export type ReservationStatus =
   | "REJECTED"
   | "CANCELLED"
   | "CANCELED"
-  | "IN_PROGRESS"
   | "COMPLETED";
 
   export interface AuthRes{

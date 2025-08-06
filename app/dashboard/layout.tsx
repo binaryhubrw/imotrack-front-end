@@ -299,7 +299,7 @@ export default function DashboardLayout({
 
         {/* Sidebar */}
         <aside
-          className={`fixed z-40 h-full w-64 transform bg-[#0872B3] text-white transition-transform duration-300 md:relative md:translate-x-0 md:z-10
+          className={`fixed z-35 h-full w-50 transform bg-[#0872B3] text-white transition-transform duration-300 md:relative md:translate-x-0 md:z-10
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
           `}
         >

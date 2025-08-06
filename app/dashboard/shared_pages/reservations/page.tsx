@@ -1,12 +1,11 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Plus, Search, Filter, X, ChevronDown } from "lucide-react";
+import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car } from "lucide-react";
 import {
   useReservations,
   useMyReservations,
   useCreateReservation,
-  useCancelReservation,
-  useUpdateReservation,
+
 } from "@/lib/queries";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,14 +19,6 @@ import { SkeletonReservationCard } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorUI from "@/components/ErrorUI";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
 
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
@@ -37,7 +28,6 @@ const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
   REJECTED: "Rejected",
   CANCELLED: "Cancelled",
   CANCELED: "Cancelled",
-  IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
 };
 
@@ -318,12 +308,12 @@ function CreateReservationModal({
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.reservation_purpose && touched.reservation_purpose
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.reservation_purpose && touched.reservation_purpose && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1">
                     {errors.reservation_purpose}
                   </p>
                 )}
@@ -338,12 +328,12 @@ function CreateReservationModal({
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.description && touched.description
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.description && touched.description && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1">
                     {errors.description}
                   </p>
                 )}
@@ -362,12 +352,12 @@ function CreateReservationModal({
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.start_location && touched.start_location
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.start_location && touched.start_location && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1">
                     {errors.start_location}
                   </p>
                 )}
@@ -383,13 +373,13 @@ function CreateReservationModal({
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.reservation_destination &&
                     touched.reservation_destination
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.reservation_destination &&
                   touched.reservation_destination && (
-                    <p className="text-xs text-red-500 mt-1">
+                    <p className="text-xs text-orange-500 mt-1">
                       {errors.reservation_destination}
                     </p>
                   )}
@@ -410,12 +400,12 @@ function CreateReservationModal({
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.passengers && touched.passengers
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.passengers && touched.passengers && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1">
                     {errors.passengers}
                   </p>
                 )}
@@ -431,12 +421,12 @@ function CreateReservationModal({
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.departure_date && touched.departure_date
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.departure_date && touched.departure_date && (
-                  <p className="text-xs text-red-500 mt-1">
+                  <p className="text-xs text-orange-500 mt-1">
                     {errors.departure_date}
                   </p>
                 )}
@@ -453,13 +443,13 @@ function CreateReservationModal({
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
                     errors.expected_returning_date &&
                     touched.expected_returning_date
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
                       : ""
                   }`}
                 />
                 {errors.expected_returning_date &&
                   touched.expected_returning_date && (
-                    <p className="text-xs text-red-500 mt-1">
+                    <p className="text-xs text-orange-500 mt-1">
                       {errors.expected_returning_date}
                     </p>
                   )}
@@ -482,177 +472,6 @@ function CreateReservationModal({
     </div>
   );
 }
-
-function CancelReservationModal({
-  open,
-  onClose,
-  reservation,
-  onCancel,
-  isLoading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  reservation: Reservation | null;
-  onCancel: (rejectionComment: string) => void;
-  isLoading: boolean;
-}) {
-  const [rejectionComment, setRejectionComment] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await onCancel(rejectionComment);
-    setRejectionComment("");
-    onClose();
-  };
-
-  if (!open || !reservation) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md relative">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
-          onClick={onClose}
-        >
-          &times;
-        </button>
-        <h2 className="text-xl font-bold mb-4">Cancel Reservation</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Provide a reason for cancellation
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Cancellation Reason
-            </label>
-            <textarea
-              className="w-full p-2 border border-gray-300 rounded-md"
-              rows={3}
-              value={rejectionComment}
-              onChange={(e) => setRejectionComment(e.target.value)}
-              placeholder="Enter cancellation reason..."
-              required
-            />
-          </div>
-          <Button
-            type="submit"
-            className="w-full bg-[#0872b3] text-white"
-            disabled={isLoading || !rejectionComment.trim()}
-          >
-            {isLoading ? "Cancelling..." : "Cancel Reservation"}
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// Approve/Reject Modal
-function ApproveRejectModal({
-  open,
-  onClose,
-  reservation,
-  onSubmit,
-  isLoading,
-}: {
-  open: boolean;
-  onClose: () => void;
-  reservation: Reservation | null;
-  onSubmit: (action: "APPROVED" | "REJECTED", reason: string) => void;
-  isLoading: boolean;
-}) {
-  const [action, setAction] = useState<"APPROVED" | "REJECTED">("APPROVED");
-  const [reason, setReason] = useState("");
-  const [touched, setTouched] = useState(false);
-  const isReject = action === "REJECTED";
-  const valid =
-    action === "APPROVED" || (action === "REJECTED" && reason.trim());
-
-  React.useEffect(() => {
-    setReason("");
-    setTouched(false);
-  }, [action, open]);
-
-  if (!open || !reservation) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-          onClick={onClose}
-        >
-          &times;
-        </button>
-        <h2 className="text-xl font-bold mb-4">Actions</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setTouched(true);
-            if (!valid) return;
-            onSubmit(action, reason);
-          }}
-          className="space-y-4"
-        >
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Select Action
-            </label>
-            <select
-              className="w-full border rounded px-3 py-2"
-              value={action}
-              onChange={(e) =>
-                setAction(e.target.value as "APPROVED" | "REJECTED")
-              }
-            >
-              <option value="APPROVED">Approve</option>
-              <option value="REJECTED">Reject</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Reason {isReject && <span className="text-red-500">*</span>}
-            </label>
-            <textarea
-              className="w-full border rounded px-3 py-2"
-              rows={4}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={
-                isReject
-                  ? "Enter reason for rejection"
-                  : "Optional reason for approval"
-              }
-              required={isReject}
-            />
-            {touched && isReject && !reason.trim() && (
-              <div className="text-xs text-red-500 mt-1">
-                Reason is required for rejection.
-              </div>
-            )}
-          </div>
-          <div className="flex gap-3 justify-end">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 text-white"
-              disabled={isLoading || !valid}
-            >
-              {isLoading
-                ? action === "APPROVED"
-                  ? "Approving..."
-                  : "Rejecting..."
-                : action === "APPROVED"
-                ? "Approve"
-                : "Reject"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function ReservationsPage() {
   const { user } = useAuth();
   const reservationAccess = user?.position?.position_access?.reservations;
@@ -685,12 +504,9 @@ export default function ReservationsPage() {
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const [showFilters, setShowFilters] = useState(false);
+
   const [showCreate, setShowCreate] = useState(false);
-  const [showCancelReservation, setShowCancelReservation] = useState(false);
-  const [showApproveRejectModal, setShowApproveRejectModal] = useState(false);
-  const [approveRejectReservation, setApproveRejectReservation] =
-    useState<Reservation | null>(null);
+
 
   // Enhanced data fetching based on permissions
   const {
@@ -728,8 +544,6 @@ export default function ReservationsPage() {
   const isError = canViewAll ? isErrorAll : canViewOwn ? isErrorMy : false;
 
   const createReservation = useCreateReservation();
-  const cancelReservation = useCancelReservation();
-  const updateReservation = useUpdateReservation();
 
   const filteredReservations = useMemo(() => {
     if (!reservations) return [];
@@ -804,7 +618,7 @@ export default function ReservationsPage() {
   if (!canViewPage) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500 text-lg font-semibold">
+        <div className="text-orange-500 text-lg font-semibold">
           You do not have permission to access reservations.
         </div>
       </div>
@@ -833,50 +647,6 @@ export default function ReservationsPage() {
     }
   };
 
-  const handleCancelReservation = async (rejectionComment: string) => {
-    if (!canCancel) {
-      toast.error("You do not have permission to cancel reservations");
-      return;
-    }
-
-    if (!approveRejectReservation) return;
-    try {
-      await cancelReservation.mutateAsync({
-        id: approveRejectReservation.reservation_id,
-        dto: { reason: rejectionComment },
-      });
-      setShowApproveRejectModal(false);
-      setApproveRejectReservation(null);
-    } catch {
-      // error handled by mutation
-    }
-  };
-
-  const handleApproveReject = async (
-    action: "APPROVED" | "REJECTED",
-    reason: string
-  ) => {
-    if (!canApprove) {
-      toast.error("You do not have permission to approve/reject reservations");
-      return;
-    }
-
-    if (!approveRejectReservation) return;
-    try {
-      // Set status to ACCEPTED when approving, REJECTED when rejecting
-      const newStatus = action === 'APPROVED' ? 'ACCEPTED' : 'REJECTED';
-      
-      await updateReservation.mutateAsync({
-        id: approveRejectReservation.reservation_id,
-        dto: { status: newStatus, reason },
-      });
-      setShowApproveRejectModal(false);
-      setApproveRejectReservation(null);
-    } catch {
-      // error handled by mutation
-    }
-  };
-
   const getStatusColor = (status: ReservationStatus) => {
     switch (status) {
       case "UNDER_REVIEW":
@@ -886,13 +656,11 @@ export default function ReservationsPage() {
       case "APPROVED":
         return "bg-green-100 text-green-800";
       case "REJECTED":
-        return "bg-red-100 text-red-800";
+        return "bg-orange-100 text-orange-800";
       case "CANCELLED":
         return "bg-gray-100 text-gray-800";
       case "CANCELED":
         return "bg-gray-100 text-gray-800";
-      case "IN_PROGRESS":
-        return "bg-blue-100 text-blue-800";
       case "COMPLETED":
         return "bg-purple-100 text-purple-800";
       default:
@@ -900,192 +668,199 @@ export default function ReservationsPage() {
     }
   };
 
+  // Status options for filter dropdown
+  const statusOptions = [
+    { id: "all", name: "All Statuses" },
+    { id: "UNDER_REVIEW", name: "Under Review" },
+    { id: "ACCEPTED", name: "Accepted" },
+    { id: "APPROVED", name: "Approved" },
+    { id: "REJECTED", name: "Rejected" },
+    { id: "CANCELLED", name: "Cancelled" },
+    { id: "COMPLETED", name: "Completed" },
+  ];
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <h1 className="text-xl font-bold text-[#0872b3]">Reservations</h1>
-          <div className="flex flex-1 gap-3 items-center justify-end">
-            <div className="relative w-full max-w-xs">
+      {/* Search and Filter Controls */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
+                type="text"
                 placeholder="Search reservations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+                className="pl-10 h-10 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
               />
             </div>
-            <Button
-              variant="outline"
-              className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </Button>
-            {canCreate && (
-              <Button
-                className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-5 py-3 rounded-lg transition-colors duration-200"
-                onClick={() => setShowCreate(true)}
-              >
-                <Plus className="w-4 h-4" /> Add Reservation
-              </Button>
-            )}
+
+            {/* Status Filter */}
+            <div className="w-full sm:w-48">
+              <SearchableDropdown
+                options={statusOptions}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Filter by status"
+                className="h-10"
+              />
+            </div>
+
+            {/* Date Filter */}
+            <div className="w-full sm:w-48">
+              <SearchableDropdown
+                options={[
+                  { id: "all", name: "All Dates" },
+                  { id: "today", name: "Today" },
+                  { id: "week", name: "This Week" },
+                  { id: "month", name: "This Month" },
+                  { id: "custom", name: "Custom Range" },
+                ]}
+                value={dateFilter}
+                onChange={setDateFilter}
+                placeholder="Filter by date"
+                className="h-10"
+              />
+            </div>
           </div>
+
+          {/* Create Button */}
+          {canCreate && (
+            <Button
+              onClick={() => setShowCreate(true)}
+              className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-6 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 h-10"
+            >
+              <Plus className="w-4 h-4" />
+              Create Reservation
+            </Button>
+          )}
         </div>
-        
-        {/* Filter Panel */}
-        {showFilters && (
-          <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-              {/* Status Filter */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <SearchableDropdown
-                  options={[
-                    { status_id: "all", status_name: "All Statuses" },
-                    ...Object.entries(RESERVATION_STATUSES).map(([key, value]) => ({
-                      status_id: key,
-                      status_name: value,
-                    })),
-                  ]}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  placeholder="All Statuses"
-                  className="w-full"
-                />
-              </div>
 
-              {/* Date Filter */}
-              <div className="flex-1 min-w-0">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Date Range
-                </label>
-                <SearchableDropdown
-                  options={[
-                    { date_id: "all", date_name: "All Dates" },
-                    { date_id: "today", date_name: "Today" },
-                    { date_id: "week", date_name: "This Week" },
-                    { date_id: "month", date_name: "This Month" },
-                    { date_id: "custom", date_name: "Custom Range" },
-                  ]}
-                  value={dateFilter}
-                  onChange={setDateFilter}
-                  placeholder="All Dates"
-                  className="w-full"
-                />
-              </div>
-
-              {/* Custom Date Range */}
-              {dateFilter === "custom" && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Clear Filters */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-                onClick={() => {
-                  setStatusFilter("all");
-                  setDateFilter("all");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-              >
-                <X className="w-4 h-4" />
-                Clear
-              </Button>
+        {/* Custom Date Range Inputs */}
+        {dateFilter === "custom" && (
+          <div className="flex gap-3 mt-3">
+            <div className="flex-1 max-w-xs">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Start Date
+              </label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="h-8 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+              />
+            </div>
+            <div className="flex-1 max-w-xs">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                End Date
+              </label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="h-8 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+              />
             </div>
           </div>
         )}
-        
+
         {/* Active Filters Summary */}
-        {(statusFilter !== "all" || dateFilter !== "all" || searchTerm) && (
-          <div className="mt-3 px-4 py-2 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium text-blue-800">Active Filters:</span>
-              {statusFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                  Status: {RESERVATION_STATUSES[statusFilter as ReservationStatus]}
-                  <button
-                    onClick={() => setStatusFilter("all")}
-                    className="ml-1 hover:text-blue-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {dateFilter !== "all" && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                  Date: {dateFilter === "custom" ? "Custom Range" : dateFilter.charAt(0).toUpperCase() + dateFilter.slice(1)}
-                  <button
-                    onClick={() => {
-                      setDateFilter("all");
-                      setStartDate("");
-                      setEndDate("");
-                    }}
-                    className="ml-1 hover:text-blue-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {searchTerm && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                  Search: &ldquo;{searchTerm}&rdquo;
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="ml-1 hover:text-blue-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              <button
-                onClick={() => {
-                  setStatusFilter("all");
-                  setDateFilter("all");
-                  setStartDate("");
-                  setEndDate("");
-                  setSearchTerm("");
-                }}
-                className="text-blue-600 hover:text-blue-800 underline text-xs"
-              >
-                Clear All
-              </button>
-            </div>
+        {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
+          <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
+            <span>Active filters:</span>
+            {searchTerm && (
+              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                Search: &ldquo;{searchTerm}&rdquo;
+              </span>
+            )}
+            {statusFilter !== "all" && (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                Status: {statusOptions.find(s => s.id === statusFilter)?.name}
+              </span>
+            )}
+            {dateFilter !== "all" && (
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                Date: {dateFilter === "custom" ? "Custom Range" : dateFilter}
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+                setDateFilter("all");
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="text-orange-600 hover:text-orange-800 text-xs underline"
+            >
+              Clear all
+            </button>
           </div>
         )}
       </div>
+    
+   {/* Stats Cards Header */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 px-6 pt-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Reservations</p>
+              <p className="text-2xl font-bold text-gray-900">{filteredReservations.length}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Car className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Under Review</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {filteredReservations.filter(r => r.reservation_status === 'UNDER_REVIEW').length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Approved</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {filteredReservations.filter(r => r.reservation_status === 'APPROVED').length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-green-600">
+                {filteredReservations.filter(r => r.reservation_status === 'COMPLETED').length}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto px-6 pb-6">
         {isLoading ? (
           <SkeletonReservationCard />
         ) : isError ? (
@@ -1095,181 +870,234 @@ export default function ReservationsPage() {
             onRetry={() => window.location.reload()}
           />
         ) : filteredReservations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 bg-white rounded-xl border border-gray-100 shadow-md">
-            <svg
-              className="w-16 h-16 text-blue-200 mb-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="text-2xl font-bold text-gray-700 mb-2">No Reservations Found</h3>
-            <p className="text-gray-500 mb-4 text-center max-w-md">
-              There are no reservations. Try searching or create a new reservation if you have permission.
+          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 shadow-lg">
+            <div className="bg-white p-6 rounded-full shadow-md mb-6">
+              <svg
+                className="w-20 h-20 text-blue-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5zM12 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5zM15.75 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-bold text-gray-800 mb-3">No Reservations Found</h3>
+            <p className="text-lg text-gray-600 mb-6 text-center max-w-md leading-relaxed">
+              There are no reservations matching your criteria. Try adjusting your filters or create a new reservation.
             </p>
+            {canCreate && (
+              <button className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-3">
+                <Plus className="w-5 h-5" />
+                Create New Reservation
+              </button>
+            )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">#</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Purpose</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">User</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Start</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Destination</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Departure</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Return</TableHead>
-                  <TableHead className="font-semibold text-gray-900 px-3 py-4">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedReservations.map((reservation, idx) => (
-                  <TableRow
-                    key={reservation.reservation_id}
-                    className="hover:bg-blue-50 border-b border-gray-100 cursor-pointer group"
-                    onClick={() => router.push(`/dashboard/shared_pages/reservations/${reservation.reservation_id}`)}
-                  >
-                    <TableCell className="font-mono text-gray-500 px-3">
-                      {pageIndex * pageSize + idx + 1}
-                    </TableCell>
-                    <TableCell className="font-medium text-blue-800 px-3">
-                      {reservation.reservation_purpose}
-                    </TableCell>
-                    <TableCell className="px-3">
-                      {reservation.user ? (
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">
-                            {reservation.user.first_name} {reservation.user.last_name}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {reservation.user.auth?.email || "No email"}
-                          </span>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            {/* Compact Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">#</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Purpose</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">User</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Route</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Departure</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Return</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedReservations.map((reservation, idx) => (
+                    <tr
+                      key={reservation.reservation_id}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                      onClick={() => router.push(`/dashboard/shared_pages/reservations/${reservation.reservation_id}`)}
+                    >
+                      {/* Serial Number */}
+                      <td className="py-3 px-4">
+                        <span className="font-mono text-gray-500 text-sm">
+                          {pageIndex * pageSize + idx + 1}
+                        </span>
+                      </td>
+
+                      {/* Purpose */}
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-blue-800 text-sm">
+                          {reservation.reservation_purpose}
                         </div>
-                      ) : (
-                        <span className="text-gray-400 italic">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-3">{reservation.start_location}</TableCell>
-                    <TableCell className="px-3">{reservation.reservation_destination}</TableCell>
-                    <TableCell className="px-3">
-                      {reservation.departure_date ? new Date(reservation.departure_date).toLocaleString() : "N/A"}
-                    </TableCell>
-                    <TableCell className="px-3">
-                      {reservation.expected_returning_date ? new Date(reservation.expected_returning_date).toLocaleString() : "N/A"}
-                    </TableCell>
-                    <TableCell className="px-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(reservation.reservation_status)}`}>
-                        {RESERVATION_STATUSES[reservation.reservation_status as ReservationStatus]}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {/* Pagination Controls */}
-            {filteredReservations.length > pageSize && (
-              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageIndex(0)}
-                    disabled={pageIndex === 0}
-                  >
-                    {"<<"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                    disabled={pageIndex === 0}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-                    disabled={pageIndex >= pageCount - 1}
-                  >
-                    Next
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPageIndex(pageCount - 1)}
-                    disabled={pageIndex >= pageCount - 1}
-                  >
-                    {">>"}
-                  </Button>
-                </div>
-                <span className="text-sm text-gray-600">
-                  Page <strong>{pageIndex + 1} of {pageCount}</strong>
-                </span>
-                <span className="text-sm text-gray-600">
-                  Go to page:{" "}
-                  <input
-                    type="number"
-                    min={1}
-                    max={pageCount}
-                    value={pageIndex + 1}
-                    onChange={e => {
-                      const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                      setPageIndex(Math.max(0, Math.min(page, pageCount - 1)));
-                    }}
-                    className="w-16 border rounded px-2 py-1 text-sm"
-                  />
-                </span>
-                <select
-                  className="border rounded px-2 py-1 text-sm"
-                  value={pageSize}
-                  onChange={e => {
-                    setPageSize(Number(e.target.value));
-                    setPageIndex(0);
-                  }}
-                >
-                  {[10, 20, 30, 40, 50].map(size => (
-                    <option key={size} value={size}>
-                      Show {size}
-                    </option>
+                      </td>
+
+                      {/* User Info */}
+                      <td className="py-3 px-4">
+                        {reservation.user ? (
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">
+                              {reservation.user.first_name} {reservation.user.last_name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {reservation.user.auth?.email || "No email"}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 italic text-sm">N/A</span>
+                        )}
+                      </td>
+
+                      {/* Route */}
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="flex items-center gap-1 text-gray-900 mb-1">
+                            <MapPin className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                            <span className="truncate max-w-32" title={reservation.start_location}>
+                              {reservation.start_location}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <MapPin className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                            <span className="truncate max-w-32" title={reservation.reservation_destination}>
+                              {reservation.reservation_destination}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Departure */}
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {reservation.departure_date 
+                              ? new Date(reservation.departure_date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : "Not set"
+                            }
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {reservation.departure_date 
+                              ? new Date(reservation.departure_date).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : ""
+                            }
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Return */}
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {reservation.expected_returning_date 
+                              ? new Date(reservation.expected_returning_date).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : "Not set"
+                            }
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {reservation.expected_returning_date 
+                              ? new Date(reservation.expected_returning_date).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : ""
+                            }
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(reservation.reservation_status)}`}>
+                          {RESERVATION_STATUSES[reservation.reservation_status as ReservationStatus] || reservation.reservation_status}
+                        </span>
+                      </td>
+                    </tr>
                   ))}
-                </select>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Enhanced Pagination */}
+            {filteredReservations.length > pageSize && (
+              <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing {pageIndex * pageSize + 1} to{' '}
+                    {Math.min((pageIndex + 1) * pageSize, filteredReservations.length)} of{' '}
+                    {filteredReservations.length} reservations
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      onClick={() => setPageIndex(0)}
+                      disabled={pageIndex === 0}
+                    >
+                      First
+                    </button>
+                    <button
+                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                      disabled={pageIndex === 0}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+                    >
+                      {pageIndex + 1}
+                    </button>
+                    <button
+                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                      disabled={pageIndex >= pageCount - 1}
+                    >
+                      Next
+                    </button>
+                    <button
+                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
+                      onClick={() => setPageIndex(pageCount - 1)}
+                      disabled={pageIndex >= pageCount - 1}
+                    >
+                      Last
+                    </button>
+                    <select
+                      className="ml-3 px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      value={pageSize}
+                      onChange={e => {
+                        setPageSize(Number(e.target.value));
+                        setPageIndex(0);
+                      }}
+                    >
+                      {[10, 20, 30, 40, 50].map(size => (
+                        <option key={size} value={size}>
+                          {size} per page
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         )}
-      </div>
+      </div> 
       {/* Modals */}
       <CreateReservationModal
         open={showCreate}
         onClose={() => setShowCreate(false)}
         onCreate={handleCreate}
         isLoading={createReservation.isPending}
-      />
-      <CancelReservationModal
-        open={showCancelReservation}
-        onClose={() => setShowCancelReservation(false)}
-        reservation={approveRejectReservation}
-        onCancel={handleCancelReservation}
-        isLoading={cancelReservation.isPending}
-      />
-      {/* Approve/Reject Modal */}
-      <ApproveRejectModal
-        open={showApproveRejectModal}
-        onClose={() => {
-          setShowApproveRejectModal(false);
-          setApproveRejectReservation(null);
-        }}
-        reservation={approveRejectReservation}
-        onSubmit={handleApproveReject}
-        isLoading={updateReservation.isPending}
       />
       {/* Edit Reason, Assign Vehicle, Complete Reservation modals are now handled on [id] page only */}
     </div>

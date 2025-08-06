@@ -1,4 +1,4 @@
-export enum VehicleType {
+export enum ModelType {
   SEDAN = "SEDAN",
   SUV = "SUV",
   TRUCK = "TRUCK",
