@@ -11,14 +11,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type {
-  Reservation,
   CreateReservationDto,
   ReservationStatus,
 } from "@/types/next-auth";
-import { SkeletonReservationCard } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorUI from "@/components/ErrorUI";
 import { useRouter } from "next/navigation";
+import { SkeletonReservationDetailPage } from "@/components/ui/skeleton";
 
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
@@ -547,7 +546,7 @@ export default function ReservationsPage() {
 
   const filteredReservations = useMemo(() => {
     if (!reservations) return [];
-    return reservations.filter((reservation: Reservation) => {
+    return reservations.filter((reservation) => {
       // Text search filter
       const matchesSearch = 
         reservation.reservation_purpose
@@ -861,9 +860,9 @@ export default function ReservationsPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto px-6 pb-6">
-        {isLoading ? (
-          <SkeletonReservationCard />
-        ) : isError ? (
+                 {isLoading ? (
+           <SkeletonReservationDetailPage />
+         ) : isError ? (
           <ErrorUI
             resource="reservations"
             onBack={() => router.back()}

@@ -30,7 +30,7 @@ import {
 } from "@/lib/queries";
 import {
   SkeletonEntityDetails,
-  SkeletonReservationCard,
+  SkeletonReservationDetailPage,
 } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,7 +75,7 @@ export default function ReservationDetailPage() {
 
   // Show loading state while data is being fetched
   if (isLoading || authLoading) {
-    return <SkeletonReservationCard />;
+    return <SkeletonReservationDetailPage />;
   }
 
   // Show error state if data fetch failed
@@ -148,13 +148,13 @@ export default function ReservationDetailPage() {
           });
         } else {
           // If no vehicles selected, just update status to ACCEPTED
-          await updateReservation.mutateAsync({
-            id: reservation.reservation_id,
-            dto: {
-              status: "ACCEPTED",
-              reason: reason || "Reservation accepted",
-            },
-          });
+                  await updateReservation.mutateAsync({
+          id: reservation.reservation_id,
+          dto: {
+            status: "ACCEPTED",
+            reason: reason || "Reservation accepted",
+          },
+        });
         }
       } else {
         // For rejection, just update the status

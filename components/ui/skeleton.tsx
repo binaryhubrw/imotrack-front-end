@@ -1424,6 +1424,162 @@ function SkeletonSystemLogsDashboard({ className, ...props }: React.ComponentPro
   );
 }
 
+// Reservation Detail Page Skeleton Component
+function SkeletonReservationDetailPage({ className, ...props }: { className?: string }) {
+  return (
+    <div className={cn("min-h-screen bg-gray-50 py-8", className)} {...props}>
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-5 w-12" />
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Main Reservation Card */}
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            {/* Header with Status */}
+            <div className="bg-[#0872b3] text-white p-6">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-8 w-48 bg-white/20" />
+                <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
+                  <Skeleton className="h-4 w-4 bg-white/30" />
+                  <Skeleton className="h-4 w-20 bg-white/30" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Purpose and Description - Full Width */}
+              <div className="grid grid-cols-1 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <Skeleton className="h-3 w-16 mb-2" />
+                  <Skeleton className="h-5 w-64" />
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <Skeleton className="h-3 w-20 mb-2" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-3/4 mt-1" />
+                </div>
+              </div>
+
+              {/* Trip Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-1 mb-2">
+                      <Skeleton className="h-3 w-3" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* User Information Card */}
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <div className="flex items-center gap-2 mb-6">
+              <Skeleton className="h-6 w-6" />
+              <Skeleton className="h-6 w-44" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    <Skeleton className="h-3 w-3" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-5 w-28" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Reserved Vehicles Card */}
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-6 w-6" />
+                <Skeleton className="h-6 w-40" />
+              </div>
+            </div>
+
+            {/* Vehicle Cards Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div
+                  key={index}
+                  className="bg-green-50 border-green-200 rounded-xl border p-4 shadow-sm"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+
+                  <div className="space-y-2">
+                    {Array.from({ length: 6 }, (_, detailIndex) => (
+                      <div key={detailIndex} className="flex justify-between">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Return Date */}
+                  <div className="pt-2 mt-2 border-t border-gray-200">
+                    <Skeleton className="h-3 w-16 mb-1" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="mt-4 pt-3 border-t border-gray-200 space-y-2">
+                    <Skeleton className="h-8 w-full rounded" />
+                    <Skeleton className="h-8 w-full rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional Information Card */}
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <div className="flex items-center gap-2 mb-6">
+              <Skeleton className="h-6 w-6" />
+              <Skeleton className="h-6 w-44" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <Skeleton className="h-3 w-20 mb-2" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+              <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
+                <Skeleton className="h-3 w-32 mb-2" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-2/3 mt-1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Actions Bar */}
+      <div className="bg-white flex items-center justify-between m-3 p-4 rounded-xl shadow-sm">
+        <div></div>
+        <div className="flex items-center gap-3">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Skeleton key={index} className="h-10 w-24 rounded" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
 // Dashboard Skeleton Component
 function SkeletonDashboard({ 
   className, 
@@ -1642,5 +1798,6 @@ export {
   SkeletonVehicleIssueDetails, 
   SkeletonSystemLogsDashboard,
   SkeletonUserProfilePage,
-  skeletonVariants 
+  skeletonVariants ,
+  SkeletonReservationDetailPage
 }

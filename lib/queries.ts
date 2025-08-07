@@ -30,7 +30,6 @@ import {
   Reservation,
   CreateReservationDto,
   UpdateReservationStatusDto,
-  StartReservationDto,
   VehicleIssue,
   CreateVehicleIssueDto,
   Notification,
@@ -1352,38 +1351,94 @@ export const useDeleteVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation<{ message: string }, Error, { id: string }>({
     mutationFn: async ({ id }) => {
-      const { data } = await api.delete<{ data: { message: string } }>(`/v2/vehicles/${id}`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success(data.message || 'Vehicle deleted successfully!');
-    },
-    onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
+      console.log('Deleting reservation with id:', id);
+      try {
+        const response = await api.delete(`/v2/reservations/${id}`);
+        console.log('Delete reservation full response:', response);
+        const { data } = response;
+        console.log('Delete reservation data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data && data.message) {
+          return data;
+        } else {
+          return { message: 'Reservation deleted successfully' };
+        }
+      } catch (error) {
+        console.error('Delete reservation API error:', error);
+        throw error;
       }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle.'));
+    },
+    onMutate: async ({ id }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['reservations'] });
+      await queryClient.cancelQueries({ queryKey: ['myReservations'] });
+      await queryClient.cancelQueries({ queryKey: ['reservation', id] });
+
+      // Snapshot the previous values
+      const previousReservations = queryClient.getQueryData(['reservations']);
+      const previousMyReservations = queryClient.getQueryData(['myReservations']);
+      const previousReservation = queryClient.getQueryData(['reservation', id]);
+
+      // Optimistically update the reservation status
+      const optimisticUpdate = (reservation: Reservation) => ({
+        ...reservation,
+        reservation_status: 'CANCELLED',
+        rejection_comment: 'Reservation deleted by user',
+        updated_at: new Date().toISOString(),
+      });
+
+      // Update reservations list
+      queryClient.setQueryData(['reservations'], (old: Reservation[] = []) => {
+        return old.map(reservation => 
+          reservation.reservation_id === id 
+            ? optimisticUpdate(reservation)
+            : reservation
+        );
+      });
+
+      // Update my reservations
+      queryClient.setQueryData(['myReservations'], (old: Reservation | Reservation[] = []) => {
+        if (Array.isArray(old)) {
+          return old.map(reservation => 
+            reservation.reservation_id === id 
+              ? optimisticUpdate(reservation)
+              : reservation
+          );
+        }
+        return old;
+      });
+
+      // Update specific reservation
+      queryClient.setQueryData(['reservation', id], (old: Reservation) => {
+        return old ? optimisticUpdate(old) : old;
+      });
+
+      return { previousReservations, previousMyReservations, previousReservation };
+    },
+    onError: (err, variables, context: unknown) => {
+      // Rollback on error
+      const typedContext = context as { previousReservations?: unknown; previousMyReservations?: unknown; previousReservation?: unknown } | undefined;
+      if (typedContext?.previousReservations) {
+        queryClient.setQueryData(['reservations'], typedContext.previousReservations);
+      }
+      if (typedContext?.previousMyReservations) {
+        queryClient.setQueryData(['myReservations'], typedContext.previousMyReservations);
+      }
+      if (typedContext?.previousReservation) {
+        queryClient.setQueryData(['reservation', variables.id], typedContext.previousReservation);
+      }
+    },
+    onSettled: (data, error, variables) => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
     },
   });
 };
-
-
-
-
-// --- Reservations ---
 
 export const useReservation = (id: string) => {
   return useQuery({
@@ -1559,66 +1614,6 @@ export const useUpdateReservation = () => {
   });
 };
 
-// Get available vehicles for a specific date range
-export const useGetAvailableVehicles = (departureDate: string, expectedReturningDate: string) => {
-  return useQuery({
-    queryKey: ['available-vehicles', departureDate, expectedReturningDate],
-    queryFn: async () => {
-      const response = await api.post('/v2/reservations/available-vehicles', {
-        departure_date: departureDate,
-        expected_returning_date: expectedReturningDate,
-      });
-      return response.data;
-    },
-    enabled: !!departureDate && !!expectedReturningDate,
-  });
-};
-
-
-export const useAssignMultipleVehicles = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ 
-      reservationId, 
-      vehicleIds 
-    }: { 
-      reservationId: string; 
-      vehicleIds: string[] 
-    }) => {
-      const response = await api.post(`/v2/reservations/${reservationId}/assign-multiple-vehicles`, {
-        vehicle_ids: vehicleIds
-      });
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
-      // Invalidate all reservation-related queries
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
-      queryClient.invalidateQueries({ queryKey: ['reservation', variables.reservationId] });
-      
-      // Update the specific reservation in cache if data is available
-      if (data?.data) {
-        queryClient.setQueryData(['reservation', variables.reservationId], data.data);
-      }
-      
-      toast.success('Vehicles assigned successfully!');
-    },
-    onError: (error: unknown) => {
-      console.error('Vehicle assignment error:', error);
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message
-      ) {
-        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      }
-      toast.error(apiMsg || 'Failed to assign vehicles');
-    },
-  });
-};
-
 export const useReservationVehiclesOdometerAssignation = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { id: string; dto: { vehicles: Array<{ vehicle_id: string; starting_odometer: number; fuel_provided: number }> } }>({
@@ -1663,7 +1658,6 @@ export const useReservationVehiclesOdometerAssignation = () => {
   });
 };
 
-
 export const useUpdateReservationReason = () => {
   const queryClient = useQueryClient();
   return useMutation<Reservation, Error, { id: string; dto: { reason: string } }>({
@@ -1702,54 +1696,6 @@ export const useUpdateReservationReason = () => {
         apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
       toast.error(apiMsg || 'Failed to update reservation reason');
-    },
-  });
-};
-export const useStartReservation = () => {
-  const queryClient = useQueryClient();
-  return useMutation<Reservation, Error, { reservedVehicleId: string; dto: StartReservationDto }>({
-    mutationFn: async ({ reservedVehicleId, dto }) => {
-      console.log('Starting reservation for reserved vehicle:', { reservedVehicleId, dto });
-      try {
-        const response = await api.post(`/v2/reservations/${reservedVehicleId}/start`, dto, {
-          headers: { 'Content-Type': 'application/json' },
-        });
-        console.log('Start reservation full response:', response);
-        const { data } = response;
-        console.log('Start reservation data:', data);
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data) {
-          return data;
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } catch (error) {
-        console.error('Start reservation API error:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Reservation started!');
-    },
-    onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to start reservation.'));
     },
   });
 };
@@ -1816,55 +1762,6 @@ export const useCompleteReservation = () => {
   });
 };
 
-export const useDeleteReservation = () => {
-  const queryClient = useQueryClient();
-  return useMutation<{ message: string }, Error, { id: string }>({
-    mutationFn: async ({ id }) => {
-      console.log('Deleting reservation with id:', id);
-      try {
-        const response = await api.delete(`/v2/reservations/${id}`);
-        console.log('Delete reservation full response:', response);
-        const { data } = response;
-        console.log('Delete reservation data:', data);
-        
-        // Handle different response formats
-        if (data.data) {
-          return data.data;
-        } else if (data && data.message) {
-          return data;
-        } else {
-          return { message: 'Reservation deleted successfully' };
-        }
-      } catch (error) {
-        console.error('Delete reservation API error:', error);
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Reservation deleted successfully!');
-    },
-    onError: (error: unknown) => {
-      console.error('Delete reservation error:', error);
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete reservation.'));
-    },
-  });
-};
-
 
 
 
@@ -1882,6 +1779,7 @@ export const useVehicleIssues = () => {
 };
 
 export const useCreateVehicleIssue = () => {
+  const queryClient = useQueryClient();
   return useMutation<VehicleIssue, Error, CreateVehicleIssueDto>({
     mutationFn: async (vehicleIssue) => {
       console.log('Creating vehicle issue with data:', vehicleIssue);
@@ -1909,15 +1807,53 @@ export const useCreateVehicleIssue = () => {
         throw new Error('Unexpected response structure from create vehicle issue request');
       }
     },
-    onSuccess: () => {
-      toast.success('Vehicle issue reported successfully!');
+    onMutate: async (newVehicleIssue) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['vehicle-issues'] });
+
+      // Snapshot the previous value
+      const previousVehicleIssues = queryClient.getQueryData(['vehicle-issues']);
+
+      // Optimistically update to the new value
+      const optimisticVehicleIssue: VehicleIssue = {
+        issue_id: `temp-${Date.now()}`,
+        issue_title: newVehicleIssue.issue_title,
+        issue_description: newVehicleIssue.issue_description,
+        issue_status: 'OPEN',
+        issue_date: newVehicleIssue.issue_date,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        reserved_vehicle_id: newVehicleIssue.reserved_vehicle_id,
+        reserved_vehicle: null, // Will be filled by server
+      };
+
+      // Update vehicle issues list
+      queryClient.setQueryData(['vehicle-issues'], (old: VehicleIssue[] = []) => {
+        return [optimisticVehicleIssue, ...old];
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousVehicleIssues };
     },
-    onError: (error: unknown) => {
-      console.error('Create vehicle issue request failed:', error);
-      const axiosError = error as { response?: { data?: { message?: string } } };
+    onError: (err, newVehicleIssue, context: unknown) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      const typedContext = context as { previousVehicleIssues?: unknown } | undefined;
+      if (typedContext?.previousVehicleIssues) {
+        queryClient.setQueryData(['vehicle-issues'], typedContext.previousVehicleIssues);
+      }
+      
+      console.error('Create vehicle issue request failed:', err);
+      const axiosError = err as { response?: { data?: { message?: string } } };
       const errorMessage = axiosError.response?.data?.message || 'Failed to report vehicle issue';
       console.error('Create vehicle issue error message:', errorMessage);
       toast.error(errorMessage);
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['vehicle-issues'] });
+    },
+    onSuccess: () => {
+      toast.success('Vehicle issue reported successfully!');
     },
   });
 };
@@ -2037,6 +1973,139 @@ export const useAuditLogs = (filters: {
       const { data } = await api.get<ApiResponse<AuditLog[]>>(`/v2/history${query}`);
       if (!data.data) throw new Error('No data');
       return data.data;
+    },
+  });
+};
+
+// Get available vehicles for a specific date range
+export const useGetAvailableVehicles = (departureDate: string, expectedReturningDate: string) => {
+  return useQuery({
+    queryKey: ['available-vehicles', departureDate, expectedReturningDate],
+    queryFn: async () => {
+      const response = await api.post('/v2/reservations/available-vehicles', {
+        departure_date: departureDate,
+        expected_returning_date: expectedReturningDate,
+      });
+      return response.data;
+    },
+    enabled: !!departureDate && !!expectedReturningDate,
+  });
+};
+
+export const useAssignMultipleVehicles = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ 
+      reservationId, 
+      vehicleIds 
+    }: { 
+      reservationId: string; 
+      vehicleIds: string[] 
+    }) => {
+      const response = await api.post(`/v2/reservations/${reservationId}/assign-multiple-vehicles`, {
+        vehicle_ids: vehicleIds
+      });
+      return response.data;
+    },
+    onMutate: async ({ reservationId, vehicleIds }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['reservations'] });
+      await queryClient.cancelQueries({ queryKey: ['myReservations'] });
+      await queryClient.cancelQueries({ queryKey: ['reservation', reservationId] });
+
+      // Snapshot the previous values
+      const previousReservations = queryClient.getQueryData(['reservations']);
+      const previousMyReservations = queryClient.getQueryData(['myReservations']);
+      const previousReservation = queryClient.getQueryData(['reservation', reservationId]);
+
+      // Get vehicles data for optimistic update
+      const vehicles = queryClient.getQueryData(['vehicles']) as Vehicle[] || [];
+
+      // Create optimistic reserved vehicles
+      const optimisticReservedVehicles = vehicleIds.map(vehicleId => {
+        const vehicle = vehicles.find(v => v.vehicle_id === vehicleId);
+        return {
+          reserved_vehicle_id: `temp-${Date.now()}-${vehicleId}`,
+          vehicle: vehicle || { vehicle_id: vehicleId, vehicle_name: 'Loading...', plate_number: 'Loading...' },
+          starting_odometer: null,
+          fuel_provided: null,
+          returned_odometer: null,
+          returned_date: null,
+        };
+      });
+
+      // Optimistically update the reservation
+      const optimisticUpdate = (reservation: Reservation) => ({
+        ...reservation,
+        reservation_status: 'ACCEPTED',
+        reserved_vehicles: optimisticReservedVehicles,
+        updated_at: new Date().toISOString(),
+      });
+
+      // Update reservations list
+      queryClient.setQueryData(['reservations'], (old: Reservation[] = []) => {
+        return old.map(reservation => 
+          reservation.reservation_id === reservationId 
+            ? optimisticUpdate(reservation)
+            : reservation
+        );
+      });
+
+      // Update my reservations
+      queryClient.setQueryData(['myReservations'], (old: Reservation | Reservation[] = []) => {
+        if (Array.isArray(old)) {
+          return old.map(reservation => 
+            reservation.reservation_id === reservationId 
+              ? optimisticUpdate(reservation)
+              : reservation
+          );
+        }
+        return old;
+      });
+
+      // Update specific reservation
+      queryClient.setQueryData(['reservation', reservationId], (old: Reservation) => {
+        return old ? optimisticUpdate(old) : old;
+      });
+
+      return { previousReservations, previousMyReservations, previousReservation };
+    },
+    onError: (err, variables, context: { previousReservations?: unknown; previousMyReservations?: unknown; previousReservation?: unknown } | undefined) => {
+      // Rollback on error
+      if (context?.previousReservations) {
+        queryClient.setQueryData(['reservations'], context.previousReservations);
+      }
+      if (context?.previousMyReservations) {
+        queryClient.setQueryData(['myReservations'], context.previousMyReservations);
+      }
+      if (context?.previousReservation) {
+        queryClient.setQueryData(['reservation', variables.reservationId], context.previousReservation);
+      }
+      
+      console.error('Vehicle assignment error:', err);
+      let apiMsg: string | undefined;
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        (err as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        apiMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      }
+      toast.error(apiMsg || 'Failed to assign vehicles');
+    },
+    onSettled: (data, error, variables) => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['myReservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.reservationId] });
+    },
+    onSuccess: (data, variables) => {
+      // Update the specific reservation in cache if data is available
+      if (data?.data) {
+        queryClient.setQueryData(['reservation', variables.reservationId], data.data);
+      }
+      toast.success('Vehicles assigned successfully!');
     },
   });
 };
