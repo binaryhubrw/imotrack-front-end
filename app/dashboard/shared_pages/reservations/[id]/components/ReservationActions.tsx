@@ -13,13 +13,19 @@ interface ReservationActionsProps {
   onOpenAssignVehiclesModal: () => void;
   onOpenApproveWithOdometerModal: () => void;
   onOpenCancelModal: () => void;
+   onOpenAddVehicleModal: () => void;      // ADD THIS
+  onOpenRemoveVehicleModal: () => void;   // ADD THIS
   onOpenEditReasonModal: () => void;
+  
   // Loading states
   isApproveRejectLoading: boolean;
   isAssignVehiclesLoading: boolean;
   isApproveWithOdometerLoading: boolean;
   isCancelLoading: boolean;
   isEditReasonLoading: boolean;
+   isAddVehicleLoading: boolean;        // ADD THIS
+  isRemoveVehicleLoading: boolean;     // ADD THIS
+
 }
 
 export default function ReservationActions({
@@ -29,12 +35,15 @@ export default function ReservationActions({
   onOpenApproveWithOdometerModal,
   onOpenCancelModal,
   onOpenEditReasonModal,
+  // ADD THIS
   isApproveRejectLoading,
   isAssignVehiclesLoading,
   isApproveWithOdometerLoading,
   isCancelLoading,
   isEditReasonLoading,
 }: ReservationActionsProps) {
+
+
   const { user } = useAuth();
   
   // Permission checks
@@ -128,6 +137,9 @@ export default function ReservationActions({
           )}
         </Button>
       )}
+      {/* Add Vehicle Button - only show for ACCEPTED status */}
+
+
 
       {/* Cancel Reservation */}
       {shouldShowCancel && (

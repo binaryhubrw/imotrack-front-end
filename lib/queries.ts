@@ -35,6 +35,10 @@ import {
   Notification,
   AuditLog,
   position_accesses,
+  VehicleOperationResponse,
+  RemoveVehicleFromReservationDto,
+  VehicleOperationApiResponse,
+  AddVehicleToReservationDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { TransmissionMode } from '@/types/enums';
@@ -1440,6 +1444,8 @@ export const useDeleteVehicle = () => {
   });
 };
 
+// reservation
+
 export const useReservation = (id: string) => {
   return useQuery({
     queryKey: ['reservation', id],
@@ -1654,6 +1660,119 @@ export const useReservationVehiclesOdometerAssignation = () => {
         apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
       }
       toast.error(apiMsg || 'Failed to update vehicles with odometer/fuel');
+    },
+  });
+};
+
+export const useAddNewReservedVehicle=()=>{
+
+}
+export const useRemoveReservedVehicle=()=>{}
+
+// Add these new hooks to your existing reservation queries
+
+export const useAddVehicleToReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<VehicleOperationResponse[], Error, { id: string; dto: AddVehicleToReservationDto }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Adding vehicle to reservation:', { id, dto });
+      
+      try {
+        const { data } = await api.post<VehicleOperationApiResponse>(
+          `/v2/reservations/${id}/add-vehicle`,
+          dto,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        
+        console.log('Add vehicle API response:', data);
+        
+        if (!data.data) throw new Error('No data received');
+        return data.data;
+      } catch (error) {
+        console.error('Add vehicle API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: (data, variables) => {
+      console.log('Vehicle added successfully:', data);
+      
+      // Invalidate all reservation-related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      toast.success('Vehicle added to reservation successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Add vehicle error:', error);
+      
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      }
+      
+      const errorMessage = apiMsg || (error instanceof Error ? error.message : 'Failed to add vehicle to reservation');
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useRemoveVehicleFromReservation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<VehicleOperationResponse[], Error, { id: string; dto: RemoveVehicleFromReservationDto }>({
+    mutationFn: async ({ id, dto }) => {
+      console.log('Removing vehicle from reservation:', { id, dto });
+      
+      try {
+        const { data } = await api.post<VehicleOperationApiResponse>(
+          `/v2/reservations/${id}/remove-vehicle`,
+          dto,
+          {
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+        
+        console.log('Remove vehicle API response:', data);
+        
+        if (!data.data) throw new Error('No data received');
+        return data.data;
+      } catch (error) {
+        console.error('Remove vehicle API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: (data, variables) => {
+      console.log('Vehicle removed successfully:', data);
+      
+      // Invalidate all reservation-related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['my-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['reservation', variables.id] });
+      
+      toast.success('Vehicle removed from reservation successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Remove vehicle error:', error);
+      
+      let apiMsg: string | undefined;
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      ) {
+        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      }
+      
+      const errorMessage = apiMsg || (error instanceof Error ? error.message : 'Failed to remove vehicle from reservation');
+      toast.error(errorMessage);
     },
   });
 };

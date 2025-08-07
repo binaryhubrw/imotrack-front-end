@@ -520,20 +520,22 @@ export type UpdateVehicleDto = {
   organization_id?: string;
 };
 
-// --- Reservation Types ---
+// --- Reservation Status Enum ---
 export type ReservationStatus =
   | "UNDER_REVIEW"
   | "ACCEPTED"
   | "APPROVED"
   | "REJECTED"
   | "CANCELLED"
-  | "CANCELED"
+  | "CANCELED" // US vs UK spelling
   | "COMPLETED";
 
-  export interface AuthRes{
-    email: string
-  }
+// --- Auth Info ---
+export interface AuthRes {
+  email: string;
+}
 
+// --- User Info ---
 export interface ReservationUser {
   user_id: string;
   first_name: string;
@@ -542,23 +544,45 @@ export interface ReservationUser {
   auth: AuthRes;
 }
 
+// --- Reserved Vehicle Info ---
 export interface ReservedVehicle {
   reserved_vehicle_id: string;
+  reservation_id: string;
+  vehicle_id: string;
   starting_odometer?: number;
   fuel_provided?: number;
   returned_odometer?: number;
   returned_date?: string | null;
+  returned_by?: string | null;
+  created_at?: string;
+  returned_by_user?: string | null;
+
   vehicle: {
     vehicle_id: string;
-    vehicle_name: string;
-    vehicle_model: string;
-    vehicle_status: string;
-    license_plate: string;
-     vehicle_capacity: string;
     plate_number: string;
+    transmission_mode: string;
+    vehicle_model_id: string;
+    vehicle_photo: string;
+    vehicle_year: number;
+    vehicle_status: string;
+    energy_type: string;
+    last_service_date: string;
+    created_at: string;
+    organization_id: string;
+
+    vehicle_model: {
+      vehicle_model_id: string;
+      vehicle_model_name: string;
+      vehicle_type: string;
+      vehicle_capacity: number;
+      manufacturer_name: string;
+      created_at: string;
+    };
   };
 }
 
+
+// --- Main Reservation Info ---
 export interface Reservation {
   reservation_id: string;
   reservation_purpose: string;
@@ -576,6 +600,7 @@ export interface Reservation {
   reserved_vehicles: ReservedVehicle[];
 }
 
+// --- Create Reservation Payload ---
 export interface CreateReservationDto {
   reservation_purpose: string;
   start_location: string;
@@ -671,6 +696,35 @@ export type AuditLog = {
   };
 };
 
+
+// Add these new types to your existing types file
+
+// Request DTOs for vehicle operations
+export interface AddVehicleToReservationDto {
+  vehicle_id: string;
+}
+
+export interface RemoveVehicleFromReservationDto {
+  vehicle_id: string;
+}
+
+// Response type for vehicle operations
+export interface VehicleOperationResponse {
+  reserved_vehicle_id: string;
+  vehicle_id: string;
+  vehicle: {
+    vehicle_name: string;
+    vehicle_model: string;
+    license_plate: string;
+    vehicle_status: string;
+  };
+}
+
+// API response wrapper for vehicle operations
+export interface VehicleOperationApiResponse {
+  message: string;
+  data: VehicleOperationResponse[];
+}
 
 
 

@@ -204,9 +204,7 @@ function ReportIssueModal({
                         value={reservation.reservation_id}
                       >
                         {reservation.reservation_purpose} -{" "}
-                        {vehicle?.plate_number ||
-                          vehicle?.license_plate ||
-                          "Unknown Vehicle"}
+                        {vehicle?.plate_number }
                       </option>
                     );
                   })}
@@ -223,9 +221,7 @@ function ReportIssueModal({
               <div className="mb-4 p-3 bg-blue-50 rounded border-l-4 border-blue-400">
                 <p className="text-sm text-blue-800">
                   <strong>Vehicle:</strong>{" "}
-                  {selectedReservedVehicle.vehicle?.plate_number ||
-                    selectedReservedVehicle.vehicle?.license_plate ||
-                    "Unknown"}
+                  {selectedReservedVehicle.vehicle?.plate_number }
                 </p>
 
                 <p className="text-sm text-blue-700 mt-1">
@@ -320,6 +316,7 @@ export default function VehicleIssuesPage() {
       return matchesSearch && matchesFilter;
     });
   }, [issues, searchTerm, filter]);
+  
 
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
@@ -333,6 +330,7 @@ export default function VehicleIssuesPage() {
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
+
 
   const handleReportIssue = async (data: CreateVehicleIssueDto) => {
     try {
@@ -373,6 +371,8 @@ export default function VehicleIssuesPage() {
   const closedIssuesCount = issues.filter(
     (issue) => issue.issue_status === "CLOSED"
   ).length;
+
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -496,7 +496,7 @@ export default function VehicleIssuesPage() {
                       variant={issue.issue_status === "OPEN" ? "destructive" : "secondary"}
                       className={`text-xs font-semibold px-3 py-1 rounded-full ${
                         issue.issue_status === "OPEN" 
-                          ? "bg-red-100 text-red-700 border border-red-200" 
+                          ? "bg-red-100 text-orange-700 border border-red-200" 
                           : "bg-green-100 text-green-700 border border-green-200"
                       }`}
                     >

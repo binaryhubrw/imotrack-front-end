@@ -469,6 +469,17 @@ export default function VehicleDetailPage() {
                   </div>
                 </div>
               )}
+              {/* Capacity Name */}
+              {vehicle.vehicle_model?.vehicle_capacity && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide">
+                    Capacity
+                  </div>
+                  <div className="font-medium text-gray-900">
+                    {vehicle.vehicle_model.vehicle_capacity}
+                  </div>
+                </div>
+              )}
               {/* Model Name and Manufacturer */}
               {vehicle.vehicle_model && (
                 <div className="bg-gray-50 rounded-lg p-4">
