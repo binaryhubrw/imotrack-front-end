@@ -447,53 +447,59 @@ Generated on: ${new Date().toLocaleString()}
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Issue Header */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(issue.issue_status)}
-                    <div>
-                      <CardTitle className="text-xl text-gray-900">
-                        {issue.issue_title}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600">
-                        Reported {new Date(issue.issue_date).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                  {getStatusBadge(issue.issue_status)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Description
-                    </h3>
-                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                      {issue.issue_description}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <Calendar className="w-5 h-5 text-green-600" />
-                      <div>
-                        <p className="text-sm text-gray-600">Last Updated</p>
-                        <p className="font-medium text-gray-900">
-                          {"updated_at" in issue && issue.updated_at
-                            ? new Date(
-                                issue.updated_at as string
-                              ).toLocaleString()
-                            : issue.created_at
-                            ? new Date(issue.created_at).toLocaleString()
-                            : "-"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+         <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
+  <CardHeader>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        {getStatusIcon(issue.issue_status)}
+        <div>
+          <CardTitle className="text-xl text-gray-900">
+            {issue.issue_title}
+          </CardTitle>
+        </div>
+      </div>
+      {getStatusBadge(issue.issue_status)}
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Description
+        </h3>
+        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+          {issue.issue_description}
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <div>
+            <p className="text-sm text-gray-600">Reported At</p>
+            <p className="font-medium text-gray-900">
+              {new Date(issue.issue_date).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+          <Calendar className="w-5 h-5 text-green-600" />
+          <div>
+            <p className="text-sm text-gray-600">Updated At</p>
+            <p className="font-medium text-gray-900">
+              {"updated_at" in issue && issue.updated_at
+                ? new Date(
+                    issue.updated_at as string
+                  ).toLocaleString()
+                : issue.created_at
+                ? new Date(issue.created_at).toLocaleString()
+                : "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </CardContent>
+</Card>
 
             {/* Vehicle Details Card */}
             {issue.reserved_vehicle &&

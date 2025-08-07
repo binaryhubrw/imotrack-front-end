@@ -20,7 +20,7 @@ export default function ResendVerificationPage() {
 
   // Pre-fill email if available in localStorage
   useEffect(() => {
-    const storedEmail = localStorage.getItem('verification_email');
+    const storedEmail = localStorage.getItem("verification_email");
     if (storedEmail && !email) {
       setEmail(storedEmail);
     }
@@ -38,7 +38,7 @@ export default function ResendVerificationPage() {
       setIsSubmitted(true);
     } catch (error) {
       // Error handling is done in the mutation
-      console.error('Resend verification failed:', error);
+      console.error("Resend verification failed:", error);
     }
   };
 
@@ -70,14 +70,15 @@ export default function ResendVerificationPage() {
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
             </div>
-            
+
             <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
               Verification Email Sent!
             </h2>
-            
+
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-              We&apos;ve sent a new verification link to <strong>{email}</strong>. 
-              Please check your email and follow the instructions to verify your account.
+              We&apos;ve sent a new verification link to{" "}
+              <strong>{email}</strong>. Please check your email and follow the
+              instructions to verify your account.
             </p>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
@@ -89,11 +90,11 @@ export default function ResendVerificationPage() {
             <div className="space-y-3">
               <button
                 onClick={() => setIsSubmitted(false)}
-                className="block w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5"
+                className="block w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5"
               >
                 Send Another Email
               </button>
-              
+
               <Link
                 href="/login"
                 className="block w-full py-3 bg-gray-500 text-white rounded-md font-medium text-base text-center transition hover:bg-gray-600 hover:-translate-y-0.5"
@@ -137,7 +138,7 @@ export default function ResendVerificationPage() {
           <h2 className="text-xl font-semibold text-[#0872b3] mb-2 text-center flex items-center justify-center gap-2">
             <FontAwesomeIcon icon={faEnvelope} /> Resend Verification
           </h2>
-          
+
           <p className="text-gray-600 text-center mb-6 text-sm leading-relaxed">
             Enter your email address to receive a new verification link.
           </p>
@@ -172,8 +173,10 @@ export default function ResendVerificationPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-              disabled={resendVerification.isPending || !email || !validateEmail(email)}
+              className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+              disabled={
+                resendVerification.isPending || !email || !validateEmail(email)
+              }
             >
               {resendVerification.isPending ? (
                 <>

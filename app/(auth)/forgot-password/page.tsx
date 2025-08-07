@@ -103,7 +103,7 @@ function ForgotPasswordForm() {
                 {/* Send Reset Link Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                  className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                   disabled={forgotPassword.isPending}
                 >
                   {forgotPassword.isPending ? (
@@ -166,7 +166,7 @@ function ForgotPasswordForm() {
                 <div className="space-y-3">
                   <button
                     onClick={handleTryAgain}
-                    className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base transition hover:bg-[#065d8f] hover:-translate-y-0.5"
+                    className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base transition hover:bg-[#065d8f] hover:-translate-y-0.5"
                     disabled={forgotPassword.isPending}
                   >
                     Try Different Email

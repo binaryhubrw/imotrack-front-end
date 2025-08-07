@@ -190,7 +190,7 @@ export default function UserProfilePage() {
               <div className="flex gap-3 justify-center">
                 <Button
                   onClick={handleManualLogin}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="cursor-pointer bg-blue-600 hover:bg-blue-700"
                 >
                   <User className="w-4 h-4 mr-2" />
                   Go to Login
@@ -252,7 +252,7 @@ export default function UserProfilePage() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+              className={`flex cursor-pointer items-center gap-2 px-4 py-2 rounded-xl transition-all duration-200 ${
                 activeTab === id
                   ? "bg-white shadow-md text-blue-600 border border-blue-100"
                   : "bg-white/50 hover:bg-white/80 text-gray-600 hover:text-gray-900"
@@ -421,7 +421,7 @@ export default function UserProfilePage() {
                       <div className="flex gap-3 pt-4">
                         <Button
                           onClick={handleSaveProfile}
-                          className="bg-blue-600 hover:bg-blue-700"
+                          className="cursor-pointer bg-blue-600 hover:bg-blue-700"
                         >
                           <Save className="w-4 h-4 mr-2" />
                           Save Changes
@@ -587,7 +587,7 @@ export default function UserProfilePage() {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0872b3]/60 hover:text-[#0872b3] transition-colors p-1 rounded"
+                          className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-[#0872b3]/60 hover:text-[#0872b3] transition-colors p-1 rounded"
                           aria-label={
                             showPassword ? "Hide password" : "Show password"
                           }

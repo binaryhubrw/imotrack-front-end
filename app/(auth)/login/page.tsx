@@ -59,7 +59,7 @@ function PositionSelectionModal({
           </div>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="text-gray-400 cursor-pointer hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             disabled={isLoading}
           >
             <FontAwesomeIcon icon={faTimes} />
@@ -74,7 +74,7 @@ function PositionSelectionModal({
                 onSelectPosition(position.position_id, position.position_name)
               }
               disabled={isLoading}
-              className="w-full p-4 text-left border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 group"
+              className="w-full p-4 cursor-pointer text-left border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 group"
             >
               <div className="flex items-center justify-between">
                 <div className="text-left">
@@ -117,7 +117,7 @@ function PositionSelectionModal({
           <button
             onClick={onCancel}
             disabled={isLoading}
-            className="flex-1 py-3 px-4 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium"
+            className="flex-1 py-3 px-4 cursor-pointer border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium"
           >
             Cancel
           </button>
@@ -341,7 +341,7 @@ function LoginForm() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading}
             >
               {isLoading ? (

@@ -18,16 +18,72 @@ import {
   faChartLine,
   faClock,
   faShieldAlt,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/button"; // shadcn/ui button
+import { useState } from "react";
 
 import Link from "next/link";
 
+// Video Modal Component
+const VideoModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  // Handler to close modal when clicking on the overlay
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backdropFilter: 'blur(8px)' }}
+      onClick={handleOverlayClick}
+    >
+      <div className="absolute inset-0 bg-white/30 dark:bg-[#0a2233]/40 backdrop-blur-md transition-all" aria-hidden="true"></div>
+      <div className="relative w-full max-w-4xl shadow-2xl rounded-2xl overflow-hidden bg-white/90 dark:bg-[#0a2233]/90">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 bg-white/80 hover:bg-[#0872b3] hover:text-white text-[#0872b3] border border-[#0872b3]/30 rounded-full p-2 shadow transition-colors z-10"
+          aria-label="Close video modal"
+        >
+          <FontAwesomeIcon icon={faTimes} className="text-xl" />
+        </button>
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src="https://www.youtube.com/embed/ozwOEuKHX6I?autoplay=1"
+            title="Imotrak System Demo"
+            className="absolute top-0 left-0 w-full h-full rounded-2xl"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // import Link from "next/link";
 export default function HomePage() {
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  const openVideoModal = () => {
+    setIsVideoModalOpen(true);
+  };
+
+  const closeVideoModal = () => {
+    setIsVideoModalOpen(false);
+  };
+
   return (
     <main className="text-[#0872b3]">
+      {/* Video Modal */}
+      <VideoModal isOpen={isVideoModalOpen} onClose={closeVideoModal} />
+
       {/* Hero Section */}
       <section
         id="home"
@@ -54,11 +110,10 @@ export default function HomePage() {
             <Button
               variant="outline"
               className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer "
+              onClick={openVideoModal}
             >
-              <Link href="/login">
-                <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
-                Watch Demo
-              </Link>
+              <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
+              Watch Demo
             </Button>
           </div>
         </div>
@@ -298,11 +353,10 @@ export default function HomePage() {
           <Button
             variant="outline"
             className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer "
+            onClick={openVideoModal}
           >
-            <Link href="/login">
-              <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
-              Schedule Demo
-            </Link>
+            <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
+            Schedule Demo
           </Button>
         </div>
       </section>

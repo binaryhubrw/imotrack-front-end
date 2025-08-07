@@ -21,9 +21,12 @@ function VerifyEmailForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'error' | 'already-verified'>('pending');
+  const [verificationStatus, setVerificationStatus] = useState<
+    "pending" | "success" | "error" | "already-verified"
+  >("pending");
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
+  const [hasAttemptedVerification, setHasAttemptedVerification] =
+    useState(false);
   const [userEmail, setUserEmail] = useState("");
 
   const verifyEmail = useVerifyEmail();
@@ -37,7 +40,7 @@ function VerifyEmailForm() {
     }
 
     if (!token) {
-      setVerificationStatus('error');
+      setVerificationStatus("error");
       toast.error("Invalid verification link", {
         description: "The verification link is invalid or missing",
         duration: 4000,
@@ -46,10 +49,10 @@ function VerifyEmailForm() {
     }
 
     // Try to get email from localStorage if available
-    const storedEmail = localStorage.getItem('verification_email');
+    const storedEmail = localStorage.getItem("verification_email");
     if (storedEmail && !userEmail) {
       setUserEmail(storedEmail);
-      console.log('Loaded email from localStorage:', storedEmail);
+      console.log("Loaded email from localStorage:", storedEmail);
     }
 
     // Mark that we've attempted verification to prevent re-runs
@@ -57,81 +60,92 @@ function VerifyEmailForm() {
 
     const verifyUserEmail = async () => {
       try {
-        console.log('Starting email verification with token:', token);
+        console.log("Starting email verification with token:", token);
         const result = await verifyEmail.mutateAsync({ token });
-        console.log('Email verification result:', result);
-        
-        setVerificationStatus('success');
-        
+        console.log("Email verification result:", result);
+
+        setVerificationStatus("success");
+
         // Show success message
-        toast.success('Email verified successfully!', {
-          description: 'Redirecting to password setup...',
+        toast.success("Email verified successfully!", {
+          description: "Redirecting to password setup...",
           duration: 3000,
         });
-        
+
         // Store the verification token for use in set-password page
         if (result.token) {
-          localStorage.setItem('verification_token', result.token);
-          console.log('Verification token stored successfully');
+          localStorage.setItem("verification_token", result.token);
+          console.log("Verification token stored successfully");
         } else {
-          console.warn('No token received from verification API');
+          console.warn("No token received from verification API");
         }
-        
+
         // Store the user's email for resend verification functionality
         // Note: Backend doesn't return email, so we'll need to get it from the token or other means
         if (result.email) {
           setUserEmail(result.email);
-          localStorage.setItem('verification_email', result.email);
-          console.log('User email stored for resend verification:', result.email);
+          localStorage.setItem("verification_email", result.email);
+          console.log(
+            "User email stored for resend verification:",
+            result.email
+          );
         } else {
-          console.log('No email returned from verification API - this is expected');
+          console.log(
+            "No email returned from verification API - this is expected"
+          );
           // Try to extract email from token if possible
           try {
-            const tokenPayload = JSON.parse(atob(result.token.split('.')[1]));
+            const tokenPayload = JSON.parse(atob(result.token.split(".")[1]));
             if (tokenPayload.email) {
               setUserEmail(tokenPayload.email);
-              localStorage.setItem('verification_email', tokenPayload.email);
-              console.log('Email extracted from token:', tokenPayload.email);
+              localStorage.setItem("verification_email", tokenPayload.email);
+              console.log("Email extracted from token:", tokenPayload.email);
             }
           } catch {
-            console.log('Could not extract email from token');
+            console.log("Could not extract email from token");
           }
         }
-        
+
         // Redirect to set-password page after a short delay
         setTimeout(() => {
-          console.log('Redirecting to set-password page...');
+          console.log("Redirecting to set-password page...");
           setIsRedirecting(true);
           router.push(`/set-password?token=${token}`);
         }, 2000);
-        
       } catch (error: unknown) {
-        console.error('Email verification failed:', error);
-        const axiosError = error as { 
-          message?: string; 
-          response?: { 
+        console.error("Email verification failed:", error);
+        const axiosError = error as {
+          message?: string;
+          response?: {
             status?: number;
             data?: { message?: string };
           };
         };
-        
+
         // Check for already verified status
-        if (axiosError.response?.status === 409 || 
-            axiosError.message?.includes('already verified') ||
-            axiosError.response?.data?.message?.includes('already verified')) {
-          setVerificationStatus('already-verified');
+        if (
+          axiosError.response?.status === 409 ||
+          axiosError.message?.includes("already verified") ||
+          axiosError.response?.data?.message?.includes("already verified")
+        ) {
+          setVerificationStatus("already-verified");
           toast.info("Email is already verified", {
             description: "You can now login with your account",
             duration: 4000,
           });
         } else if (axiosError.response?.status === 401) {
           // 401 might be expected for verification calls, don't show error
-          console.log('401 error on verification call - this might be expected');
-          setVerificationStatus('error');
+          console.log(
+            "401 error on verification call - this might be expected"
+          );
+          setVerificationStatus("error");
         } else {
-          setVerificationStatus('error');
+          setVerificationStatus("error");
           toast.error("Verification failed", {
-            description: axiosError.response?.data?.message || axiosError.message || "Failed to verify email",
+            description:
+              axiosError.response?.data?.message ||
+              axiosError.message ||
+              "Failed to verify email",
             duration: 4000,
           });
         }
@@ -142,7 +156,7 @@ function VerifyEmailForm() {
   }, [token, verifyEmail, router, hasAttemptedVerification, userEmail]);
 
   // Loading state while verifying email
-  if (verificationStatus === 'pending') {
+  if (verificationStatus === "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
@@ -164,13 +178,17 @@ function VerifyEmailForm() {
           {/* Loading Content */}
           <div className="px-8 py-8 bg-white text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-[#0872b3] to-[#065d8f] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <FontAwesomeIcon icon={faSpinner} spin className="text-white text-xl" />
+              <FontAwesomeIcon
+                icon={faSpinner}
+                spin
+                className="text-white text-xl"
+              />
             </div>
-            
+
             <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
               Verifying Your Email
             </h2>
-            
+
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
               Please wait while we verify your email address...
             </p>
@@ -188,14 +206,16 @@ function VerifyEmailForm() {
   }
 
   // Error state - invalid or expired token
-  if (verificationStatus === 'error') {
+  if (verificationStatus === "error") {
     const handleResendVerification = async () => {
       // Try to get email from state or localStorage
-      const emailToUse = userEmail || localStorage.getItem('verification_email');
-      
+      const emailToUse =
+        userEmail || localStorage.getItem("verification_email");
+
       if (!emailToUse) {
         toast.error("Email not found", {
-          description: "Unable to determine email address for resending verification. Please try the resend verification page.",
+          description:
+            "Unable to determine email address for resending verification. Please try the resend verification page.",
           duration: 4000,
         });
         return;
@@ -205,7 +225,7 @@ function VerifyEmailForm() {
         await resendVerification.mutateAsync({ email: emailToUse });
       } catch (error) {
         // Error is already handled in the mutation
-        console.error('Resend verification failed:', error);
+        console.error("Resend verification failed:", error);
       }
     };
 
@@ -230,43 +250,50 @@ function VerifyEmailForm() {
           {/* Error Content */}
           <div className="px-8 py-8 bg-white text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="text-white text-xl" />
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                className="text-white text-xl"
+              />
             </div>
-            
+
             <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
               Verification Failed
             </h2>
-            
+
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-              This verification link is invalid or has expired. You can request a new verification email or contact your administrator.
+              This verification link is invalid or has expired. You can request
+              a new verification email or contact your administrator.
             </p>
 
             <div className="space-y-3">
-              {(userEmail || localStorage.getItem('verification_email')) && (
+              {(userEmail || localStorage.getItem("verification_email")) && (
                 <>
                   <button
                     onClick={handleResendVerification}
                     disabled={resendVerification.isPending}
-                    className="block w-full py-3 bg-green-600 text-white rounded-md font-medium text-base text-center transition hover:bg-green-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="block w-full py-3 cursor-pointer bg-green-600 text-white rounded-md font-medium text-base text-center transition hover:bg-green-700 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {resendVerification.isPending ? (
                       <>
-                        <FontAwesomeIcon icon={faSpinner} spin className="mr-2" />
+                        <FontAwesomeIcon
+                          icon={faSpinner}
+                          spin
+                          className="mr-2"
+                        />
                         Sending...
                       </>
                     ) : (
-                      <>
-                        Resend Verification Email
-                      </>
+                      <>Resend Verification Email</>
                     )}
                   </button>
                   <p className="text-xs text-gray-500">
-                    Sending to: {userEmail || localStorage.getItem('verification_email')}
+                    Sending to:{" "}
+                    {userEmail || localStorage.getItem("verification_email")}
                   </p>
                 </>
               )}
-              
-              {!(userEmail || localStorage.getItem('verification_email')) && (
+
+              {!(userEmail || localStorage.getItem("verification_email")) && (
                 <Link
                   href="/resend-verification"
                   className="block w-full py-3 bg-green-600 text-white rounded-md font-medium text-base text-center transition hover:bg-green-700 hover:-translate-y-0.5"
@@ -274,7 +301,7 @@ function VerifyEmailForm() {
                   Resend Verification Email
                 </Link>
               )}
-              
+
               <Link
                 href="/login"
                 className="block w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5"
@@ -296,7 +323,7 @@ function VerifyEmailForm() {
   }
 
   // Already verified state
-  if (verificationStatus === 'already-verified') {
+  if (verificationStatus === "already-verified") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
@@ -320,13 +347,14 @@ function VerifyEmailForm() {
             <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
             </div>
-            
+
             <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
               Email Already Verified
             </h2>
-            
+
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-              Your email has already been verified. You can now login to your account.
+              Your email has already been verified. You can now login to your
+              account.
             </p>
 
             <div className="space-y-3">
@@ -374,22 +402,25 @@ function VerifyEmailForm() {
           <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
             <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
           </div>
-          
+
           <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
             Email Verified Successfully!
           </h2>
-          
+
           <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-            Your email has been verified. You will be redirected to set your password in a moment.
+            Your email has been verified. You will be redirected to set your
+            password in a moment.
           </p>
 
           {isRedirecting && (
             <div className="space-y-3">
               <div className="flex items-center justify-center gap-2 text-[#0872b3]">
                 <FontAwesomeIcon icon={faSpinner} spin className="text-sm" />
-                <span className="text-sm">Redirecting to password setup...</span>
+                <span className="text-sm">
+                  Redirecting to password setup...
+                </span>
               </div>
-              
+
               <Link
                 href={`/set-password?token=${token}`}
                 className="block w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5 flex items-center justify-center gap-2"

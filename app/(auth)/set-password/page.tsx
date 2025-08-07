@@ -340,7 +340,7 @@ function SetPasswordForm() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
+                      className="absolute cursor-pointer right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={setPasswordAndVerify.isPending}
                     >
@@ -378,7 +378,7 @@ function SetPasswordForm() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
+                      className="absolute cursor-pointer right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
@@ -394,7 +394,7 @@ function SetPasswordForm() {
                 {/* Set Password Button */}
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                  className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
                   disabled={setPasswordAndVerify.isPending}
                 >
                   {setPasswordAndVerify.isPending ? (
@@ -452,7 +452,7 @@ function SetPasswordForm() {
                 {/* Action Button */}
                 <button
                   onClick={handleGoToLogin}
-                  className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base transition hover:bg-[#065d8f] hover:-translate-y-0.5"
+                  className="w-full cursor-pointer py-3 bg-[#0872b3] text-white rounded-md font-medium text-base transition hover:bg-[#065d8f] hover:-translate-y-0.5"
                 >
                   Continue to Login
                 </button>

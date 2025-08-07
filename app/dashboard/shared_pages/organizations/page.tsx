@@ -161,7 +161,7 @@ function CreateOrganizationModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border border-gray-100">
         <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+          className="absolute cursor-pointer top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
           onClick={onClose}
         >
           &times;
@@ -263,7 +263,7 @@ function CreateOrganizationModal({
             <div className="mt-8 flex-1 flex flex-col justify-end w-full">
               <button
                 type="submit"
-                className="w-full py-3 bg-[#0872b3] text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={submitting}
               >
                 {submitting ? "Creating..." : "Create Organization"}
@@ -472,7 +472,7 @@ export default function OrganizationsPage() {
             </div>
             <div className="flex items-center gap-2">
               {canView && (
-                <button className="flex items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <button className="flex cursor-pointer items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                   <Download className="w-5 h-5" />
                   Export
                 </button>
@@ -638,14 +638,14 @@ export default function OrganizationsPage() {
                     <button
                       onClick={() => setPage(1)}
                       disabled={pagination.page === 1}
-                      className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 cursor-pointer text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {"<<"}
                     </button>
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={pagination.page === 1}
-                      className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 cursor-pointer text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Previous
                     </button>
@@ -654,14 +654,14 @@ export default function OrganizationsPage() {
                         setPage((p) => Math.min(pagination.pages, p + 1))
                       }
                       disabled={pagination.page === pagination.pages}
-                      className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 cursor-pointer text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
                     <button
                       onClick={() => setPage(pagination.pages)}
                       disabled={pagination.page === pagination.pages}
-                      className="px-3 py-2 text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 py-2 cursor-pointer text-base border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {">>"}
                     </button>
@@ -724,7 +724,7 @@ export default function OrganizationsPage() {
                 </p>
                 {canCreate && (
                   <button
-                    className="inline-flex items-center gap-2 px-6 py-3 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                    className="inline-flex cursor-pointer items-center gap-2 px-6 py-3 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
                     onClick={() => setShowCreate(true)}
                   >
                     <Plus className="w-5 h-5" />
@@ -826,7 +826,7 @@ function UpdateOrganizationModal({
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors"
             disabled={submitting}
           >
             <span className="text-2xl">&times;</span>
@@ -892,7 +892,7 @@ function UpdateOrganizationModal({
           <div className="flex gap-3 pt-4">
             <button
               type="button"
-              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2 px-4 cursor-pointer border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={onClose}
               disabled={submitting}
             >
@@ -900,7 +900,7 @@ function UpdateOrganizationModal({
             </button>
             <button
               type="submit"
-              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 py-2 px-4 cursor-pointer bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={submitting}
             >
               {submitting ? "Saving..." : "Save Changes"}

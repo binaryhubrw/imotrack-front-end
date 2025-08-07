@@ -126,7 +126,7 @@ export default function NotificationsPage() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={markAllAsRead}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg"
+                className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg"
               >
                 <CheckCircle className="w-4 h-4" />
                 Mark All Read
@@ -223,7 +223,7 @@ export default function NotificationsPage() {
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           onClick={() => handleMarkAsRead(notification.notification_id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 cursor-pointer text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Remove"
                         >
                           <Trash2 className="w-5 h-5" />
