@@ -3,7 +3,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Public routes that don't require authentication
-const publicPaths = ["/", "/login", "/api/auth", "/forgot-password", "/reset-password"];
+const publicPaths = [
+  "/",
+  "/login",
+  "/api/auth",
+  "/forgot-password",
+  "/reset-password",
+  "/verify",
+  "/set-password",
+  "/resend-verification",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,7 +25,7 @@ export async function middleware(request: NextRequest) {
   // For now, let all authenticated routes pass through
   // The frontend will handle authentication checks using localStorage
   // This can be enhanced later with proper session management
-  
+
   // Let the frontend handle login page redirects
   // The frontend will check if user is authenticated and redirect accordingly
 

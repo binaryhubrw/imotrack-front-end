@@ -18,34 +18,84 @@ import {
   faShieldAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useResetPassword } from "@/lib/queries";
+import { useSetPasswordAndVerify } from "@/lib/queries";
 
-// Main Reset Password Form Component
-function ResetPasswordForm() {
+// Main Set Password Form Component
+function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const email = searchParams.get("email");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [tokenValid, setTokenValid] = useState(true);
+  const [pageStatus, setPageStatus] = useState<"loading" | "ready" | "error">(
+    "loading"
+  );
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  const resetPassword = useResetPassword();
+  const setPasswordAndVerify = useSetPasswordAndVerify();
 
-  // Check if token and email are present
+  // Initialize page and check for verification token
   useEffect(() => {
-    if (!token || !email) {
-      setTokenValid(false);
-      toast.error("Invalid reset link", {
-        description: "The reset link is invalid or has expired",
+    // Prevent multiple initializations
+    if (hasInitialized) {
+      return;
+    }
+
+    console.log("Set password page initializing with token:", token);
+
+    if (!token) {
+      console.error("No token provided in URL");
+      setPageStatus("error");
+      toast.error("Invalid verification link", {
+        description: "The verification link is invalid or missing",
         duration: 4000,
       });
+      setHasInitialized(true);
+      return;
     }
-  }, [token, email]);
+
+    // Check if verification token exists in localStorage
+    const verificationToken = localStorage.getItem("verification_token");
+    console.log(
+      "Verification token in localStorage:",
+      verificationToken ? "exists" : "missing"
+    );
+
+    if (!verificationToken) {
+      console.error("No verification token found, redirecting to verify page");
+      setPageStatus("error");
+      toast.error("Verification required", {
+        description: "Please complete email verification first",
+        duration: 4000,
+      });
+      // Redirect back to verification page
+      setTimeout(() => {
+        router.push(`/verify?token=${token}`);
+      }, 2000);
+      setHasInitialized(true);
+      return;
+    }
+
+    // All checks passed, page is ready
+    console.log("All checks passed, setting page to ready");
+    setPageStatus("ready");
+    setHasInitialized(true);
+  }, [token, router, hasInitialized]);
+
+  // Cleanup verification token when component unmounts or on successful submission
+  useEffect(() => {
+    return () => {
+      // Only clear if user successfully submitted or navigated away
+      if (isSubmitted) {
+        localStorage.removeItem("verification_token");
+        localStorage.removeItem("verification_email");
+      }
+    };
+  }, [isSubmitted]);
 
   const validatePassword = (password: string) => {
     return password.length >= 8;
@@ -71,29 +121,90 @@ function ResetPasswordForm() {
       return;
     }
 
-    try {
-      // await resetPassword.mutateAsync({ 
-      //   // token: token!,
-      //   email: email!,
-      //   // password 
-      // });
-      setIsSubmitted(true);
-      toast.success("Password reset successfully!", {
-        description: "You can now login with your new password",
+    // Get the verification token from localStorage
+    const verificationToken = localStorage.getItem("verification_token");
+    if (!verificationToken) {
+      toast.error("Verification token not found", {
+        description: "Please go back to the verification link and try again",
         duration: 4000,
       });
+      router.push(`/verify?token=${token}`);
+      return;
+    }
+
+    try {
+      console.log("Attempting to set password...");
+      await setPasswordAndVerify.mutateAsync({ password });
+      console.log("Password set successfully");
+
+      // Clear the verification token after successful password setting
+      localStorage.removeItem("verification_token");
+      setIsSubmitted(true);
     } catch (error) {
+      console.error("Error setting password:", error);
       // Error handling is already done in the mutation
-      console.error("Error resetting password:", error);
     }
   };
 
   const handleGoToLogin = () => {
+    // Clean up any remaining tokens
+    localStorage.removeItem("verification_token");
+    localStorage.removeItem("verification_email");
     router.push("/login");
   };
 
-  // Invalid token state
-  if (!tokenValid) {
+  // Loading state while checking verification status
+  if (pageStatus === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="text-center px-8 pt-8 pb-4 bg-white">
+            <Image
+              src="/logo/logo.png"
+              alt="Imotrak Logo"
+              width={80}
+              height={80}
+              className="mx-auto mb-4"
+              priority
+            />
+            <h1 className="text-2xl font-bold text-[#0872b3] mb-2">
+              Imotrak System
+            </h1>
+          </div>
+
+          {/* Loading Content */}
+          <div className="px-8 py-8 bg-white text-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#0872b3] to-[#065d8f] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <FontAwesomeIcon
+                icon={faSpinner}
+                spin
+                className="text-white text-xl"
+              />
+            </div>
+
+            <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
+              Checking Verification Status
+            </h2>
+
+            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+              Please wait while we verify your session...
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center py-4 bg-[#f8f9fa] border-t border-[#0872b3]/20">
+            <p className="text-[#0872b3] text-sm m-0">
+              &copy; {new Date().getFullYear()} Imotrak - Imotrak System
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state - invalid token or verification required
+  if (pageStatus === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
@@ -114,32 +225,36 @@ function ResetPasswordForm() {
 
           {/* Error Content */}
           <div className="px-8 py-8 bg-white text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="text-white text-xl" />
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                className="text-white text-xl"
+              />
             </div>
-            
+
             <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
-              Invalid Reset Link
+              Verification Required
             </h2>
-            
+
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-              This password reset link is invalid or has expired. Please request a new one.
+              Please complete email verification first before setting your
+              password.
             </p>
 
             <div className="space-y-3">
-              <Link
-                href="/forgot-password"
-                className="block w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5"
-              >
-                Request New Reset Link
-              </Link>
-              
+              {token && (
+                <Link
+                  href={`/verify?token=${token}`}
+                  className="block w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base text-center transition hover:bg-[#065d8f] hover:-translate-y-0.5"
+                >
+                  Verify Email First
+                </Link>
+              )}
               <Link
                 href="/login"
-                className="block w-full py-3 border-2 border-[#0872b3] text-[#0872b3] rounded-md font-medium text-base text-center transition hover:bg-[#0872b3] hover:text-white hover:-translate-y-0.5"
+                className="block w-full py-3 bg-gray-500 text-white rounded-md font-medium text-base text-center transition hover:bg-gray-600 hover:-translate-y-0.5"
               >
-                <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-                Back to Login
+                Go to Login
               </Link>
             </div>
           </div>
@@ -177,19 +292,27 @@ function ResetPasswordForm() {
         <div className="px-8 py-8 bg-white">
           {!isSubmitted ? (
             <>
-              {/* Reset Password Form */}
+              {/* Set Password Form */}
               <h2 className="text-xl font-semibold text-[#0872b3] mb-2 text-center flex items-center justify-center gap-2">
-                <FontAwesomeIcon icon={faShieldAlt} /> Set New Password
+                <FontAwesomeIcon icon={faShieldAlt} /> Set Your Password
               </h2>
-              
+
               <p className="text-gray-600 text-center mb-6 text-sm leading-relaxed">
-                Enter your new password below. Make sure it&apos;s strong and secure.
+                Your email has been verified successfully! Now set a strong
+                password to complete your account setup.
               </p>
 
-              {/* User Email Display */}
-              <div className="bg-[#0872b3]/5 border border-[#0872b3]/20 rounded-lg p-3 mb-6">
-                <p className="text-xs text-gray-500 mb-1">Resetting password for:</p>
-                <p className="text-[#0872b3] font-medium text-sm break-all">{email}</p>
+              {/* Success Message */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    className="text-green-600 text-sm"
+                  />
+                  <p className="text-green-700 text-xs font-medium">
+                    Email verified successfully
+                  </p>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit}>
@@ -212,16 +335,18 @@ function ResetPasswordForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      disabled={resetPassword.isPending}
+                      disabled={setPasswordAndVerify.isPending}
                       minLength={8}
                     />
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
-                      disabled={resetPassword.isPending}
+                      disabled={setPasswordAndVerify.isPending}
                     >
-                      <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                      <FontAwesomeIcon
+                        icon={showPassword ? faEyeSlash : faEye}
+                      />
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -248,33 +373,38 @@ function ResetPasswordForm() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      disabled={resetPassword.isPending}
+                      disabled={setPasswordAndVerify.isPending}
                       minLength={8}
                     />
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#0872b3] transition-colors"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      disabled={resetPassword.isPending}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      disabled={setPasswordAndVerify.isPending}
                     >
-                      <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
+                      <FontAwesomeIcon
+                        icon={showConfirmPassword ? faEyeSlash : faEye}
+                      />
                     </button>
                   </div>
                 </div>
 
-                {/* Reset Password Button */}
+                {/* Set Password Button */}
                 <button
                   type="submit"
                   className="w-full py-3 bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-                  disabled={resetPassword.isPending}
+                  disabled={setPasswordAndVerify.isPending}
                 >
-                  {resetPassword.isPending ? (
+                  {setPasswordAndVerify.isPending ? (
                     <>
-                      <FontAwesomeIcon icon={faSpinner} spin /> Updating Password...
+                      <FontAwesomeIcon icon={faSpinner} spin /> Setting
+                      Password...
                     </>
                   ) : (
                     <>
-                      <FontAwesomeIcon icon={faKey} /> Reset Password
+                      <FontAwesomeIcon icon={faKey} /> Set Password
                     </>
                   )}
                 </button>
@@ -297,20 +427,24 @@ function ResetPasswordForm() {
               <div className="text-center">
                 {/* Success Icon */}
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    className="text-white text-xl"
+                  />
                 </div>
 
                 <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
-                  Password Reset Complete
+                  Account Setup Complete
                 </h2>
-                
+
                 <div className="mb-6">
                   <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                    Your password has been successfully updated. You can now login with your new password.
+                    Your account has been verified and your password has been
+                    set successfully. You can now login to your account.
                   </p>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-green-700 text-xs font-medium">
-                      🔒 Your account is now secure with the new password
+                      🎉 Your account is now ready to use
                     </p>
                   </div>
                 </div>
@@ -339,7 +473,7 @@ function ResetPasswordForm() {
 }
 
 // Loading fallback component
-function ResetPasswordFallback() {
+function SetPasswordFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
@@ -360,10 +494,10 @@ function ResetPasswordFallback() {
   );
 }
 
-export default function ResetPasswordPage() {
+export default function SetPasswordPage() {
   return (
-    <Suspense fallback={<ResetPasswordFallback />}>
-      <ResetPasswordForm />
+    <Suspense fallback={<SetPasswordFallback />}>
+      <SetPasswordForm />
     </Suspense>
   );
 }

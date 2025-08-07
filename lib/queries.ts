@@ -10,6 +10,10 @@ import {
   UpdatePasswordRequest,
   UpdatePasswordResponse,
   ResetPasswordRequest,
+  VerifyEmailRequest,
+  VerifyEmailResponse,
+  SetPasswordAndVerifyRequest,
+  SetPasswordAndVerifyResponse,
   ApiResponse,
   Organization,
   PaginatedOrganizations,
@@ -336,6 +340,180 @@ export const useAuthLogout =()=> {
   });
 }
 
+// Email verification query
+export const useVerifyEmail = () => {
+  return useMutation<VerifyEmailResponse, Error, VerifyEmailRequest>({
+    mutationFn: async ({ token }) => {
+      console.log('Making verification API call with token:', token);
+      const response = await api.get<ApiResponse<VerifyEmailResponse>>(`/v2/auth/verify?token=${token}`);
+      console.log('Verification API response:', response.data);
+      
+      if (!response.data.data) {
+        throw new Error('No data received from verification request');
+      }
+
+      return response.data.data;
+    },
+    onSuccess: (data) => {
+      // Store the new access token as verification_token (not regular token)
+      if (data.token) {
+        localStorage.setItem('verification_token', data.token);
+        console.log('Verification token stored successfully');
+      }
+      
+      // Store the email for resend verification functionality
+      if (data.email) {
+        localStorage.setItem('verification_email', data.email);
+        console.log('Verification email stored successfully');
+      }
+      
+      // Don't show toast here as it's handled in the component
+    },
+    onError: (error: unknown) => {
+      console.error('Email verification failed:', error);
+      const axiosError = error as { 
+        response?: { 
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+      
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to verify email';
+      const status = axiosError.response?.status;
+      
+      // Don't show toast here as it's handled in the component
+      // Only log errors that are not 409 (already verified) or 401 (auth issues)
+      if (status !== 409 && status !== 401) {
+        console.error('Verification error:', errorMessage);
+      }
+    },
+  });
+};
+
+// Resend verification email
+export const useResendVerification = () => {
+  return useMutation<{ message: string }, Error, { email: string }>({
+    mutationFn: async ({ email }) => {
+      console.log('Resending verification email to:', email);
+      const response = await api.post<ApiResponse<{ message: string }>>(
+        '/v2/auth/resend-invitation',
+        { email },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      console.log('Resend verification API response:', response.data);
+
+      if (!response.data.message) {
+        throw new Error('No response message received');
+      }
+
+      return { message: response.data.message };
+    },
+    onSuccess: (data) => {
+      toast.success('Verification email sent!', {
+        description: data.message,
+        duration: 5000,
+      });
+    },
+    onError: (error: unknown) => {
+      console.error('Resend verification failed:', error);
+      const axiosError = error as { 
+        response?: { 
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+      
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to resend verification email';
+      const status = axiosError.response?.status;
+      
+      if (status === 404) {
+        toast.error('User not found', {
+          description: 'No account found with this email address',
+          duration: 5000,
+        });
+      } else if (status === 409) {
+        toast.error('Email already verified', {
+          description: 'This email address has already been verified',
+          duration: 5000,
+        });
+      } else {
+        toast.error('Failed to resend verification email', {
+          description: errorMessage,
+          duration: 5000,
+        });
+      }
+    },
+  });
+};
+
+// Set password and verify account
+export const useSetPasswordAndVerify = () => {
+  return useMutation<SetPasswordAndVerifyResponse, Error, SetPasswordAndVerifyRequest>({
+    mutationFn: async ({ password }) => {
+      console.log('Setting password and verifying account...');
+      
+      // Get verification token from localStorage (stored during email verification)
+      const verificationToken = localStorage.getItem('verification_token');
+      console.log('Verification token from localStorage:', verificationToken ? 'exists' : 'missing');
+      
+      if (!verificationToken) {
+        throw new Error('No verification token found. Please verify your email first.');
+      }
+
+      console.log('Making set password API call with verification token');
+      const response = await api.post<ApiResponse<SetPasswordAndVerifyResponse>>(
+        '/v2/auth/set-password-and-verify',
+        { password },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${verificationToken}`,
+          },
+        }
+      );
+      console.log('Set password API response:', response.data);
+
+      if (!response.data.data) {
+        throw new Error('No data received from set password request');
+      }
+
+      return response.data.data;
+    },
+    onSuccess: () => {
+      // Clear verification data after successful password setting
+      localStorage.removeItem('verification_token');
+      localStorage.removeItem('verification_email');
+      toast.success('Account verified and password set successfully!');
+    },
+    onError: (error: unknown) => {
+      console.error('Set password and verify failed:', error);
+      const axiosError = error as { 
+        response?: { 
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+      
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to set password and verify account';
+      const status = axiosError.response?.status;
+      
+      if (status === 409) {
+        toast.error('Account is already verified. You can now login.');
+      } else if (status === 401) {
+        toast.error('Verification session expired. Please try again from the email link.');
+      } else {
+        toast.error(errorMessage);
+      }
+    },
+  });
+};
 
 // Fetch paginated organizations
 export const useOrganizations = (page = 1, limit = 10) => {

@@ -17,10 +17,20 @@ export const api = axios.create({
 
 // Request interceptor for adding auth token and logging requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // Don't add auth token for verification calls
+  const isVerificationCall = config.url?.includes('/v2/auth/verify') || 
+                            config.url?.includes('/v2/auth/set-password-and-verify') ||
+                            config.url?.includes('/v2/auth/resend-invitation');
+  
+  console.log('API Request:', config.url, 'isVerificationCall:', isVerificationCall);
+  
+  if (!isVerificationCall) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
+  
   return config;
 });
 
@@ -30,25 +40,52 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const data = error.response?.data;
-    // Suppress logging for 403 and 404 errors (expected for restricted APIs)
+    const url = error.config?.url;
+    
+    // Don't clear localStorage or redirect for verification-related API calls
+    const isVerificationCall = url?.includes('/v2/auth/verify') || 
+                              url?.includes('/v2/auth/set-password-and-verify') ||
+                              url?.includes('/v2/auth/resend-invitation');
+    
+    // Suppress logging for 401 errors on verification calls (they might be expected)
     // Also suppress logging if data is undefined or an empty object
     const isEmptyData =
       data === undefined ||
       (typeof data === 'object' && data !== null && Object.keys(data).length === 0);
-    if (status !== 403 && status !== 404 && !isEmptyData) {
+    
+    const shouldSuppressLogging = 
+      (status === 401 && isVerificationCall) ||
+      (status === 403 && status !== 404) ||
+      isEmptyData;
+    
+    if (!shouldSuppressLogging) {
       console.error('API Error Response:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
-        url: error.config?.url,
+        url: url,
       });
     }
     
-    if (error.response?.status === 401) {
+    console.log('API Error Response:', {
+      url,
+      status: error.response?.status,
+      isVerificationCall,
+      message: error.response?.data?.message
+    });
+    
+    if (error.response?.status === 401 && !isVerificationCall) {
+      console.log('401 error on non-verification call, clearing auth data and redirecting to login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('position');
+      localStorage.removeItem('organization');
+      localStorage.removeItem('unit');
       window.location.href = '/login';
+    } else if (error.response?.status === 401 && isVerificationCall) {
+      console.log('401 error on verification call, not clearing auth data');
     }
+    
     return Promise.reject(error);
   }
 );

@@ -21,7 +21,7 @@ import { useForgotPassword } from "@/lib/queries";
 function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
+
   const forgotPassword = useForgotPassword();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,9 +71,10 @@ function ForgotPasswordForm() {
               <h2 className="text-xl font-semibold text-[#0872b3] mb-2 text-center flex items-center justify-center gap-2">
                 <FontAwesomeIcon icon={faKey} /> Reset Password
               </h2>
-              
+
               <p className="text-gray-600 text-center mb-6 text-sm leading-relaxed">
-                Enter your email address and we&apos;ll send you a secure link to reset your password.
+                Enter your email address and we&apos;ll send you a secure link
+                to reset your password.
               </p>
 
               <form onSubmit={handleSubmit}>
@@ -134,13 +135,16 @@ function ForgotPasswordForm() {
               <div className="text-center">
                 {/* Success Icon */}
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <FontAwesomeIcon icon={faCheck} className="text-white text-xl" />
+                  <FontAwesomeIcon
+                    icon={faCheck}
+                    className="text-white text-xl"
+                  />
                 </div>
 
                 <h2 className="text-xl font-semibold text-[#0872b3] mb-2">
                   Check Your Email
                 </h2>
-                
+
                 <div className="mb-6">
                   <p className="text-gray-600 text-sm mb-3 leading-relaxed">
                     We&apos;ve sent a password reset link to:
@@ -152,8 +156,9 @@ function ForgotPasswordForm() {
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed">
-                    Please check your email inbox and follow the instructions to reset your password. 
-                    The link will expire in 24 hours for security reasons.
+                    Please check your email inbox and follow the instructions to
+                    reset your password. The link will expire in 24 hours for
+                    security reasons.
                   </p>
                 </div>
 
@@ -166,7 +171,7 @@ function ForgotPasswordForm() {
                   >
                     Try Different Email
                   </button>
-                  
+
                   <Link
                     href="/login"
                     className="block w-full py-3 border-2 border-[#0872b3] text-[#0872b3] rounded-md font-medium text-base text-center transition hover:bg-[#0872b3] hover:text-white hover:-translate-y-0.5"

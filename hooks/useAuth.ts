@@ -32,7 +32,7 @@ export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
-    isLoading: false,
+    isLoading: true, // Start with loading true
     positions: [],
     showPositionSelector: false,
   });
@@ -41,54 +41,82 @@ export const useAuth = () => {
   const authStateRef = useRef(authState);
   authStateRef.current = authState;
 
+  // Track if we've completed the initial auth check
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   // Check for existing authentication on mount
   useEffect(() => {
-    console.log('Checking for existing authentication...');
-    const storedUser = localStorage.getItem('user');
-    const storedPosition = localStorage.getItem('position');
-    const storedOrganization = localStorage.getItem('organization');
-    const storedUnit = localStorage.getItem('unit');
+    // Prevent multiple initialization attempts
+    if (hasInitialized) {
+      return;
+    }
 
-    console.log('Stored auth data:', {
-      user: storedUser ? 'exists' : 'missing',
-      position: storedPosition ? 'exists' : 'missing',
-      organization: storedOrganization ? 'exists' : 'missing',
-      unit: storedUnit ? 'exists' : 'missing',
-    });
+    const initializeAuth = () => {
+      // Don't restore authentication on verification pages
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        if (pathname === '/verify' || pathname === '/set-password') {
+          console.log('On verification page, skipping auth restoration');
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+          setHasInitialized(true);
+          return;
+        }
+      }
 
-    if (storedUser && storedPosition && storedOrganization && storedUnit) {
-      try {
-        const user = JSON.parse(storedUser);
-        const position = JSON.parse(storedPosition);
-        const organization = JSON.parse(storedOrganization);
-        const unit = JSON.parse(storedUnit);
+      console.log('Checking for existing authentication...');
+      const storedUser = localStorage.getItem('user');
+      const storedPosition = localStorage.getItem('position');
+      const storedOrganization = localStorage.getItem('organization');
+      const storedUnit = localStorage.getItem('unit');
+      const storedToken = localStorage.getItem('token');
 
-        console.log('Restoring authentication state...');
-        setAuthState(prev => ({
-          ...prev,
-          user: {
-            user,
-            position,
-            organization,
-            unit,
-          },
-          isAuthenticated: true,
-          isLoading: false,
-        }));
-      } catch (error) {
-        console.error('Error parsing stored auth data:', error);
-        // Clear corrupted data
-        localStorage.removeItem('user');
-        localStorage.removeItem('position');
-        localStorage.removeItem('organization');
-        localStorage.removeItem('unit');
+      console.log('Stored auth data:', {
+        user: storedUser ? 'exists' : 'missing',
+        position: storedPosition ? 'exists' : 'missing',
+        organization: storedOrganization ? 'exists' : 'missing',
+        unit: storedUnit ? 'exists' : 'missing',
+        token: storedToken ? 'exists' : 'missing',
+      });
+
+      if (storedUser && storedPosition && storedOrganization && storedUnit && storedToken) {
+        try {
+          const user = JSON.parse(storedUser);
+          const position = JSON.parse(storedPosition);
+          const organization = JSON.parse(storedOrganization);
+          const unit = JSON.parse(storedUnit);
+
+          console.log('Restoring authentication state...');
+          setAuthState(prev => ({
+            ...prev,
+            user: {
+              user,
+              position,
+              organization,
+              unit,
+            },
+            isAuthenticated: true,
+            isLoading: false,
+          }));
+        } catch (error) {
+          console.error('Error parsing stored auth data:', error);
+          // Clear corrupted data
+          localStorage.removeItem('user');
+          localStorage.removeItem('position');
+          localStorage.removeItem('organization');
+          localStorage.removeItem('unit');
+          localStorage.removeItem('token');
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
+      } else {
+        console.log('No complete authentication found, setting loading to false');
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
-    } else {
-      console.log('No stored authentication found, setting loading to false');
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, []);
+
+      setHasInitialized(true);
+    };
+
+    initializeAuth();
+  }, [hasInitialized]);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
@@ -98,7 +126,6 @@ export const useAuth = () => {
       localStorage.setItem('loginCredentials', JSON.stringify(credentials));
       
       // Step 1: Login to get positions
-      console.log('Starting login process...');
       const positions = await loginMutation.mutateAsync(credentials);
       console.log('Login successful, received positions:', positions);
       
@@ -122,6 +149,7 @@ export const useAuth = () => {
       setAuthState(prev => ({ ...prev, isLoading: false }));
       // Clear stored credentials on error
       localStorage.removeItem('loginCredentials');
+      localStorage.removeItem('availablePositions');
       throw error;
     }
   }, [loginMutation]);
@@ -163,7 +191,7 @@ export const useAuth = () => {
         throw new Error('Selected position not found');
       }
 
-      // Get the stored credentials from localStorage (we'll need to store them during login)
+      // Get the stored credentials from localStorage
       const storedCredentials = localStorage.getItem('loginCredentials');
       if (!storedCredentials) {
         throw new Error('Login credentials not found');
@@ -255,17 +283,39 @@ export const useAuth = () => {
   }, [router]);
 
   const cancelPositionSelection = useCallback(() => {
+    // Clear stored data when canceling
+    localStorage.removeItem('loginCredentials');
+    localStorage.removeItem('availablePositions');
+    
     setAuthState(prev => ({
       ...prev,
       showPositionSelector: false,
       positions: [],
+      isLoading: false,
     }));
   }, []);
 
   const logout = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
-      await logoutMutation.mutateAsync();
+      
+      // Clear all auth-related localStorage items first
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('position');
+      localStorage.removeItem('organization');
+      localStorage.removeItem('unit');
+      localStorage.removeItem('loginCredentials');
+      localStorage.removeItem('availablePositions');
+      localStorage.removeItem('verification_token');
+
+      // Try to call logout API, but don't fail if it doesn't work
+      try {
+        await logoutMutation.mutateAsync();
+      } catch (apiError) {
+        console.warn('Logout API call failed, but local cleanup successful:', apiError);
+      }
+      
       // Reset state
       setAuthState({
         user: null,
@@ -274,10 +324,10 @@ export const useAuth = () => {
         positions: [],
         showPositionSelector: false,
       });
-      router.push('/login');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
       
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
       setAuthState(prev => ({ ...prev, isLoading: false }));
       // Error toast is already shown in the mutation
     }

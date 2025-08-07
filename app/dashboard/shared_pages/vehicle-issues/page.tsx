@@ -161,7 +161,11 @@ function ReportIssueModal({
               >
                 <option value="">Select a reservation</option>
                                  {reservations
-                   ?.filter(reservation => reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0)
+                   ?.filter(reservation => 
+                     reservation.reserved_vehicles && 
+                     reservation.reserved_vehicles.length > 0 &&
+                     reservation.reservation_status === "APPROVED"
+                   )
                    .map(reservation => {
                      console.log('Reservation for dropdown:', reservation);
                      console.log('Reserved vehicles:', reservation.reserved_vehicles);

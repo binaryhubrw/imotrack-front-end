@@ -105,14 +105,10 @@ export default function ReservationDetailPage() {
   //Fleet-manager//Approver checks
   const canView = !!user?.position?.position_access?.reservations?.view;
   const canUpdate = !!user?.position?.position_access?.reservations?.update;
-  // const canDelete = !!user?.position?.position_access?.reservations?.delete;
-  // const canApprove = !!user?.position?.position_access?.reservations?.approve;
-  // const canAssignVehicle =
-  //   !!user?.position?.position_access?.reservations?.assignVehicle;
   const canComplete = !!user?.position?.position_access?.reservations?.complete;
 
   // Check if user can access this reservation
-  const isOwner = reservation?.user?.user_id === user?.user?.first_name;
+  const isOwner = reservation?.user?.user_id === user?.user?.email || reservation?.user?.auth?.email === user?.user?.email;
   const canAccessReservation = 
     canView || // Fleet manager can view all
     (canViewOwn && isOwner) || // Requester can view own
@@ -128,8 +124,8 @@ export default function ReservationDetailPage() {
     (canComplete || canUpdate);
 
   const shouldShowReportIssue =
-    ["APPROVED", "ACCEPTED"].includes(reservation?.reservation_status || "") && 
-    (canUpdate || (isOwner && (canViewOwn || canCancel || canUpdateReason || canCreate)));
+    reservation?.reservation_status === "APPROVED" && 
+    (isOwner && (canViewOwn || canCancel || canUpdateReason || canCreate));
 
   // Action handlers
   const handleAcceptReject = async (

@@ -251,6 +251,36 @@ export type UpdatePasswordResponse = {
   user_status: string;
 };
 
+// Email verification types
+export type VerifyEmailRequest = {
+  token: string;
+};
+
+export type VerifyEmailResponse = {
+  token: string;
+  email?: string; // Make email optional since backend doesn't return it
+};
+
+export type SetPasswordAndVerifyRequest = {
+  password: string;
+};
+
+export type SetPasswordAndVerifyResponse = {
+  auth_id: string;
+  email: string;
+  updated_at: string;
+  user_status: string;
+};
+
+// Resend verification types
+export type ResendVerificationRequest = {
+  email: string;
+};
+
+export type ResendVerificationResponse = {
+  message: string;
+};
+
 // Organization Types (NEW API)
 export type OrganizationStatus = "ACTIVE" | "INACTIVE" | "PENDING";
 

@@ -1,5 +1,5 @@
 // app/ClientLayout.tsx
-'use client';
+"use client";
 
 import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -9,7 +9,14 @@ import Footer from "@/components/layout/Footer";
 export default function ClientLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  const hideLayoutOn = ["/login", "/dashboard", "/forgot-password","/reset-password"];
+  const hideLayoutOn = [
+    "/login",
+    "/dashboard",
+    "/forgot-password",
+    "/set-password",
+    "/verify",
+    "/resend-verification",
+  ];
   const shouldHideLayout = hideLayoutOn.some((path) =>
     pathname.startsWith(path)
   );

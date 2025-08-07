@@ -52,7 +52,9 @@ function PositionSelectionModal({
               <h3 className="text-xl font-semibold text-gray-900">
                 Select Position
               </h3>
-              <p className="text-sm text-gray-500">Choose your role to continue</p>
+              <p className="text-sm text-gray-500">
+                Choose your role to continue
+              </p>
             </div>
           </div>
           <button
@@ -77,14 +79,26 @@ function PositionSelectionModal({
               <div className="flex items-center justify-between">
                 <div className="text-left">
                   <div className="font-semibold text-gray-900 group-hover:text-[#0872b3] transition-colors flex items-center gap-2">
-                   <span className="text-xs text-gray-500 font-medium">Role:</span>
-                    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-[#0872b3]/10 text-[#0872b3] font-semibold">{position.position_name}</span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      Role:
+                    </span>
+                    <span className="ml-2 inline-block px-2 py-0.5 text-xs rounded bg-[#0872b3]/10 text-[#0872b3] font-semibold">
+                      {position.position_name}
+                    </span>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2 items-center">
-                    <span className="text-xs text-gray-500 font-medium">Unit:</span>
-                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 font-medium border border-blue-200 mr-2">{position.unit_name}</span>
-                    <span className="text-xs text-gray-500 font-medium">Organization:</span>
-                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 font-medium border border-green-200">{position.organization_name}</span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      Unit:
+                    </span>
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 font-medium border border-blue-200 mr-2">
+                      {position.unit_name}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      Organization:
+                    </span>
+                    <span className="inline-block px-2 py-0.5 text-xs rounded bg-green-100 text-green-700 font-medium border border-green-200">
+                      {position.organization_name}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -112,8 +126,6 @@ function PositionSelectionModal({
     </div>
   );
 }
-
-
 
 // Main Login Form Component
 function LoginForm() {
@@ -155,7 +167,7 @@ function LoginForm() {
           description: `No positions found, redirecting...`,
           duration: 3000,
         });
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
         toast.success("Login successful! Please select your position.", {
           description: "Choose the position you want to access",
@@ -200,10 +212,16 @@ function LoginForm() {
     }
   };
 
-  const handlePositionSelect = async (positionId: string, positionName: string) => {
+  const handlePositionSelect = async (
+    positionId: string,
+    positionName: string
+  ) => {
     try {
-      console.log('handlePositionSelect called with:', { positionId, positionName });
-      console.log('Available positions in handlePositionSelect:', positions);
+      console.log("handlePositionSelect called with:", {
+        positionId,
+        positionName,
+      });
+      console.log("Available positions in handlePositionSelect:", positions);
       await selectPosition(positionId, positions);
       toast.success("Position selected! Redirecting to dashboard...", {
         description: `Welcome as ${positionName}`,
@@ -337,6 +355,18 @@ function LoginForm() {
               )}
             </button>
           </form>
+
+          <div className="text-center mt-4">
+            <p className="text-gray-600 text-sm mb-2">
+              Haven&apos;t received your verification email?
+            </p>
+            <Link
+              href="/resend-verification"
+              className="text-[#0872b3] hover:text-[#065d8f] transition-colors text-sm font-medium"
+            >
+              Resend Verification Email
+            </Link>
+          </div>
         </div>
 
         {/* Footer */}
