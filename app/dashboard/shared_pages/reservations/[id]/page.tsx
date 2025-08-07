@@ -108,8 +108,10 @@ export default function ReservationDetailPage() {
   const canComplete = !!user?.position?.position_access?.reservations?.complete;
 
   // Check if user can access this reservation
-  const isOwner = reservation?.user?.user_id === user?.user?.email || reservation?.user?.auth?.email === user?.user?.email;
-  const canAccessReservation = 
+  const isOwner =
+    reservation?.user?.user_id === user?.user?.email ||
+    reservation?.user?.auth?.email === user?.user?.email;
+  const canAccessReservation =
     canView || // Fleet manager can view all
     (canViewOwn && isOwner) || // Requester can view own
     canCreate; // Anyone who can create can view
@@ -120,12 +122,13 @@ export default function ReservationDetailPage() {
   }
 
   const shouldShowComplete =
-    reservation?.reservation_status === "APPROVED" && 
+    reservation?.reservation_status === "APPROVED" &&
     (canComplete || canUpdate);
 
   const shouldShowReportIssue =
-    reservation?.reservation_status === "APPROVED" && 
-    (isOwner && (canViewOwn || canCancel || canUpdateReason || canCreate));
+    reservation?.reservation_status === "APPROVED" &&
+    isOwner &&
+    (canViewOwn || canCancel || canUpdateReason || canCreate);
 
   // Action handlers
   const handleAcceptReject = async (
@@ -150,18 +153,18 @@ export default function ReservationDetailPage() {
             dto: {
               status: "ACCEPTED",
               reason: reason || "Reservation accepted",
-      },
-    });
+            },
+          });
         }
       } else {
         // For rejection, just update the status
         await updateReservation.mutateAsync({
           id: reservation.reservation_id,
-      dto: {
+          dto: {
             status: "REJECTED",
             reason: reason,
-      },
-    });
+          },
+        });
       }
 
       // Close modal immediately after success
@@ -179,11 +182,11 @@ export default function ReservationDetailPage() {
     }>
   ) => {
     if (!reservation) return;
-    
+
     try {
       // Update vehicles with odometer and fuel data (this should also update status to ACCEPTED)
       await assignVehicleOdometer.mutateAsync({
-      id: reservation.reservation_id,
+        id: reservation.reservation_id,
         dto: { vehicles },
       });
 
@@ -206,7 +209,7 @@ export default function ReservationDetailPage() {
     try {
       // Update vehicles with odometer and fuel data (this should also update status to APPROVED)
       await assignVehicleOdometer.mutateAsync({
-      id: reservation.reservation_id,
+        id: reservation.reservation_id,
         dto: { vehicles },
       });
 
@@ -222,7 +225,7 @@ export default function ReservationDetailPage() {
     returnedOdometer: number
   ) => {
     if (!reservation) return;
-    
+
     try {
       await completeReservation.mutateAsync({
         reservedVehicleId,
@@ -257,13 +260,13 @@ export default function ReservationDetailPage() {
     if (!reservation) return;
 
     try {
-    await updateReservationReason.mutateAsync({
-      id: reservation.reservation_id,
+      await updateReservationReason.mutateAsync({
+        id: reservation.reservation_id,
         dto: { reason },
-    });
+      });
 
       // Close modal immediately after success
-    setShowEditReasonModal(false);
+      setShowEditReasonModal(false);
     } catch (error) {
       console.error("Error updating reason:", error);
     }
@@ -307,15 +310,15 @@ export default function ReservationDetailPage() {
 
   if (isError || !reservation) {
     return (
-     <ErrorUI
-             resource={`reservation ${reservation?.reservation_purpose}`}
-             onRetry={() => {
-               router.refresh();
-             }}
-             onBack={() => {
-               router.back();
-             }}
-           />
+      <ErrorUI
+        resource={`reservation ${reservation?.reservation_purpose}`}
+        onRetry={() => {
+          router.refresh();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
     );
   }
 
@@ -377,23 +380,6 @@ export default function ReservationDetailPage() {
             Back
           </Button>
         </div>
-
-        {/* Actions Section */}
-        <ReservationActions
-          reservation={reservation}
-          onOpenAcceptRejectModal={() => setShowAcceptRejectModal(true)}
-          onOpenAssignVehiclesModal={() => setShowAssignVehiclesModal(true)}
-          onOpenApproveWithOdometerModal={() =>
-            setShowApproveWithOdometerModal(true)
-          }
-          onOpenCancelModal={() => setShowCancelModal(true)}
-          onOpenEditReasonModal={() => setShowEditReasonModal(true)}
-          isApproveRejectLoading={updateReservation.isPending}
-          isAssignVehiclesLoading={assignVehicleOdometer.isPending}
-          isApproveWithOdometerLoading={assignVehicleOdometer.isPending}
-          isCancelLoading={cancelReservation.isPending}
-          isEditReasonLoading={updateReservationReason.isPending}
-        />
 
         {/* Main Content */}
         <div className="space-y-6">
@@ -503,7 +489,7 @@ export default function ReservationDetailPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2 mb-6">
               <User className="w-6 h-6 text-[#0872b3]" />
-              User Information
+              Requester Information
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-50 rounded-lg p-4">
@@ -549,126 +535,126 @@ export default function ReservationDetailPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {reservation.reserved_vehicles.map(
                   (reservedVehicle: ReservedVehicle) => {
-                  const isOccupied =
-                    reservedVehicle.vehicle.vehicle_status === "OCCUPIED";
-                  const cardColor = isOccupied
-                    ? "bg-orange-50 border-orange-200"
-                    : "bg-green-50 border-green-200";
+                    const isOccupied =
+                      reservedVehicle.vehicle.vehicle_status === "OCCUPIED";
+                    const cardColor = isOccupied
+                      ? "bg-orange-50 border-orange-200"
+                      : "bg-green-50 border-green-200";
                     const canReportIssueForThisVehicle = shouldShowReportIssue;
                     const canCompleteThisReservation = shouldShowComplete;
 
-                  return (
-                    <div
-                      key={reservedVehicle.reserved_vehicle_id}
-                      className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 ${cardColor}`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-bold text-gray-900">
-                          {reservedVehicle.vehicle.vehicle_name}
-                        </h4>
-                        <Badge
-                          className={`text-xs ${
-                            isOccupied
-                              ? "bg-orange-100 text-orange-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {reservedVehicle.vehicle.vehicle_status}
-                        </Badge>
-                      </div>
+                    return (
+                      <div
+                        key={reservedVehicle.reserved_vehicle_id}
+                        className={`rounded-xl border p-4 shadow-sm hover:shadow-md transition-all duration-200 ${cardColor}`}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-bold text-gray-900">
+                            {reservedVehicle.vehicle.vehicle_name}
+                          </h4>
+                          <Badge
+                            className={`text-xs ${
+                              isOccupied
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {reservedVehicle.vehicle.vehicle_status}
+                          </Badge>
+                        </div>
 
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Plate Number:</span>
-                          <span className="font-medium text-gray-900">
-                            {reservedVehicle.vehicle.plate_number}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Capacity:</span>
-                          <span className="font-medium text-gray-900">
-                            {reservedVehicle.vehicle.vehicle_capacity}
-                          </span>
-                        </div>
-                        {reservedVehicle.starting_odometer && (
+                        <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Start Odometer:
-                            </span>
+                            <span className="text-gray-600">Plate Number:</span>
                             <span className="font-medium text-gray-900">
-                              {reservedVehicle.starting_odometer} km
+                              {reservedVehicle.vehicle.plate_number}
                             </span>
                           </div>
-                        )}
-                        {reservedVehicle.fuel_provided && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Fuel Provided:
-                            </span>
+                            <span className="text-gray-600">Capacity:</span>
                             <span className="font-medium text-gray-900">
-                              {reservedVehicle.fuel_provided} L
+                              {reservedVehicle.vehicle.vehicle_capacity}
                             </span>
                           </div>
-                        )}
-                        {reservedVehicle.returned_odometer && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">
-                              Return Odometer:
-                            </span>
-                            <span className="font-medium text-gray-900">
-                              {reservedVehicle.returned_odometer} km
-                            </span>
-                          </div>
-                        )}
-                        {reservedVehicle.returned_date && (
-                          <div className="pt-2 border-t border-gray-200">
-                            <span className="text-gray-600 text-xs">
-                              Returned:
-                            </span>
-                            <div className="font-medium text-gray-900 text-xs">
-                              {formatDate(reservedVehicle.returned_date)}
+                          {reservedVehicle.starting_odometer && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Start Odometer:
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {reservedVehicle.starting_odometer} km
+                              </span>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                          {reservedVehicle.fuel_provided && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Fuel Provided:
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {reservedVehicle.fuel_provided} L
+                              </span>
+                            </div>
+                          )}
+                          {reservedVehicle.returned_odometer && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Return Odometer:
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {reservedVehicle.returned_odometer} km
+                              </span>
+                            </div>
+                          )}
+                          {reservedVehicle.returned_date && (
+                            <div className="pt-2 border-t border-gray-200">
+                              <span className="text-gray-600 text-xs">
+                                Returned:
+                              </span>
+                              <div className="font-medium text-gray-900 text-xs">
+                                {formatDate(reservedVehicle.returned_date)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Report Issue Button */}
-                      {canReportIssueForThisVehicle && (
-                        <div className="mt-4 pt-3 border-t border-gray-200">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-orange-500 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
+                        {/* Report Issue Button */}
+                        {canReportIssueForThisVehicle && (
+                          <div className="mt-4 pt-3 border-t border-gray-200">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-orange-500 border-orange-200 hover:bg-orange-50 hover:border-orange-300"
                               onClick={() => {
                                 setSelectedVehicle(reservedVehicle);
                                 setShowReportIssueModal(true);
                               }}
-                          >
-                            <AlertCircle className="w-4 h-4 mr-2" />
-                            Report Issue
-                          </Button>
-                        </div>
-                      )}
+                            >
+                              <AlertCircle className="w-4 h-4 mr-2" />
+                              Report Issue
+                            </Button>
+                          </div>
+                        )}
 
-                      {/* Complete Reservation Button */}
-                      {canCompleteThisReservation && (
-                        <div className="mt-4 pt-3 border-t border-gray-200">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300"
-                            onClick={() => {
+                        {/* Complete Reservation Button */}
+                        {canCompleteThisReservation && (
+                          <div className="mt-4 pt-3 border-t border-gray-200">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-[#0872b3] border-green-200 hover:bg-green-50 hover:border-blue-500"
+                              onClick={() => {
                                 setVehicleToComplete(reservedVehicle);
-                              setShowCompleteModal(true);
-                            }}
-                          >
-                            <CheckSquare className="w-4 h-4 mr-2" />
-                            Return Vehicle
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
+                                setShowCompleteModal(true);
+                              }}
+                            >
+                              <CheckSquare className="w-4 h-4 mr-2" />
+                              Return Vehicle
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
                   }
                 )}
               </div>
@@ -754,6 +740,26 @@ export default function ReservationDetailPage() {
         isEditReasonLoading={updateReservationReason.isPending}
         isReportIssueLoading={createVehicleIssue.isPending}
       />
+
+      <div className="bg-white flex items-center justify-between m-3 p-4 rounded-xl">
+        <p></p>
+        {/* Actions Section */}
+        <ReservationActions
+          reservation={reservation}
+          onOpenAcceptRejectModal={() => setShowAcceptRejectModal(true)}
+          onOpenAssignVehiclesModal={() => setShowAssignVehiclesModal(true)}
+          onOpenApproveWithOdometerModal={() =>
+            setShowApproveWithOdometerModal(true)
+          }
+          onOpenCancelModal={() => setShowCancelModal(true)}
+          onOpenEditReasonModal={() => setShowEditReasonModal(true)}
+          isApproveRejectLoading={updateReservation.isPending}
+          isAssignVehiclesLoading={assignVehicleOdometer.isPending}
+          isApproveWithOdometerLoading={assignVehicleOdometer.isPending}
+          isCancelLoading={cancelReservation.isPending}
+          isEditReasonLoading={updateReservationReason.isPending}
+        />
+      </div>
     </div>
   );
 }

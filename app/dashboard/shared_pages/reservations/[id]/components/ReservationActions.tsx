@@ -65,7 +65,7 @@ export default function ReservationActions({
     ['REJECTED', 'CANCELLED', 'CANCELED'].includes(reservation?.reservation_status);
 
   return (
-    <div className="flex flex-wrap gap-3 mb-6">
+    <div className="flex flex-wrap gap-3 mb-6 pb-10">
       {/* Accept/Reject for UNDER_REVIEW status */}
       {canApprove && reservation.reservation_status === 'UNDER_REVIEW' && (
         <Button
@@ -111,7 +111,7 @@ export default function ReservationActions({
       {/* Approve with Odometer for ACCEPTED status with vehicles */}
       {shouldShowApproveWithOdometer && (
         <Button
-          className="bg-purple-600 text-white hover:bg-purple-700"
+          className="bg-[#0872b3] text-white hover:bg-blue-700"
           onClick={onOpenApproveWithOdometerModal}
           disabled={isApproveWithOdometerLoading}
         >

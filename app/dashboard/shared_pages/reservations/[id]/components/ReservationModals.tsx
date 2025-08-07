@@ -1010,7 +1010,7 @@ export default function ReservationModals({
                   <button
                     type="submit"
                     disabled={isApproveWithOdometerLoading}
-                    className="flex-1 px-4 py-2 text-white bg-purple-600 border border-purple-600 rounded-md hover:bg-purple-700 disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-white bg-[#0872b3] border border-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
                     {isApproveWithOdometerLoading
                       ? "Approving..."
@@ -1105,7 +1105,7 @@ export default function ReservationModals({
                   <button
                     type="submit"
                     disabled={isCompleteLoading}
-                    className="flex-1 px-4 py-2 text-white bg-green-600 border border-green-600 rounded-md hover:bg-green-700 disabled:opacity-50"
+                    className="flex-1 px-4 py-2 text-white bg-[#0872b3] border border-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
                   >
                     {isCompleteLoading
                       ? "Completing..."

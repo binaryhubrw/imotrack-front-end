@@ -936,7 +936,7 @@ export default function ReservationsPage() {
                               {reservation.user.first_name} {reservation.user.last_name}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {reservation.user.auth?.email || "No email"}
+                              <span>Tel: {reservation.user.user_phone || "No Tel"}</span>
                             </div>
                           </div>
                         ) : (

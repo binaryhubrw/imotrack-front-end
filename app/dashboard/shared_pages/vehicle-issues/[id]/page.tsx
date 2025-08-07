@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   useVehicleIssue,
   useUpdateVehicleIssue,
@@ -561,16 +560,6 @@ Generated on: ${new Date().toLocaleString()}
                 </div>
               </CardContent>
             </Card>
-            {/* Emergency Alert */}
-            {issue.issue_status === "OPEN" && (
-              <Alert className="border-yellow-200 bg-yellow-50">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <AlertDescription className="text-yellow-800">
-                  This issue has been reported and is awaiting review. You will
-                  be notified once it is being addressed.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
         </div>
       </div>
