@@ -34,7 +34,6 @@ interface ReservationModalsProps {
   showCompleteModal: boolean;
   showCancelModal: boolean;
   showAddVehicleModal: boolean;
-  showRemoveVehicleModal: boolean;
   showEditReasonModal: boolean;
   showReportIssueModal: boolean;
   selectedVehicle: ReservedVehicle | null;
@@ -48,7 +47,6 @@ interface ReservationModalsProps {
   onCloseEditReason: () => void;
   onCloseReportIssue: () => void;
   onCloseAddVehicle: () => void;     // ADD THIS
-  onCloseRemoveVehicle: () => void;  // ADD THIS
 
   
   // Action handlers
@@ -86,7 +84,6 @@ interface ReservationModalsProps {
     issue_date: string;
   }) => Promise<void>;
   onAddVehicle: (vehicleId: string) => Promise<void>;  // ADD THIS
-  onRemoveVehicle: (vehicleId: string) => Promise<void>;  // ADD THIS
 
   // Loading states
   isAcceptRejectLoading: boolean;
@@ -97,7 +94,6 @@ interface ReservationModalsProps {
   isEditReasonLoading: boolean;
   isReportIssueLoading: boolean;
   isAddVehicleLoading: boolean;  // ADD THIS
-  isRemoveVehicleLoading: boolean;  // ADD THIS
 }
 
 export default function ReservationModals({
@@ -110,7 +106,6 @@ export default function ReservationModals({
   showCancelModal,
   showEditReasonModal,
   showAddVehicleModal,  // ADD THIS
-  showRemoveVehicleModal,  // ADD THIS
   showReportIssueModal,
   selectedVehicle,
   vehicleToComplete,
@@ -124,13 +119,11 @@ export default function ReservationModals({
   onAcceptReject,
   onAssignVehicles,
   onCloseAddVehicle,  // ADD THIS
-  onCloseRemoveVehicle,  // ADD THIS
   onApproveWithOdometer,
   onCompleteReservation,
   onCancelReservation,
   onEditReason,
   onAddVehicle,  // ADD THIS
-  onRemoveVehicle,  // ADD THIS
   onReportIssue,
   isAcceptRejectLoading,
   isAssignVehiclesLoading,
@@ -138,7 +131,6 @@ export default function ReservationModals({
   isCompleteLoading,
   isCancelLoading,
   isAddVehicleLoading,  // ADD THIS
-  isRemoveVehicleLoading,  // ADD THIS
   isEditReasonLoading,
   isReportIssueLoading,
 }: ReservationModalsProps) {
@@ -149,7 +141,6 @@ export default function ReservationModals({
   const [acceptRejectReason, setAcceptRejectReason] = useState("");
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<string[]>([]);
 const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD THIS
-const [selectedVehicleToRemove, setSelectedVehicleToRemove] = useState("");  // ADD THIS
   const [vehicleAssignments, setVehicleAssignments] = useState<
     Array<{
       vehicle_id: string;
@@ -377,16 +368,6 @@ const [selectedVehicleToRemove, setSelectedVehicleToRemove] = useState("");  // 
   setSelectedVehicleToAdd("");
 };
 
-const handleRemoveVehicle = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!selectedVehicleToRemove) {
-    toast.error("Please select a vehicle to remove");
-    return;
-  }
-
-  await onRemoveVehicle(selectedVehicleToRemove);
-  setSelectedVehicleToRemove("");
-};
 
   const handleCancel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1311,46 +1292,6 @@ const handleRemoveVehicle = async (e: React.FormEvent) => {
   </div>
 )}
 
-{/* Remove Vehicle Modal */}
-{showRemoveVehicleModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-      <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white">
-        <h2 className="text-lg font-semibold text-gray-900">Remove Vehicle</h2>
-        <button onClick={onCloseRemoveVehicle} className="text-gray-400 hover:text-gray-600 p-1">×</button>
-      </div>
-      <div className="p-4">
-        <form onSubmit={handleRemoveVehicle} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Vehicle to Remove <span className="text-orange-500">*</span>
-            </label>
-            <select
-              value={selectedVehicleToRemove}
-              onChange={(e) => setSelectedVehicleToRemove(e.target.value)}
-              disabled={isRemoveVehicleLoading}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              required
-            >
-              <option value="">Select a vehicle</option>
-              {reservation?.reserved_vehicles?.map((reservedVehicle: ReservedVehicle) => (
-                <option key={reservedVehicle.vehicle.vehicle_id} value={reservedVehicle.vehicle.vehicle_id}>
-                  {reservedVehicle.vehicle.plate_number} - {reservedVehicle.vehicle.vehicle_model.vehicle_model_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button type="button" onClick={onCloseRemoveVehicle} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200">Cancel</button>
-            <button type="submit" disabled={isRemoveVehicleLoading || !selectedVehicleToRemove} className="flex-1 px-4 py-2 text-white bg-red-600 border border-red-600 rounded-md hover:bg-red-700 disabled:opacity-50">
-              {isRemoveVehicleLoading ? "Removing..." : "Remove Vehicle"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-)}
 
       {/* Report Issue Modal */}
       {showReportIssueModal && selectedVehicle && (

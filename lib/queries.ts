@@ -1664,13 +1664,6 @@ export const useReservationVehiclesOdometerAssignation = () => {
   });
 };
 
-export const useAddNewReservedVehicle=()=>{
-
-}
-export const useRemoveReservedVehicle=()=>{}
-
-// Add these new hooks to your existing reservation queries
-
 export const useAddVehicleToReservation = () => {
   const queryClient = useQueryClient();
   return useMutation<VehicleOperationResponse[], Error, { id: string; dto: AddVehicleToReservationDto }>({
@@ -2028,6 +2021,48 @@ export const useUpdateVehicleIssue = () => {
   });
 };
 
+export const useRespondToVehicleIssue = () => {
+  const queryClient = useQueryClient();
+  return useMutation<VehicleIssue, Error, { issueId: string; message: string }>({
+    mutationFn: async ({ issueId, message }) => {
+      console.log('Responding to vehicle issue with data:', { issueId, message });
+      const { data } = await api.patch(`/v2/issues/${issueId}/message`, { message });
+      console.log('Respond to vehicle issue response:', data);
+      
+      // Handle both { data: {...} } and direct object responses
+      if (data && typeof data === 'object' && 'data' in data && data.data) {
+        return data.data as VehicleIssue;
+      } else if (data && typeof data === 'object' && 'id' in data) {
+        // Direct object with field mapping
+        return {
+          issue_id: data.id,
+          issue_title: data.issue_title,
+          issue_status: data.issue_status,
+          issue_description: data.issue_description,
+          issue_date: data.issue_date,
+          created_at: data.createdAt,
+          updated_at: data.updatedAt,
+          reserved_vehicle_id: data.reserved_vehicle_id,
+        } as VehicleIssue;
+      } else {
+        throw new Error('Unexpected response structure from respond to vehicle issue request');
+      }
+    },
+    onSuccess: () => {
+      toast.success('Response sent successfully!');
+      // Invalidate and refetch issues to get updated data
+      queryClient.invalidateQueries({ queryKey: ['vehicle-issues'] });
+    },
+    onError: (error: unknown) => {
+      console.error('Respond to vehicle issue request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to send response';
+      console.error('Respond to vehicle issue error message:', errorMessage);
+      toast.error(errorMessage);
+    },
+  });
+};
+
 export const useDeleteVehicleIssue = () => {
   return useMutation<VehicleIssue, Error, { issueId: string }>({
     mutationFn: async ({ issueId }) => {
@@ -2037,8 +2072,6 @@ export const useDeleteVehicleIssue = () => {
     },
   });
 };
-
-
 
 // Notifications
 

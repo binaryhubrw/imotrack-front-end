@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -10,7 +10,7 @@ import {
   Download,
   Phone,
   CheckCircle,
-  Edit,
+  // Edit,
   Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   useVehicleIssue,
-  useUpdateVehicleIssue,
+  // useUpdateVehicleIssue,
   useDeleteVehicleIssue,
 } from "@/lib/queries";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
+// import { Textarea } from "@/components/ui/textarea";
 import type { FC } from "react";
 import ErrorUI from "@/components/ErrorUI";
 import Image from "next/image";
@@ -203,9 +203,9 @@ export default function IssueDetailsPage() {
     isLoading,
     isError,
     error,
-    refetch,
+    // refetch,
   } = useVehicleIssue(issueId);
-  const updateVehicleIssue = useUpdateVehicleIssue();
+  // const updateVehicleIssue = useUpdateVehicleIssue();
   const deleteVehicleIssue = useDeleteVehicleIssue();
   const { user, isLoading: authLoading } = useAuth();
 
@@ -227,32 +227,32 @@ export default function IssueDetailsPage() {
   const hasAnyPermission = canView || canUpdate || canDelete;
 
   // Edit modal state
-  const [showEditModal, setShowEditModal] = useState(false);
+  // const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editForm, setEditForm] = useState({
-    issue_title: "",
-    issue_description: "",
-    issued_date: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
+  // const [editForm, setEditForm] = useState({
+  //   issue_title: "",
+  //   issue_description: "",
+  //   issued_date: "",
+  // });
+  // const [submitting, setSubmitting] = useState(false);
 
   // Initialize edit form when issue data is available
-  useEffect(() => {
-    if (issue) {
-      // Convert ISO date string to YYYY-MM-DD format for date input
-      const formatDateForInput = (dateString: string) => {
-        return new Date(dateString).toISOString().split("T")[0];
-      };
+  // useEffect(() => {
+  //   if (issue) {
+  //     // Convert ISO date string to YYYY-MM-DD format for date input
+  //     const formatDateForInput = (dateString: string) => {
+  //       return new Date(dateString).toISOString().split("T")[0];
+  //     };
 
-      setEditForm({
-        issue_title: issue.issue_title || "",
-        issue_description: issue.issue_description || "",
-        issued_date: issue.issue_date
-          ? formatDateForInput(issue.issue_date)
-          : new Date().toISOString().split("T")[0],
-      });
-    }
-  }, [issue]);
+  //     // setEditForm({
+  //     //   issue_title: issue.issue_title || "",
+  //     //   issue_description: issue.issue_description || "",
+  //     //   issued_date: issue.issue_date
+  //     //     ? formatDateForInput(issue.issue_date)
+  //     //     : new Date().toISOString().split("T")[0],
+  //     // });
+  //   }
+  // }, [issue]);
 
   // Status badge component
   const getStatusBadge = (status: string) => (
@@ -311,42 +311,42 @@ Generated on: ${new Date().toLocaleString()}
   };
 
   // Edit handlers
-  const handleEdit = () => {
-    if (!canUpdate) {
-      toast.error("You do not have permission to update vehicle issues");
-      return;
-    }
-    setShowEditModal(true);
-  };
+  // const handleEdit = () => {
+  //   if (!canUpdate) {
+  //     toast.error("You do not have permission to update vehicle issues");
+  //     return;
+  //   }
+  //   // setShowEditModal(true);
+  // };
 
-  const handleEditSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canUpdate) {
-      toast.error("You do not have permission to update vehicle issues");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      // Convert date input back to ISO string format
-      const updates = {
-        issue_title: editForm.issue_title,
-        issue_description: editForm.issue_description,
-        issued_date: new Date(editForm.issued_date).toISOString(),
-      };
+  // const handleEditSave = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!canUpdate) {
+  //     toast.error("You do not have permission to update vehicle issues");
+  //     return;
+  //   }
+  //   setSubmitting(true);
+  //   try {
+  //     // Convert date input back to ISO string format
+  //     const updates = {
+  //       issue_title: editForm.issue_title,
+  //       issue_description: editForm.issue_description,
+  //       issued_date: new Date(editForm.issued_date).toISOString(),
+  //     };
 
-      await updateVehicleIssue.mutateAsync({
-        issueId,
-        updates,
-      });
-      toast.success("Issue updated successfully!");
-      setShowEditModal(false);
-      refetch();
-    } catch {
-      toast.error("Failed to update issue");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  //     await updateVehicleIssue.mutateAsync({
+  //       issueId,
+  //       updates,
+  //     });
+  //     toast.success("Issue updated successfully!");
+  //     setShowEditModal(false);
+  //     refetch();
+  //   } catch {
+  //     toast.error("Failed to update issue");
+  //   } finally {
+  //     setSubmitting(false);
+  //   }
+  // };
 
   // Delete handlers
   const handleDelete = () => {
@@ -420,7 +420,7 @@ Generated on: ${new Date().toLocaleString()}
               <Download className="w-4 h-4 mr-2" />
               Export Report
             </Button>
-            {canUpdate && (
+            {/* {canUpdate && (
               <Button
                 onClick={handleEdit}
                 className="text-white bg-[#0872B3] hover:bg-[#065d8f]"
@@ -428,7 +428,7 @@ Generated on: ${new Date().toLocaleString()}
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Issue
               </Button>
-            )}
+            )} */}
             {canDelete && (
               <Button
                 onClick={handleDelete}
@@ -571,7 +571,7 @@ Generated on: ${new Date().toLocaleString()}
       </div>
 
       {/* Edit Modal */}
-      {showEditModal && canUpdate && (
+      {/* {showEditModal && canUpdate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <form
             onSubmit={handleEditSave}
@@ -656,7 +656,7 @@ Generated on: ${new Date().toLocaleString()}
             </div>
           </form>
         </div>
-      )}
+      )} */}
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && canDelete && (

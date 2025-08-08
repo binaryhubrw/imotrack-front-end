@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Car, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Reservation } from "@/types/next-auth";
 
@@ -14,7 +14,6 @@ interface ReservationActionsProps {
   onOpenApproveWithOdometerModal: () => void;
   onOpenCancelModal: () => void;
    onOpenAddVehicleModal: () => void;      // ADD THIS
-  onOpenRemoveVehicleModal: () => void;   // ADD THIS
   onOpenEditReasonModal: () => void;
   
   // Loading states
@@ -24,7 +23,6 @@ interface ReservationActionsProps {
   isCancelLoading: boolean;
   isEditReasonLoading: boolean;
    isAddVehicleLoading: boolean;        // ADD THIS
-  isRemoveVehicleLoading: boolean;     // ADD THIS
 
 }
 
@@ -99,19 +97,19 @@ export default function ReservationActions({
       {/* Assign Vehicles for ACCEPTED status without vehicles */}
       {shouldShowAssignVehicle && (
         <Button
-          className="bg-blue-600 text-white hover:bg-blue-700"
+          // className="bg-blue-600 text-white hover:bg-blue-700"
           onClick={onOpenAssignVehiclesModal}
           disabled={isAssignVehiclesLoading}
         >
           {isAssignVehiclesLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Assigning...
+              {/* Assigning... */}
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Car className="w-4 h-4" />
-              Assign Vehicles
+              {/* <Car className="w-4 h-4" /> */}
+              {/* Assign Vehicles */}
             </div>
           )}
         </Button>

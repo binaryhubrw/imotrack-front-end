@@ -76,10 +76,7 @@ export default function ReservationDetailPage() {
   const [showEditReasonModal, setShowEditReasonModal] = useState(false);
   const [showReportIssueModal, setShowReportIssueModal] = useState(false);
   const [showAddVehicleModal, setShowAddVehicleModal] = useState(false);
-  // Add this near your other modal states:
-  const [showRemoveVehicleModal, setShowRemoveVehicleModal] = useState(false);
   // ADD this state near other modal states:
-  const [selectedVehicleToRemove, setSelectedVehicleToRemove] = useState("");
   const [selectedVehicle, setSelectedVehicle] =
     useState<ReservedVehicle | null>(null);
   const [vehicleToComplete, setVehicleToComplete] =
@@ -136,6 +133,9 @@ export default function ReservationDetailPage() {
   const shouldShowComplete =
     reservation?.reservation_status === "APPROVED" &&
     (canComplete || canUpdate);
+
+  const isFleetManager = canView && canUpdate;
+
 
   const shouldShowReportIssue =
     reservation?.reservation_status === "APPROVED" &&
@@ -208,7 +208,6 @@ export default function ReservationDetailPage() {
         id: reservation.reservation_id,
         dto: { vehicle_id: vehicleId },
       });
-      setShowRemoveVehicleModal(false);
     } catch (error) {
       console.error("Error removing vehicle:", error);
     }
@@ -260,7 +259,6 @@ export default function ReservationDetailPage() {
     }
   };
   const onCloseAddVehicle = () => setShowAddVehicleModal(false);
-  const onCloseRemoveVehicle = () => setShowRemoveVehicleModal(false);
 
   const handleCompleteReservation = async (
     reservedVehicleId: string,
@@ -566,76 +564,87 @@ export default function ReservationDetailPage() {
           <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2 mb-6">
               <PersonStanding className="w-6 h-6 text-[#0872b3]" />
-               Reservation Status Overview
+              Reservation Status Overview
             </h2>
 
             {/* Action Timeline */}
-<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-  {/* Reviewed */}
-  <div className="bg-gray-50 rounded-lg p-4">
-    <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
-      <UserCheck className="w-4 h-4 text-blue-600" />
-      Reviewed At
-    </div>
-    <div className="font-medium text-gray-900 text-sm">
-      {reservation.reviewed_at ? formatDate(reservation.reviewed_at) : "N/A"}
-    </div>
-    {reservation.reviewer && (
-      <div className="text-xs text-gray-600 mt-1">
-        by {reservation.reviewer.first_name} {reservation.reviewer.last_name}
-      </div>
-    )}
-  </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Reviewed */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
+                  <UserCheck className="w-4 h-4 text-blue-600" />
+                  Reviewed At
+                </div>
+                <div className="font-medium text-gray-900 text-sm">
+                  {reservation.reviewed_at
+                    ? formatDate(reservation.reviewed_at)
+                    : "N/A"}
+                </div>
+                {reservation.reviewer && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    by {reservation.reviewer.first_name}{" "}
+                    {reservation.reviewer.last_name}
+                  </div>
+                )}
+              </div>
 
-  {/* Approved */}
-  <div className="bg-gray-50 rounded-lg p-4">
-    <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
-      <CheckCircle className="w-4 h-4 text-green-600" />
-      Approved At
-    </div>
-    <div className="font-medium text-gray-900 text-sm">
-      {reservation.approved_at ? formatDate(reservation.approved_at) : "Pending"}
-    </div>
-    {reservation.approver && (
-      <div className="text-xs text-gray-600 mt-1">
-        by {reservation.approver.first_name} {reservation.approver.last_name}
-      </div>
-    )}
-  </div>
+              {/* Approved */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  Approved At
+                </div>
+                <div className="font-medium text-gray-900 text-sm">
+                  {reservation.approved_at
+                    ? formatDate(reservation.approved_at)
+                    : "Pending"}
+                </div>
+                {reservation.approver && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    by {reservation.approver.first_name}{" "}
+                    {reservation.approver.last_name}
+                  </div>
+                )}
+              </div>
 
-  {/* Completed */}
-  <div className="bg-gray-50 rounded-lg p-4">
-    <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
-      <Clock className="w-4 h-4 text-purple-600" />
-      Completed At
-    </div>
-    <div className="font-medium text-gray-900 text-sm">
-      {reservation.completed_at ? formatDate(reservation.completed_at) : "Not completed"}
-    </div>
-    {reservation.completer && (
-      <div className="text-xs text-gray-600 mt-1">
-        by {reservation.completer.first_name} {reservation.completer.last_name}
-      </div>
-    )}
-  </div>
+              {/* Completed */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  Completed At
+                </div>
+                <div className="font-medium text-gray-900 text-sm">
+                  {reservation.completed_at
+                    ? formatDate(reservation.completed_at)
+                    : "Not completed"}
+                </div>
+                {reservation.completer && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    by {reservation.completer.first_name}{" "}
+                    {reservation.completer.last_name}
+                  </div>
+                )}
+              </div>
 
-  {/* Canceled */}
-  <div className="bg-gray-50 rounded-lg p-4">
-    <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
-      <XCircle className="w-4 h-4 text-red-600" />
-      Canceled At
-    </div>
-    <div className="font-medium text-gray-900 text-sm">
-      {reservation.canceled_at ? formatDate(reservation.canceled_at) : "Not canceled"}
-    </div>
-    {reservation.canceler && (
-      <div className="text-xs text-gray-600 mt-1">
-        by {reservation.canceler.first_name} {reservation.canceler.last_name}
-      </div>
-    )}
-  </div>
-</div>
-
+              {/* Canceled */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-gray-500 uppercase font-medium">
+                  <XCircle className="w-4 h-4 text-red-600" />
+                  Canceled At
+                </div>
+                <div className="font-medium text-gray-900 text-sm">
+                  {reservation.canceled_at
+                    ? formatDate(reservation.canceled_at)
+                    : "Not canceled"}
+                </div>
+                {reservation.canceler && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    by {reservation.canceler.first_name}{" "}
+                    {reservation.canceler.last_name}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Reserved Vehicles Card */}
@@ -647,7 +656,7 @@ export default function ReservationDetailPage() {
               </h2>
 
               {/* Add vehicle or other top-level actions can go here */}
-              {reservation?.reservation_status === "ACCEPTED" && (
+              {reservation?.reservation_status === "ACCEPTED" && isFleetManager  && (
                 <div className="mt-4 pt-3 border-t border-gray-200">
                   <Button
                     variant="outline"
@@ -682,7 +691,10 @@ export default function ReservationDetailPage() {
                       >
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-bold text-gray-900">
-                            {reservedVehicle.vehicle.vehicle_model.vehicle_model_name}
+                            {
+                              reservedVehicle.vehicle.vehicle_model
+                                .vehicle_model_name
+                            }
                           </h4>
                           <Badge
                             className={`text-xs ${
@@ -705,10 +717,13 @@ export default function ReservationDetailPage() {
                           <div className="flex justify-between">
                             <span className="text-gray-600">Capacity:</span>
                             <span className="font-medium text-gray-900">
-                              {reservedVehicle.vehicle.vehicle_model.vehicle_capacity}
+                              {
+                                reservedVehicle.vehicle.vehicle_model
+                                  .vehicle_capacity
+                              }
                             </span>
                           </div>
-                          {reservedVehicle.starting_odometer && (
+                          {/* {reservedVehicle.starting_odometer && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
                                 Start Odometer:
@@ -717,7 +732,7 @@ export default function ReservationDetailPage() {
                                 {reservedVehicle.starting_odometer} km
                               </span>
                             </div>
-                          )}
+                          )} */}
                           {reservedVehicle.fuel_provided && (
                             <div className="flex justify-between">
                               <span className="text-gray-600">
@@ -751,18 +766,17 @@ export default function ReservationDetailPage() {
                         </div>
 
                         {/* Remove Vehicle */}
-                        {reservation?.reservation_status === "ACCEPTED" && (
+                        {reservation?.reservation_status === "ACCEPTED" && isFleetManager && (
                           <div className="mt-4 pt-3 border-t border-gray-200">
                             <Button
                               variant="outline"
                               size="sm"
                               className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                              onClick={() => {
-                                setSelectedVehicleToRemove(
+                              onClick={() =>
+                                handleRemoveVehicle(
                                   reservedVehicle.vehicle.vehicle_id
-                                );
-                                setShowRemoveVehicleModal(true);
-                              }}
+                                )
+                              }
                               disabled={removeVehicleFromReservation.isPending}
                             >
                               {removeVehicleFromReservation.isPending ? (
@@ -830,7 +844,6 @@ export default function ReservationDetailPage() {
               </div>
             )}
           </div>
-
         </div>
       </div>
 
@@ -842,9 +855,7 @@ export default function ReservationDetailPage() {
         showAssignVehiclesModal={showAssignVehiclesModal}
         showApproveWithOdometerModal={showApproveWithOdometerModal}
         showCompleteModal={showCompleteModal}
-        selectedVehicleToRemove={selectedVehicleToRemove}
         showAddVehicleModal={showAddVehicleModal}
-        showRemoveVehicleModal={showRemoveVehicleModal}
         showCancelModal={showCancelModal}
         showEditReasonModal={showEditReasonModal}
         showReportIssueModal={showReportIssueModal}
@@ -863,7 +874,6 @@ export default function ReservationDetailPage() {
         onCompleteReservation={handleCompleteReservation}
         onCancelReservation={handleCancelReservation}
         onEditReason={handleEditReason}
-        onRemoveVehicle={handleRemoveVehicle}
         onReportIssue={handleReportIssue}
         isAcceptRejectLoading={updateReservation.isPending}
         isAssignVehiclesLoading={assignVehicleOdometer.isPending}
@@ -875,10 +885,8 @@ export default function ReservationDetailPage() {
         isEditReasonLoading={updateReservationReason.isPending}
         isReportIssueLoading={createVehicleIssue.isPending}
         onCloseAddVehicle={onCloseAddVehicle}
-        onCloseRemoveVehicle={onCloseRemoveVehicle}
         onAddVehicle={handleAddVehicle}
         isAddVehicleLoading={addVehicleToReservation.isPending}
-        isRemoveVehicleLoading={removeVehicleFromReservation.isPending}
       />
 
       <div className="bg-white flex items-center justify-between m-3 p-4 rounded-xl">
@@ -893,14 +901,12 @@ export default function ReservationDetailPage() {
           onOpenCancelModal={() => setShowCancelModal(true)}
           onOpenEditReasonModal={() => setShowEditReasonModal(true)}
           onOpenAddVehicleModal={() => setShowAddVehicleModal(true)} // ADD THIS
-          onOpenRemoveVehicleModal={() => setShowRemoveVehicleModal(true)} // ADD THIS
           isApproveRejectLoading={updateReservation.isPending}
           isAssignVehiclesLoading={assignVehicleOdometer.isPending}
           isApproveWithOdometerLoading={assignVehicleOdometer.isPending}
           isCancelLoading={cancelReservation.isPending}
           isEditReasonLoading={updateReservationReason.isPending}
           isAddVehicleLoading={addVehicleToReservation.isPending} // ADD THIS
-          isRemoveVehicleLoading={removeVehicleFromReservation.isPending} // ADD THIS
         />
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
   useVehicleIssues,
   useCreateVehicleIssue,
   useReservations,
+  useRespondToVehicleIssue,
 } from "@/lib/queries";
 import ErrorUI from "@/components/ErrorUI";
 import { useRouter } from "next/navigation";
@@ -286,21 +287,122 @@ function ReportIssueModal({
     </div>
   );
 }
+// Response Modal Component
+function ResponseModal({
+  open,
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (message: string) => void;
+  isLoading: boolean;
+}) {
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) {
+      setError("Response message is required");
+      return;
+    }
+    
+    await onSubmit(message);
+    setMessage("");
+    setError("");
+    onClose();
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    if (error) setError("");
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Respond to Issue
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-1"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Response *
+              </label>
+              <textarea
+                value={message}
+                onChange={handleChange}
+                rows={4}
+                placeholder="Type your response to this issue..."
+                className={`w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  error ? "border-red-500" : ""
+                }`}
+                required
+              />
+              {error && (
+                <p className="text-xs text-red-500 mt-1">{error}</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || !message.trim()}
+                className="flex-1 px-4 py-2 text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Sending..." : "Send Response"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function VehicleIssuesPage() {
   const { data: issues = [], isLoading, isError } = useVehicleIssues();
   const { data: reservations = [] } = useReservations();
   const createIssue = useCreateVehicleIssue();
+  const respondToIssue = useRespondToVehicleIssue(); // Add this line
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [showReportModal, setShowReportModal] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
+  const [showResponseModal, setShowResponseModal] = useState(false); // Add this line
+  const [selectedIssueId, setSelectedIssueId] = useState<string>(""); // Add this line
   const router = useRouter();
 
   // Permission checks
   const canView = !!user?.position?.position_access?.vehicleIssues?.view;
   const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
+  const canRespond = !!user?.position?.position_access?.vehicleIssues?.update;
 
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {
@@ -340,6 +442,20 @@ export default function VehicleIssuesPage() {
       // Error handled by mutation
     }
   };
+
+// Add this function
+const handleRespondToIssue = async (message: string) => {
+  try {
+    await respondToIssue.mutateAsync({ 
+      issueId: selectedIssueId, 
+      message 
+    });
+    setShowResponseModal(false);
+    setSelectedIssueId("");
+  } catch {
+    // Error handled by mutation
+  }
+};
 
   if (authLoading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -527,24 +643,37 @@ export default function VehicleIssuesPage() {
                 </p>
               </div>
 
-              {/* Footer */}
-              <div className="px-6 pb-6">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                    <Clock className="w-3 h-3" />
-                    <span className="font-medium">{formatTimeAgo(issue.created_at)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-                    <Calendar className="w-3 h-3" />
-                    <span className="font-medium">
-                      {new Date(issue.issue_date).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
+     {/* Footer */}
+<div className="px-6 pb-6">
+  <div className="flex items-center justify-between text-xs mb-3">
+    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+      <Clock className="w-3 h-3" />
+      <span className="font-medium">{formatTimeAgo(issue.created_at)}</span>
+    </div>
+    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+      <Calendar className="w-3 h-3" />
+      <span className="font-medium">
+        {new Date(issue.issue_date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })}
+      </span>
+    </div>
+  </div>
+  {canRespond && issue.issue_status === "OPEN" && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation(); // Prevent card click
+      setSelectedIssueId(issue.issue_id);
+      setShowResponseModal(true);
+    }}
+    className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg border border-blue-200 hover:border-blue-300 transition-all duration-200 text-sm"
+  >
+    Respond to Issue
+  </button>
+)}
+
+</div>
 
               {/* Hover Effect Overlay */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
@@ -557,13 +686,24 @@ export default function VehicleIssuesPage() {
 </div>
 
       {/* Report Issue Modal */}
-      <ReportIssueModal
-        open={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        reservations={reservations}
-        onSubmit={handleReportIssue}
-        isLoading={createIssue.isPending}
-      />
+<ReportIssueModal
+  open={showReportModal}
+  onClose={() => setShowReportModal(false)}
+  reservations={reservations}
+  onSubmit={handleReportIssue}
+  isLoading={createIssue.isPending}
+/>
+
+{/* Response Modal */}
+<ResponseModal
+  open={showResponseModal}
+  onClose={() => {
+    setShowResponseModal(false);
+    setSelectedIssueId("");
+  }}
+  onSubmit={handleRespondToIssue}
+  isLoading={respondToIssue.isPending}
+/>
     </div>
   );
 }
