@@ -645,12 +645,14 @@ export type VehicleIssue = {
   issue_description: string;
   issue_date: string;
   created_at: string;
+  message: string;
   reserved_vehicle_id: string;
   reserved_vehicle?: unknown; // Use unknown instead of any
   // Backend response fields
   id?: string;
   createdAt?: string;
   updatedAt?: string;
+  issue_responder?: string;
   updated_at?: string;
 };
 
@@ -660,6 +662,7 @@ export type CreateVehicleIssueDto = {
   issue_description: string;
   reserved_vehicle_id: string;
   issue_date: string;
+  message: string;
 };
 
 export type UpdateVehicleIssueDto = {

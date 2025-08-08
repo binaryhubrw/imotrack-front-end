@@ -43,15 +43,11 @@ import { SkeletonVehicleIssueDetails } from "@/components/ui/skeleton";
 // All possible status values for vehicle issues
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Reported",
-  IN_PROGRESS: "In Progress",
-  RESOLVED: "Resolved",
   CLOSED: "Closed",
 };
 
 const STATUS_BADGE: Record<string, string> = {
   OPEN: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-  IN_PROGRESS: "bg-blue-100 text-blue-800 hover:bg-blue-100",
-  RESOLVED: "bg-green-100 text-green-800 hover:bg-green-100",
   CLOSED: "bg-gray-200 text-gray-800 hover:bg-gray-200",
 };
 
@@ -92,15 +88,9 @@ const VehicleDetailsCard: FC<{
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Year</p>
+              <p className="text-xs text-gray-500">Manufactured Year</p>
               <p className="font-medium text-gray-900">
                 {vehicle.vehicle_year || "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Capacity</p>
-              <p className="font-medium text-gray-900">
-                {vehicle.vehicle_capacity || "-"}
               </p>
             </div>
             <div>
@@ -295,6 +285,9 @@ Date Reported: ${new Date(issue.issue_date).toLocaleString()}
 Description:
 ${issue.issue_description}
 
+Reviewer:
+${issue.message}
+
 ---
 Generated on: ${new Date().toLocaleString()}
     `;
@@ -467,8 +460,14 @@ Generated on: ${new Date().toLocaleString()}
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
           Description
         </h3>
-        <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+        <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">
           {issue.issue_description}
+        </p>
+        <h3 className="text-lg font-semibold text-green-900 mb-2">
+          Reviewer Message
+        </h3>
+        <p className="text-gray-900 bg-gray-100 p-4 rounded-lg">
+          {issue.message}
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -484,7 +483,7 @@ Generated on: ${new Date().toLocaleString()}
         <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
           <Calendar className="w-5 h-5 text-green-600" />
           <div>
-            <p className="text-sm text-gray-600">Updated At</p>
+            <p className="text-sm text-gray-600">Responded At</p>
             <p className="font-medium text-gray-900">
               {"updated_at" in issue && issue.updated_at
                 ? new Date(

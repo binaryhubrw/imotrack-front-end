@@ -12,7 +12,7 @@ import {
 import {
   useVehicleIssues,
   useCreateVehicleIssue,
-  useReservations,
+  useMyReservations,
   useRespondToVehicleIssue,
 } from "@/lib/queries";
 import ErrorUI from "@/components/ErrorUI";
@@ -43,6 +43,7 @@ function ReportIssueModal({
     issue_title: "",
     issue_description: "",
     reserved_vehicle_id: "",
+    message: "",
     issue_date: new Date().toISOString().split("T")[0],
   });
   const [selectedReservationId, setSelectedReservationId] = useState("");
@@ -83,6 +84,7 @@ function ReportIssueModal({
       issue_title: "",
       issue_description: "",
       reserved_vehicle_id: "",
+      message: "",
       issue_date: new Date().toISOString().split("T")[0],
     });
     setSelectedReservationId("");
@@ -387,7 +389,8 @@ function ResponseModal({
 
 export default function VehicleIssuesPage() {
   const { data: issues = [], isLoading, isError } = useVehicleIssues();
-  const { data: reservations = [] } = useReservations();
+// const { data: allReservations = [] } = useReservations();  
+  const { data: reservations = [] } = useMyReservations();
   const createIssue = useCreateVehicleIssue();
   const respondToIssue = useRespondToVehicleIssue(); // Add this line
 
@@ -689,7 +692,7 @@ const handleRespondToIssue = async (message: string) => {
 <ReportIssueModal
   open={showReportModal}
   onClose={() => setShowReportModal(false)}
-  reservations={reservations}
+  reservations={reservations as Reservation[]}
   onSubmit={handleReportIssue}
   isLoading={createIssue.isPending}
 />

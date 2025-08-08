@@ -1932,6 +1932,7 @@ export const useCreateVehicleIssue = () => {
         issue_title: newVehicleIssue.issue_title,
         issue_description: newVehicleIssue.issue_description,
         issue_status: 'OPEN',
+        message: newVehicleIssue.message,
         issue_date: newVehicleIssue.issue_date,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
