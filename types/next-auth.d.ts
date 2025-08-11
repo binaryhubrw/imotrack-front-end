@@ -1,4 +1,7 @@
 import { Request } from "express";
+import { ReactNode } from "react";
+
+export type VehicleType = "SEDAN" | "SUV" | "TRUCK" | "VAN" | "BUS" | "MOTORCYCLE" | "OTHER";
 
 export interface position_accesses {
   organizations: {
@@ -639,13 +642,14 @@ export interface CompleteReservationDto {
 
 // --- Vehicle Issue Types ---
 export type VehicleIssue = {
+  message: ReactNode;
   issue_id: string;
   issue_title: string;
   issue_status: 'OPEN' | 'CLOSED' | string;
   issue_description: string;
   issue_date: string;
   created_at: string;
-  message: string;
+  // message: string;
   reserved_vehicle_id: string;
   reserved_vehicle?: unknown; // Use unknown instead of any
   // Backend response fields
@@ -658,11 +662,12 @@ export type VehicleIssue = {
 
 
 export type CreateVehicleIssueDto = {
+  message: ReactNode;
   issue_title: string;
   issue_description: string;
   reserved_vehicle_id: string;
   issue_date: string;
-  message: string;
+  // message: string;
 };
 
 export type UpdateVehicleIssueDto = {

@@ -285,8 +285,6 @@ Date Reported: ${new Date(issue.issue_date).toLocaleString()}
 Description:
 ${issue.issue_description}
 
-Reviewer:
-${issue.message}
 
 ---
 Generated on: ${new Date().toLocaleString()}
@@ -303,43 +301,7 @@ Generated on: ${new Date().toLocaleString()}
     document.body.removeChild(link);
   };
 
-  // Edit handlers
-  // const handleEdit = () => {
-  //   if (!canUpdate) {
-  //     toast.error("You do not have permission to update vehicle issues");
-  //     return;
-  //   }
-  //   // setShowEditModal(true);
-  // };
-
-  // const handleEditSave = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   if (!canUpdate) {
-  //     toast.error("You do not have permission to update vehicle issues");
-  //     return;
-  //   }
-  //   setSubmitting(true);
-  //   try {
-  //     // Convert date input back to ISO string format
-  //     const updates = {
-  //       issue_title: editForm.issue_title,
-  //       issue_description: editForm.issue_description,
-  //       issued_date: new Date(editForm.issued_date).toISOString(),
-  //     };
-
-  //     await updateVehicleIssue.mutateAsync({
-  //       issueId,
-  //       updates,
-  //     });
-  //     toast.success("Issue updated successfully!");
-  //     setShowEditModal(false);
-  //     refetch();
-  //   } catch {
-  //     toast.error("Failed to update issue");
-  //   } finally {
-  //     setSubmitting(false);
-  //   }
-  // };
+ 
 
   // Delete handlers
   const handleDelete = () => {
@@ -463,8 +425,7 @@ Generated on: ${new Date().toLocaleString()}
         <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">
           {issue.issue_description}
         </p>
-        <h3 className="text-lg font-semibold text-green-900 mb-2">
-          Reviewer Message
+        <h3 className="text-lg font-semibold text-green-900 mb-2">          Reviewer Message
         </h3>
         <p className="text-gray-900 bg-gray-100 p-4 rounded-lg">
           {issue.message}

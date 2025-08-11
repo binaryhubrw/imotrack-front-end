@@ -149,7 +149,6 @@ function CreateOrganizationModal({
       setLogoPreview(null);
       onClose();
     } catch {
-      setError("Failed to create organization.");
     } finally {
       setSubmitting(false);
     }
@@ -809,7 +808,6 @@ function UpdateOrganizationModal({
       await onUpdate(form);
       onClose();
     } catch {
-      setError("Failed to update organization.");
     } finally {
       setSubmitting(false);
     }

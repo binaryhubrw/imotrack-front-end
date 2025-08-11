@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Car } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Reservation } from "@/types/next-auth";
 
@@ -33,12 +33,13 @@ export default function ReservationActions({
   onOpenApproveWithOdometerModal,
   onOpenCancelModal,
   onOpenEditReasonModal,
-  // ADD THIS
+  onOpenAddVehicleModal,
   isApproveRejectLoading,
   isAssignVehiclesLoading,
   isApproveWithOdometerLoading,
   isCancelLoading,
   isEditReasonLoading,
+  isAddVehicleLoading,
 }: ReservationActionsProps) {
 
 
@@ -97,19 +98,39 @@ export default function ReservationActions({
       {/* Assign Vehicles for ACCEPTED status without vehicles */}
       {shouldShowAssignVehicle && (
         <Button
-          // className="bg-blue-600 text-white hover:bg-blue-700"
+          className="bg-blue-600 text-white hover:bg-blue-700"
           onClick={onOpenAssignVehiclesModal}
           disabled={isAssignVehiclesLoading}
         >
           {isAssignVehiclesLoading ? (
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              {/* Assigning... */}
+              Assigning...
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {/* <Car className="w-4 h-4" /> */}
-              {/* Assign Vehicles */}
+              <Car className="w-4 h-4" />
+              Assign Vehicles
+            </div>
+          )}
+        </Button>
+      )}
+
+      {/* Add Vehicle Button - only show for ACCEPTED status */}
+      {canAssignVehicle && reservation.reservation_status === 'ACCEPTED' && hasAssignedVehicle && (
+        <Button
+          className="bg-green-600 text-white hover:bg-green-700"
+          onClick={onOpenAddVehicleModal}
+          disabled={isAddVehicleLoading}
+        >
+          {isAddVehicleLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Adding...
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              Add Vehicle
             </div>
           )}
         </Button>
@@ -135,9 +156,6 @@ export default function ReservationActions({
           )}
         </Button>
       )}
-      {/* Add Vehicle Button - only show for ACCEPTED status */}
-
-
 
       {/* Cancel Reservation */}
       {shouldShowCancel && (

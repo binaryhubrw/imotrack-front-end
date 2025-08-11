@@ -317,6 +317,7 @@ export default function ReservationDetailPage() {
     issue_description: string;
     reserved_vehicle_id: string;
     issue_date: string;
+    message: string
   }) => {
     try {
       await createVehicleIssue.mutateAsync(issueData);

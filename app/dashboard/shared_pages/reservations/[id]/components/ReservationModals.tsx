@@ -82,6 +82,7 @@ interface ReservationModalsProps {
     issue_description: string;
     reserved_vehicle_id: string;
     issue_date: string;
+    message: string;
   }) => Promise<void>;
   onAddVehicle: (vehicleId: string) => Promise<void>;  // ADD THIS
 
@@ -405,6 +406,7 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
       issue_description: issueForm.issue_description,
       reserved_vehicle_id: selectedVehicle.reserved_vehicle_id,
       issue_date: new Date().toISOString(),
+      message: issueForm.issue_title, // Use issue title as message
     });
     setIssueForm({ issue_title: "", issue_description: "" });
   };
