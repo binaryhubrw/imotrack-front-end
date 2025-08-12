@@ -33,6 +33,7 @@ import {
   useAddVehicleToReservation,
   useRemoveVehicleFromReservation,
 } from "@/lib/queries";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   SkeletonEntityDetails,
   SkeletonReservationDetailPage,
@@ -51,6 +52,7 @@ export default function ReservationDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Data fetching
   const { data: reservation, isLoading, isError } = useReservation(id);
@@ -194,6 +196,7 @@ export default function ReservationDetailPage() {
         id: reservation.reservation_id,
         dto: { vehicle_id: vehicleId },
       });
+      // Close modal after successful addition
       setShowAddVehicleModal(false);
     } catch (error) {
       console.error("Error adding vehicle:", error);
@@ -275,6 +278,12 @@ export default function ReservationDetailPage() {
       // Close modal immediately after success
       setShowCompleteModal(false);
       setVehicleToComplete(null);
+      
+      // Force a refetch of the current reservation to get updated data
+      // This ensures the UI updates immediately with the new vehicle status
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['reservation', id] });
+      }, 100);
     } catch (error) {
       console.error("Error completing reservation:", error);
     }
@@ -682,8 +691,14 @@ export default function ReservationDetailPage() {
                     const cardColor = isOccupied
                       ? "bg-orange-50 border-orange-200"
                       : "bg-green-50 border-green-200";
-                    const canReportIssueForThisVehicle = shouldShowReportIssue;
-                    const canCompleteThisReservation = shouldShowComplete;
+                    // Check if this specific vehicle has been returned
+                    const isVehicleReturned = !!reservedVehicle.returned_odometer;
+                    
+                    // Only show report issue button if vehicle hasn't been returned
+                    const canReportIssueForThisVehicle = shouldShowReportIssue && !isVehicleReturned;
+                    
+                    // Only show complete button if vehicle hasn't been returned
+                    const canCompleteThisReservation = shouldShowComplete && !isVehicleReturned;
 
                     return (
                       <div

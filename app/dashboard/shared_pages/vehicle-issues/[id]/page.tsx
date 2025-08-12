@@ -8,7 +8,6 @@ import {
   Car,
   Clock,
   Download,
-  Phone,
   CheckCircle,
   // Edit,
   Ban,
@@ -73,8 +72,8 @@ const VehicleDetailsCard: FC<{
         <div className="flex flex-col md:flex-row gap-6 items-center">
           {vehicle.vehicle_photo && (
             <Image
-            width={40}
-            height={40}
+              width={40}
+              height={40}
               src={vehicle.vehicle_photo}
               alt={vehicle.plate_number || "Vehicle Photo"}
               className="w-40 h-28 object-cover rounded-lg border shadow"
@@ -301,8 +300,6 @@ Generated on: ${new Date().toLocaleString()}
     document.body.removeChild(link);
   };
 
- 
-
   // Delete handlers
   const handleDelete = () => {
     if (!canDelete) {
@@ -331,22 +328,20 @@ Generated on: ${new Date().toLocaleString()}
     return <NoPermissionUI resource="vehicle issues" />;
   }
   if (isLoading) {
-    return (
-      <SkeletonVehicleIssueDetails />
-    );
+    return <SkeletonVehicleIssueDetails />;
   }
   if (isError || !issue) {
     return (
       <ErrorUI
-              resource={`issue ${issue?.issue_title}`}
-              onRetry={() => {
-                // re-fetch your data
-                router.refresh();
-              }}
-              onBack={() => {
-                router.back();
-              }}
-            />
+        resource={`issue ${issue?.issue_title}`}
+        onRetry={() => {
+          // re-fetch your data
+          router.refresh();
+        }}
+        onBack={() => {
+          router.back();
+        }}
+      />
     );
   }
 
@@ -402,64 +397,92 @@ Generated on: ${new Date().toLocaleString()}
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Issue Header */}
-         <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
-  <CardHeader>
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {getStatusIcon(issue.issue_status)}
-        <div>
-          <CardTitle className="text-xl text-gray-900">
-            {issue.issue_title}
-          </CardTitle>
-        </div>
-      </div>
-      {getStatusBadge(issue.issue_status)}
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Description
-        </h3>
-        <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">
-          {issue.issue_description}
-        </p>
-        <h3 className="text-lg font-semibold text-green-900 mb-2">          Reviewer Message
-        </h3>
-        <p className="text-gray-900 bg-gray-100 p-4 rounded-lg">
-          {issue.message}
-        </p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <div>
-            <p className="text-sm text-gray-600">Reported At</p>
-            <p className="font-medium text-gray-900">
-              {new Date(issue.issue_date).toLocaleString()}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-          <Calendar className="w-5 h-5 text-green-600" />
-          <div>
-            <p className="text-sm text-gray-600">Responded At</p>
-            <p className="font-medium text-gray-900">
-              {"updated_at" in issue && issue.updated_at
-                ? new Date(
-                    issue.updated_at as string
-                  ).toLocaleString()
-                : issue.created_at
-                ? new Date(issue.created_at).toLocaleString()
-                : "-"}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </CardContent>
-</Card>
+            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {getStatusIcon(issue.issue_status)}
+                    <div>
+                      <CardTitle className="text-xl text-gray-900">
+                        {issue.issue_title}
+                      </CardTitle>
+                    </div>
+                  </div>
+                  {getStatusBadge(issue.issue_status)}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Description
+                    </h3>
+                    <p className="text-gray-700 bg-gray-100 p-4 rounded-lg">
+                      {issue.issue_description}
+                    </p>
+                    <h3 className="text-lg font-semibold text-green-900 mb-2">
+                      {" "}
+                      Reviewer Message
+                    </h3>
+                    <p className="text-gray-900 bg-gray-100 p-4 rounded-lg">
+                      {issue.message}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Reported At</p>
+                        <p className="font-medium text-gray-900">
+                          {new Date(issue.issue_date).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                      <Calendar className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Responded At</p>
+                        <p className="font-medium text-gray-900">
+                          {"updated_at" in issue && issue.updated_at
+                            ? new Date(
+                                issue.updated_at as string
+                              ).toLocaleString()
+                            : issue.created_at
+                            ? new Date(issue.created_at).toLocaleString()
+                            : "-"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Navigation to Reservation - Only show for closed issues */}
+                {issue.issue_status === "CLOSED" &&
+                  issue.reserved_vehicle != null &&
+                  typeof issue.reserved_vehicle === "object" &&
+                  "reservation" in issue.reserved_vehicle && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        onClick={() => {
+                          const reservedVehicle = issue.reserved_vehicle as {
+                            reservation?: { reservation_id?: string };
+                          };
+                          const reservationId =
+                            reservedVehicle.reservation?.reservation_id;
+                          if (reservationId) {
+                            router.push(
+                              `/dashboard/shared_pages/reservations/${reservationId}`
+                            );
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Reservation
+                      </Button>
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
 
             {/* Vehicle Details Card */}
             {issue.reserved_vehicle &&
@@ -505,24 +528,6 @@ Generated on: ${new Date().toLocaleString()}
                         "Issue has been closed"}
                     </p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            {/* Contact Information */}
-            <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-lg">Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Button className="text-white w-full bg-[#0872B3] hover:bg-[#065d8f]">
-                    <Phone className="w-4 h-4 mr-2" />
-                    Contact Support
-                  </Button>
-                  <p className="text-sm text-gray-600 text-center">
-                    If you need immediate assistance, please contact the fleet
-                    management team.
-                  </p>
                 </div>
               </CardContent>
             </Card>

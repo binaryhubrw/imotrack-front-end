@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, AlertTriangle, Car } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Reservation } from "@/types/next-auth";
 
@@ -29,17 +29,17 @@ interface ReservationActionsProps {
 export default function ReservationActions({
   reservation,
   onOpenAcceptRejectModal,
-  onOpenAssignVehiclesModal,
+  // onOpenAssignVehiclesModal,
   onOpenApproveWithOdometerModal,
   onOpenCancelModal,
   onOpenEditReasonModal,
-  onOpenAddVehicleModal,
+  // onOpenAddVehicleModal,
   isApproveRejectLoading,
-  isAssignVehiclesLoading,
+  // isAssignVehiclesLoading,
   isApproveWithOdometerLoading,
   isCancelLoading,
   isEditReasonLoading,
-  isAddVehicleLoading,
+  // isAddVehicleLoading,
 }: ReservationActionsProps) {
 
 
@@ -48,16 +48,16 @@ export default function ReservationActions({
   // Permission checks
   const canApprove = !!user?.position?.position_access?.reservations?.approve;
   const canCancel = !!user?.position?.position_access?.reservations?.cancel;
-  const canAssignVehicle = !!user?.position?.position_access?.reservations?.assignVehicle;
+  // const canAssignVehicle = !!user?.position?.position_access?.reservations?.assignVehicle;
   const canUpdateReason = !!user?.position?.position_access?.reservations?.updateReason;
 
   // Helper: is reservation assigned a vehicle?
   const hasAssignedVehicle = reservation?.reserved_vehicles && reservation.reserved_vehicles.length > 0;
 
   // Helper: should show assign vehicle button (only for ACCEPTED status without vehicles)
-  const shouldShowAssignVehicle = canAssignVehicle && 
-    reservation?.reservation_status === 'ACCEPTED' && 
-    !hasAssignedVehicle;
+  // const shouldShowAssignVehicle = canAssignVehicle && 
+  //   reservation?.reservation_status === 'ACCEPTED' && 
+  //   !hasAssignedVehicle;
 
   // Helper: should show approve with odometer button (only for ACCEPTED status with vehicles)
   const shouldShowApproveWithOdometer = canApprove && 
@@ -95,7 +95,7 @@ export default function ReservationActions({
         </Button>
       )}
 
-      {/* Assign Vehicles for ACCEPTED status without vehicles */}
+      {/* Assign Vehicles for ACCEPTED status without vehicles
       {shouldShowAssignVehicle && (
         <Button
           className="bg-blue-600 text-white hover:bg-blue-700"
@@ -114,12 +114,12 @@ export default function ReservationActions({
             </div>
           )}
         </Button>
-      )}
+      )} */}
 
-      {/* Add Vehicle Button - only show for ACCEPTED status */}
+      {/* Add Vehicle Button - only show for ACCEPTED status
       {canAssignVehicle && reservation.reservation_status === 'ACCEPTED' && hasAssignedVehicle && (
         <Button
-          // className="bg-green-600 text-white hover:bg-green-700"
+          className="bg-green-600 text-white hover:bg-green-700"
           onClick={onOpenAddVehicleModal}
           disabled={isAddVehicleLoading}
         >
@@ -130,11 +130,12 @@ export default function ReservationActions({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              {/* Add Vehicle */}
+              <Car className="w-4 h-4" />
+              Add Vehicle
             </div>
           )}
         </Button>
-      )}
+      )} */}
 
       {/* Approve with Odometer for ACCEPTED status with vehicles */}
       {shouldShowApproveWithOdometer && (

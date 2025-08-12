@@ -248,6 +248,7 @@ export type UpdatePasswordRequest = {
 
 // Update password response type
 export type UpdatePasswordResponse = {
+  message: string;
   auth_id: string;
   email: string;
   updated_at: string | null;
@@ -269,6 +270,7 @@ export type SetPasswordAndVerifyRequest = {
 };
 
 export type SetPasswordAndVerifyResponse = {
+  message: string;
   auth_id: string;
   email: string;
   updated_at: string;

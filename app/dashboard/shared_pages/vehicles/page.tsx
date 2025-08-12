@@ -838,6 +838,11 @@ export default function VehiclesPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Filter states
+  const [modelFilter, setModelFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [energyTypeFilter, setEnergyTypeFilter] = useState<string>("");
 
   // Permission checks
   const canView = !!user?.position?.position_access?.vehicles?.view;
@@ -857,12 +862,9 @@ export default function VehiclesPage() {
           </span>
         ),
         cell: ({ row }) => {
-          // Calculate the row number based on pagination
-          const pageIndex = table.getState().pagination.pageIndex;
-          const pageSize = table.getState().pagination.pageSize;
           return (
             <span className="text-xs text-gray-700 font-semibold px-3">
-              {pageIndex * pageSize + row.index + 1}
+              {row.index + 1}
             </span>
           );
         },
@@ -956,8 +958,50 @@ export default function VehiclesPage() {
     ],
     [vehicleModels, canUpdate, router]
   );
+
+  // Filtering logic
+  const filteredVehicles = useMemo(() => {
+    let filtered = vehicles;
+
+    // Filter by model
+    if (modelFilter) {
+      filtered = filtered.filter((vehicle) => 
+        vehicle.vehicle_model_id === modelFilter
+      );
+    }
+
+    // Filter by status
+    if (statusFilter) {
+      filtered = filtered.filter((vehicle) => 
+        vehicle.vehicle_status === statusFilter
+      );
+    }
+
+    // Filter by energy type
+    if (energyTypeFilter) {
+      filtered = filtered.filter((vehicle) => 
+        vehicle.energy_type === energyTypeFilter
+      );
+    }
+
+    // Global search filter
+    if (globalFilter) {
+      const search = globalFilter.toLowerCase();
+      filtered = filtered.filter((vehicle) =>
+        vehicle.plate_number.toLowerCase().includes(search) ||
+        vehicle.vehicle_model?.vehicle_model_name?.toLowerCase().includes(search) ||
+        vehicle.vehicle_model?.manufacturer_name?.toLowerCase().includes(search) ||
+        vehicle.vehicle_status.toLowerCase().includes(search) ||
+        vehicle.energy_type.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [vehicles, modelFilter, statusFilter, energyTypeFilter, globalFilter]);
+
+  // Table configuration
   const table = useReactTable({
-    data: vehicles,
+    data: filteredVehicles,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -1191,22 +1235,58 @@ export default function VehiclesPage() {
           <div className="flex-1 overflow-auto p-4">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
               {/* Table Controls */}
-              <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3">
+              <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search vehicles..."
                     value={globalFilter ?? ""}
                     onChange={(e) => setGlobalFilter(e.target.value)}
-                    className="pl-9 pr-3 py-3.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                    className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
                   />
                 </div>
-                {globalFilter && (
+                {/* Filters */}
+                <div className="flex items-center gap-2">
+                  <SearchableDropdown
+                    options={vehicleModels.map(model => ({
+                      vehicle_model_id: model.vehicle_model_id,
+                      display_name: `${model.manufacturer_name} ${model.vehicle_model_name}`
+                    }))}
+                    value={modelFilter}
+                    onChange={setModelFilter}
+                    placeholder="All Models"
+                    className="w-48"
+                  />
+                  <SearchableDropdown
+                    options={[
+                      { status: "AVAILABLE", display_name: "Available" },
+                      { status: "OCCUPIED", display_name: "Occupied" },
+                      { status: "MAINTENANCE", display_name: "Maintenance" },
+                      { status: "OUT_OF_SERVICE", display_name: "Out of Service" }
+                    ]}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    placeholder="All Status"
+                    className="w-40"
+                  />
+                  <SearchableDropdown
+                    options={[
+                      { energy_type: "GASOLINE", display_name: "Gasoline" },
+                      { energy_type: "DIESEL", display_name: "Diesel" },
+                      { energy_type: "ELECTRIC", display_name: "Electric" },
+                      { energy_type: "HYBRID", display_name: "Hybrid" },
+                      { energy_type: "LPG", display_name: "LPG" }
+                    ]}
+                    value={energyTypeFilter}
+                    onChange={setEnergyTypeFilter}
+                    placeholder="All Energy Types"
+                    className="w-44"
+                  />
                   <span className="text-sm text-gray-500">
                     {table.getFilteredRowModel().rows.length} of{" "}
-                    {vehicles.length} vehicles
+                    {filteredVehicles.length} vehicles
                   </span>
-                )}
+                </div>
               </div>
               {/* Table */}
               <div className="overflow-x-auto">

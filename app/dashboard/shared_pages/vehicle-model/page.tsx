@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -18,6 +18,7 @@ import {
   X,
   AlertCircle,
   Car,
+  ChevronDown,
 } from "lucide-react";
 import {
   Table,
@@ -43,6 +44,165 @@ import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+
+// Searchable Dropdown Component
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder,
+  className = "",
+}: {
+  options: Array<{ [key: string]: string }>;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get the display field name
+  const displayField = "display_name";
+
+  // Filter options based on search term
+  const filteredOptions = options.filter((option) =>
+    option[displayField]?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get selected option name
+  const selectedOption = options.find((option) => {
+    const idField = Object.keys(option).find((key) => key !== "display_name") || Object.keys(option)[0];
+    return option[idField] === value;
+  });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelect = (option: { [key: string]: string }) => {
+    const idField = Object.keys(option).find((key) => key !== "display_name") || Object.keys(option)[0];
+    onChange(option[idField]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setSearchTerm("");
+  };
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <div
+        className={`w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] transition-colors duration-200 bg-white cursor-pointer ${
+          isOpen ? "ring-2 ring-[#0872b3] border-[#0872b3]" : ""
+        }`}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) {
+            setTimeout(() => {
+              const searchInput = dropdownRef.current?.querySelector("input");
+              if (searchInput) {
+                (searchInput as HTMLInputElement).focus();
+              }
+            }, 100);
+          }
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span
+            className={`${
+              selectedOption
+                ? "text-gray-900"
+                : "text-gray-500"
+            }`}
+          >
+            {selectedOption
+              ? selectedOption[displayField]
+              : placeholder}
+          </span>
+          <div className="flex items-center gap-1">
+            {value && (
+              <button
+                onClick={handleClear}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <ChevronDown
+              className={`w-4 h-4 text-gray-400 transition-transform ${
+                isOpen ? "rotate-180" : ""
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3]"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                {searchTerm
+                  ? `No ${placeholder.toLowerCase()} found`
+                  : `No ${placeholder.toLowerCase()} available`}
+              </div>
+            ) : (
+              filteredOptions.map((option, index) => {
+                const idField = Object.keys(option).find((key) => key !== "display_name") || Object.keys(option)[0];
+                return (
+                  <div
+                    key={option[idField] || index}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                      option[idField] === value
+                        ? "bg-blue-100 text-blue-900"
+                        : "text-gray-900"
+                    }`}
+                    onClick={() => handleSelect(option)}
+                  >
+                    {option[displayField]}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {searchTerm && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
+              {filteredOptions.length} of {options.length}{" "}
+              {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Helper function to format dates
 const formatDate = (dateString: string) => {
@@ -333,6 +493,10 @@ export default function VehicleModelsPage() {
     manufacturer_name: "",
     vehicle_capacity: 0,
   });
+  
+  // Filter states
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [manufacturerFilter, setManufacturerFilter] = useState<string>("");
 
   const { user, isLoading: authLoading } = useAuth();
   const canView = !!user?.position?.position_access?.vehicleModels?.view;
@@ -370,6 +534,38 @@ export default function VehicleModelsPage() {
   const { data: vehicleModels, isLoading, isError } = useVehicleModels();
   const createVehicleModel = useCreateVehicleModel();
 
+  // Filtering logic
+  const filteredVehicleModels = useMemo(() => {
+    let filtered = vehicleModels || [];
+
+    // Filter by type
+    if (typeFilter) {
+      filtered = filtered.filter((model) => 
+        model.vehicle_type === typeFilter
+      );
+    }
+
+    // Filter by manufacturer
+    if (manufacturerFilter) {
+      filtered = filtered.filter((model) => 
+        model.manufacturer_name.toLowerCase().includes(manufacturerFilter.toLowerCase())
+      );
+    }
+
+    // Global search filter
+    if (globalFilter) {
+      const search = globalFilter.toLowerCase();
+      filtered = filtered.filter((model) =>
+        model.vehicle_model_name.toLowerCase().includes(search) ||
+        model.manufacturer_name.toLowerCase().includes(search) ||
+        model.vehicle_type.toLowerCase().includes(search) ||
+        model.vehicle_capacity.toString().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [vehicleModels, typeFilter, manufacturerFilter, globalFilter]);
+
   const handleCreateVehicleModel = async (formData: CreateVehicleModelDto) => {
     if (!canCreate) {
       toast.error("You do not have permission to create vehicle models");
@@ -387,6 +583,15 @@ export default function VehicleModelsPage() {
   // Define columns after all functions are declared
   const columns = useMemo<ColumnDef<VehicleModel>[]>(
     () => [
+      {
+        id: "index",
+        header: "#",
+        cell: ({ row }) => (
+          <div className="text-sm text-gray-600 font-medium">
+            {row.index + 1}
+          </div>
+        ),
+      },
       {
         accessorKey: "vehicle_model_name",
         header: "Model Name",
@@ -470,7 +675,7 @@ export default function VehicleModelsPage() {
   );
 
   const table = useReactTable<VehicleModel>({
-    data: vehicleModels || [],
+    data: filteredVehicleModels,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -559,24 +764,45 @@ export default function VehicleModelsPage() {
         <div className="flex-1 overflow-auto p-4">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
             {/* Search and Filters */}
-            <div className="px-4 py-3 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search vehicle models..."
-                    value={globalFilter ?? ""}
-                    onChange={(e) => setGlobalFilter(e.target.value)}
-                    className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] w-64"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">
-                    {table.getFilteredRowModel().rows.length} of{" "}
-                    {vehicleModels?.length || 0} models
-                  </span>
-                </div>
+            <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap items-center gap-3 justify-between">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search vehicle models..."
+                  value={globalFilter ?? ""}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0872b3] focus:border-[#0872b3] w-64"
+                />
+              </div>
+              {/* Filters */}
+              <div className="flex items-center gap-2">
+                <SearchableDropdown
+                  options={[
+                    { vehicle_type: "SEDAN", display_name: "Sedan" },
+                    { vehicle_type: "SUV", display_name: "SUV" },
+                    { vehicle_type: "TRUCK", display_name: "Truck" },
+                    { vehicle_type: "VAN", display_name: "Van" },
+                    { vehicle_type: "MOTORCYCLE", display_name: "Motorcycle" },
+                    { vehicle_type: "BUS", display_name: "Bus" },
+                    { vehicle_type: "OTHER", display_name: "Other" }
+                  ]}
+                  value={typeFilter}
+                  onChange={setTypeFilter}
+                  placeholder="All Types"
+                  className="w-40"
+                />
+                <input
+                  type="text"
+                  placeholder="Filter by manufacturer..."
+                  value={manufacturerFilter}
+                  onChange={(e) => setManufacturerFilter(e.target.value)}
+                  className="border rounded px-3 py-2 text-sm text-gray-700 w-48"
+                />
+                <span className="text-sm text-gray-500">
+                  {table.getFilteredRowModel().rows.length} of{" "}
+                  {filteredVehicleModels.length} models
+                </span>
               </div>
             </div>
 

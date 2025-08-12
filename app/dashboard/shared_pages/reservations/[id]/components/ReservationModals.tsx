@@ -172,13 +172,21 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
   const [vehicleSearch, setVehicleSearch] = useState("");
 
   // Get available vehicles for the reservation date range
-  const { data: availableVehiclesData, isLoading: isLoadingAvailableVehicles } =
+  const { data: availableVehiclesData, isLoading: isLoadingAvailableVehicles, refetch: refetchAvailableVehicles } =
     useGetAvailableVehicles(
       reservation?.departure_date || "",
       reservation?.expected_returning_date || ""
     );
 
   const availableVehicles = availableVehiclesData?.data || [];
+  
+  // Filter out vehicles that are already assigned to this reservation
+  const filteredAvailableVehicles = availableVehicles.filter((vehicle: AvailableVehicle) => {
+    if (!reservation?.reserved_vehicles) return true;
+    return !reservation.reserved_vehicles.some(
+      (reservedVehicle) => reservedVehicle.vehicle.vehicle_id === vehicle.vehicle_id
+    );
+  });
 
   // Helper functions for vehicle assignments
   const addVehicleAssignment = () => {
@@ -252,6 +260,16 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
       ]);
     }
   }, [showCompleteModal, vehicleToComplete]);
+
+  // Reset form when Add Vehicle modal closes and refetch when it opens
+  React.useEffect(() => {
+    if (!showAddVehicleModal) {
+      setSelectedVehicleToAdd("");
+    } else {
+      // Refetch available vehicles when modal opens to get fresh data
+      refetchAvailableVehicles();
+    }
+  }, [showAddVehicleModal, refetchAvailableVehicles]);
 
   // Initialize selected vehicles when Accept/Reject modal opens
   React.useEffect(() => {
@@ -367,6 +385,10 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
 
   await onAddVehicle(selectedVehicleToAdd);
   setSelectedVehicleToAdd("");
+  // Reset the form after successful addition
+  setTimeout(() => {
+    setSelectedVehicleToAdd("");
+  }, 100);
 };
 
 
@@ -523,7 +545,7 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
 
                     {/* Vehicle List */}
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {availableVehicles
+                      {filteredAvailableVehicles
                         .filter(
                           (v: AvailableVehicle) =>
                             v.plate_number
@@ -666,7 +688,7 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                     </div>
 
                     {/* Empty State */}
-                    {availableVehicles.length === 0 &&
+                    {filteredAvailableVehicles.length === 0 &&
                       !isLoadingAvailableVehicles && (
                         <div className="text-center py-12">
                           <div className="flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mx-auto mb-4">
@@ -1274,7 +1296,7 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
               required
             >
               <option value="">Select a vehicle</option>
-              {availableVehicles.map((vehicle: AvailableVehicle) => (
+              {filteredAvailableVehicles.map((vehicle: AvailableVehicle) => (
                 <option key={vehicle.vehicle_id} value={vehicle.vehicle_id}>
                   {vehicle.plate_number} - {vehicle.vehicle_model?.vehicle_model_name} 
                   (Capacity: {vehicle.vehicle_model?.vehicle_capacity})

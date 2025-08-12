@@ -555,6 +555,7 @@ export default function DashboardLayout({
                   </p>
                 </div>
               </div>
+            
 
               {/* Right side - Powered by */}
               <div className="flex items-center gap-1">

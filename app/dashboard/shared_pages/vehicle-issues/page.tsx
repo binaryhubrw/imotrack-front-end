@@ -5,9 +5,8 @@ import {
   AlertTriangle,
   Search,
   Eye,
-  Clock,
   Plus,
-  Calendar,
+  MessageSquare,
 } from "lucide-react";
 import {
   useVehicleIssues,
@@ -22,7 +21,6 @@ import NoPermissionUI from "@/components/NoPermissionUI";
 import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { CreateVehicleIssueDto, Reservation } from "@/types/next-auth";
 
 // Report Issue Modal Component
@@ -95,7 +93,7 @@ function ReportIssueModal({
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -289,6 +287,7 @@ function ReportIssueModal({
     </div>
   );
 }
+
 // Response Modal Component
 function ResponseModal({
   open,
@@ -389,17 +388,16 @@ function ResponseModal({
 
 export default function VehicleIssuesPage() {
   const { data: issues = [], isLoading, isError } = useVehicleIssues();
-// const { data: allReservations = [] } = useReservations();  
   const { data: reservations = [] } = useMyReservations();
   const createIssue = useCreateVehicleIssue();
-  const respondToIssue = useRespondToVehicleIssue(); // Add this line
+  const respondToIssue = useRespondToVehicleIssue();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [showReportModal, setShowReportModal] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
-  const [showResponseModal, setShowResponseModal] = useState(false); // Add this line
-  const [selectedIssueId, setSelectedIssueId] = useState<string>(""); // Add this line
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedIssueId, setSelectedIssueId] = useState<string>("");
   const router = useRouter();
 
   // Permission checks
@@ -421,7 +419,6 @@ export default function VehicleIssuesPage() {
       return matchesSearch && matchesFilter;
     });
   }, [issues, searchTerm, filter]);
-  
 
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
@@ -436,7 +433,6 @@ export default function VehicleIssuesPage() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
-
   const handleReportIssue = async (data: CreateVehicleIssueDto) => {
     try {
       await createIssue.mutateAsync(data);
@@ -446,19 +442,18 @@ export default function VehicleIssuesPage() {
     }
   };
 
-// Add this function
-const handleRespondToIssue = async (message: string) => {
-  try {
-    await respondToIssue.mutateAsync({ 
-      issueId: selectedIssueId, 
-      message 
-    });
-    setShowResponseModal(false);
-    setSelectedIssueId("");
-  } catch {
-    // Error handled by mutation
-  }
-};
+  const handleRespondToIssue = async (message: string) => {
+    try {
+      await respondToIssue.mutateAsync({ 
+        issueId: selectedIssueId, 
+        message 
+      });
+      setShowResponseModal(false);
+      setSelectedIssueId("");
+    } catch {
+      // Error handled by mutation
+    }
+  };
 
   if (authLoading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -491,222 +486,247 @@ const handleRespondToIssue = async (message: string) => {
     (issue) => issue.issue_status === "CLOSED"
   ).length;
 
-
-
   return (
     <div className="min-h-screen bg-gray-50">
-     <div className="max-w-7xl mx-auto p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
-  {/* Header */}
-  <motion.div
-    initial={{ opacity: 0, y: -20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="mb-8"
-  >
-    <div className="flex items-center justify-between mb-8">
-      <div className="flex items-center gap-4">
-        <div className="relative p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg">
-          <AlertTriangle className="w-8 h-8 text-white" />
-          {openIssuesCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg border-2 border-white"
-            >
-              {openIssuesCount}
-            </motion.span>
-          )}
-        </div>
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-            Vehicle Issues
-          </h1>
-          <p className="text-gray-600 mt-1 text-lg">
-            <span className="inline-flex items-center gap-2">
-              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-              {openIssuesCount} open issues
-            </span>
-            <span className="mx-2 text-gray-400">•</span>
-            <span className="inline-flex items-center gap-2">
-              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-              {closedIssuesCount} resolved
-            </span>
-          </p>
-        </div>
-      </div>
-      {canReport && (
+      <div className="max-w-7xl mx-auto p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+        {/* Header */}
         <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
         >
-          <Button
-            onClick={() => setShowReportModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl flex items-center gap-3 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
-          >
-            <Plus className="w-5 h-5" />
-            Report Issue
-          </Button>
-        </motion.div>
-      )}
-    </div>
-
-    {/* Search and Filter */}
-    <div className="flex flex-col sm:flex-row gap-4 mb-8">
-      <div className="relative flex-1">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <Input
-          placeholder="Search issues by title or description..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-12 pr-4 py-3 rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm shadow-sm text-gray-900 placeholder-gray-500"
-        />
-      </div>
-      <motion.select
-        whileFocus={{ scale: 1.02 }}
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        className="px-6 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm shadow-sm font-medium text-gray-900 cursor-pointer hover:bg-white transition-all duration-200"
-      >
-        <option value="all">All Issues</option>
-        <option value="open">Open Issues</option>
-        <option value="closed">Closed Issues</option>
-      </motion.select>
-    </div>
-  </motion.div>
-
-  {/* Issues Grid */}
-  <AnimatePresence mode="popLayout">
-    {filteredIssues.length === 0 ? (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="text-center py-16 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm"
-      >
-        <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle className="w-10 h-10 text-gray-400" />
-        </div>
-        <h3 className="text-2xl font-bold text-gray-600 mb-3">
-          No issues found
-        </h3>
-        <p className="text-gray-500 text-lg max-w-md mx-auto">
-          {searchTerm || filter !== "all"
-            ? "Try adjusting your search or filter criteria"
-            : "No vehicle issues have been reported yet"}
-        </p>
-      </motion.div>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredIssues.map((issue, index) => (
-          <motion.div
-            key={issue.issue_id}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ delay: index * 0.1, type: "spring", damping: 20 }}
-            whileHover={{ y: -8, transition: { type: "spring", damping: 15 } }}
-            className="group cursor-pointer"
-            onClick={() => window.location.href = `/dashboard/shared_pages/vehicle-issues/${issue.issue_id}`}
-          >
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300 overflow-hidden h-full">
-              {/* Status Header */}
-              <div className="p-6 pb-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <Badge
-                      variant={issue.issue_status === "OPEN" ? "destructive" : "secondary"}
-                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                        issue.issue_status === "OPEN" 
-                          ? "bg-red-100 text-orange-700 border border-red-200" 
-                          : "bg-green-100 text-green-700 border border-green-200"
-                      }`}
-                    >
-                      {issue.issue_status}
-                    </Badge>
-                  </div>
-                  <motion.div
-                    initial={{ opacity: 0, x: 10 }}
-                    whileHover={{ opacity: 1, x: 0 }}
-                    className="flex items-center text-blue-600 font-medium text-sm"
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="relative p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                <AlertTriangle className="w-8 h-8 text-white" />
+                {openIssuesCount > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg border-2 border-white"
                   >
-                    View Details
-                    <motion.div
-                      whileHover={{ x: 3 }}
-                      transition={{ type: "spring", damping: 20 }}
-                    >
-                      <Eye className="w-4 h-4 ml-2" />
-                    </motion.div>
-                  </motion.div>
-                </div>
-
-                <h3 className="font-bold text-gray-900 mb-3 text-lg line-clamp-2 group-hover:text-blue-700 transition-colors duration-200">
-                  {issue.issue_title}
-                </h3>
-
-                <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
-                  {issue.issue_description}
+                    {openIssuesCount}
+                  </motion.span>
+                )}
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Vehicle Issues
+                </h1>
+                <p className="text-gray-600 mt-1 text-lg">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                    {openIssuesCount} open issues
+                  </span>
+                  <span className="mx-2 text-gray-400">•</span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    {closedIssuesCount} resolved
+                  </span>
                 </p>
               </div>
-
-     {/* Footer */}
-<div className="px-6 pb-6">
-  <div className="flex items-center justify-between text-xs mb-3">
-    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-      <Clock className="w-3 h-3" />
-      <span className="font-medium">{formatTimeAgo(issue.created_at)}</span>
-    </div>
-    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
-      <Calendar className="w-3 h-3" />
-      <span className="font-medium">
-        {new Date(issue.issue_date).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric' 
-        })}
-      </span>
-    </div>
-  </div>
-  {canRespond && issue.issue_status === "OPEN" && (
-  <button
-    onClick={(e) => {
-      e.stopPropagation(); // Prevent card click
-      setSelectedIssueId(issue.issue_id);
-      setShowResponseModal(true);
-    }}
-    className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-4 rounded-lg border border-blue-200 hover:border-blue-300 transition-all duration-200 text-sm"
-  >
-    Respond to Issue
-  </button>
-)}
-
-</div>
-
-              {/* Hover Effect Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
             </div>
-          </motion.div>
-        ))}
+            {canReport && (
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  onClick={() => setShowReportModal(true)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-xl flex items-center gap-3 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold"
+                >
+                  <Plus className="w-5 h-5" />
+                  Report Issue
+                </Button>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                placeholder="Search issues by title or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 pr-4 py-3 rounded-xl border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm shadow-sm text-gray-900 placeholder-gray-500"
+              />
+            </div>
+            <motion.select
+              whileFocus={{ scale: 1.02 }}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-6 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm shadow-sm font-medium text-gray-900 cursor-pointer hover:bg-white transition-all duration-200"
+            >
+              <option value="all">All Issues</option>
+              <option value="open">Open Issues</option>
+              <option value="closed">Closed Issues</option>
+            </motion.select>
+          </div>
+        </motion.div>
+
+        {/* Issues Table */}
+        <AnimatePresence mode="popLayout">
+          {filteredIssues.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-16 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-100 shadow-sm"
+            >
+              <div className="w-20 h-20 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
+                <AlertTriangle className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-600 mb-3">
+                No issues found
+              </h3>
+              <p className="text-gray-500 text-lg max-w-md mx-auto">
+                {searchTerm || filter !== "all"
+                  ? "Try adjusting your search or filter criteria"
+                  : "No vehicle issues have been reported yet"}
+              </p>
+            </motion.div>
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">#</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Issue Title</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Description</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Issue Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Created</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredIssues.map((issue, idx) => (
+                      <tr
+                        key={issue.issue_id}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                        onClick={() => router.push(`/dashboard/shared_pages/vehicle-issues/${issue.issue_id}`)}
+                      >
+                        {/* Serial Number */}
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-gray-500 text-sm">
+                            {idx + 1}
+                          </span>
+                        </td>
+
+                        {/* Issue Title */}
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-blue-800 text-sm max-w-48 truncate" title={issue.issue_title}>
+                            {issue.issue_title}
+                          </div>
+                        </td>
+
+                        {/* Description */}
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-gray-600 max-w-64 truncate" title={issue.issue_description}>
+                            {issue.issue_description}
+                          </div>
+                        </td>
+
+
+                        {/* Issue Date */}
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-900">
+                              {new Date(issue.issue_date).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            issue.issue_status === "OPEN" 
+                              ? "bg-red-100 text-red-700 border border-red-200" 
+                              : "bg-green-100 text-green-700 border border-green-200"
+                          }`}>
+                            {issue.issue_status}
+                          </span>
+                        </td>
+
+                        {/* Created */}
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-900">
+                              {formatTimeAgo(issue.created_at)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(issue.created_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/dashboard/shared_pages/vehicle-issues/${issue.issue_id}`);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {canRespond && issue.issue_status === "OPEN" && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedIssueId(issue.issue_id);
+                                  setShowResponseModal(true);
+                                }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-150"
+                                title="Respond to Issue"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
-    )}
-  </AnimatePresence>
-</div>
 
       {/* Report Issue Modal */}
-<ReportIssueModal
-  open={showReportModal}
-  onClose={() => setShowReportModal(false)}
-  reservations={reservations as Reservation[]}
-  onSubmit={handleReportIssue}
-  isLoading={createIssue.isPending}
-/>
+      <ReportIssueModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reservations={reservations as Reservation[]}
+        onSubmit={handleReportIssue}
+        isLoading={createIssue.isPending}
+      />
 
-{/* Response Modal */}
-<ResponseModal
-  open={showResponseModal}
-  onClose={() => {
-    setShowResponseModal(false);
-    setSelectedIssueId("");
-  }}
-  onSubmit={handleRespondToIssue}
-  isLoading={respondToIssue.isPending}
-/>
+      {/* Response Modal */}
+      <ResponseModal
+        open={showResponseModal}
+        onClose={() => {
+          setShowResponseModal(false);
+          setSelectedIssueId("");
+        }}
+        onSubmit={handleRespondToIssue}
+        isLoading={respondToIssue.isPending}
+      />
     </div>
   );
 }

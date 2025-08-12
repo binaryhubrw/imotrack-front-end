@@ -27,7 +27,6 @@ import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 
 
-
 export default function VehicleModelDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -221,6 +220,7 @@ export default function VehicleModelDetailPage() {
               className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
             >
               <h2 className="text-xl font-bold mb-2">Edit Vehicle Model</h2>
+
               
               <label className="text-sm font-medium">Model Name
                 <input
@@ -355,7 +355,8 @@ export default function VehicleModelDetailPage() {
             </div>
           </div>
         </div>
-      </div>
+
+        </div>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && canDelete && (
