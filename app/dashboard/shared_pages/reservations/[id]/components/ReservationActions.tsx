@@ -119,7 +119,7 @@ export default function ReservationActions({
       {/* Add Vehicle Button - only show for ACCEPTED status */}
       {canAssignVehicle && reservation.reservation_status === 'ACCEPTED' && hasAssignedVehicle && (
         <Button
-          className="bg-green-600 text-white hover:bg-green-700"
+          // className="bg-green-600 text-white hover:bg-green-700"
           onClick={onOpenAddVehicleModal}
           disabled={isAddVehicleLoading}
         >
@@ -130,7 +130,7 @@ export default function ReservationActions({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              Add Vehicle
+              {/* Add Vehicle */}
             </div>
           )}
         </Button>

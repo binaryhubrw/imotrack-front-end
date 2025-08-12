@@ -41,6 +41,7 @@ import {
   AddVehicleToReservationDto,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
+import { toastStyles } from '@/lib/toast-config';
 import { TransmissionMode } from '@/types/enums';
 
 // 1. AUTH
@@ -99,6 +100,16 @@ export const useLogin = () => {
         toast.error('Login failed');
         throw error;
       }
+    },
+    onError: (error: unknown) => {
+      console.error('Login request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Login failed';
+      console.error('Login error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -160,14 +171,13 @@ export const usePositionAuth = (position_id: string) => {
         return response.data.data;
       } catch (error: unknown) {
         console.error('Position auth request failed:', error);
-        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          console.error('Error response:', axiosError.response?.data);
-          const errorMessage = axiosError.response?.data?.message || 'Position authentication failed';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-        toast.error('Position authentication failed');
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        const errorMessage = axiosError.response?.data?.message || 'Position authentication failed';
+        console.error('Position auth error message:', errorMessage);
+        toast.error(errorMessage, {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
         throw error;
       }
     },
@@ -196,24 +206,24 @@ export const useForgotPassword = () => {
           throw new Error('No response received from server');
         }
 
-        // Show success toast
-        if (response.data.message) {
-          toast.success(response.data.message);
-        }
-
         return response.data;
       } catch (error: unknown) {
         console.error('Forgot password request failed:', error);
-        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          console.error('Error response:', axiosError.response?.data);
-          const errorMessage = axiosError.response?.data?.message || 'Failed to send reset email';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-        toast.error('Failed to send reset email');
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        const errorMessage = axiosError.response?.data?.message || 'Failed to send reset email';
+        console.error('Forgot password error message:', errorMessage);
+        toast.error(errorMessage, {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
         throw error;
       }
+    },
+    onSuccess: () => {
+      toast.success('Password reset email sent successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
   });
 };
@@ -243,7 +253,10 @@ export const useUpdatePassword = () => {
       return response.data.data;
     },
     onSuccess: () => {
-      toast.success('Password updated successfully!');
+      toast.success('Password updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
       console.error('Update password request failed:', error);
@@ -256,11 +269,20 @@ export const useUpdatePassword = () => {
       
       // Show specific error messages based on status codes
       if (status === 401) {
-        toast.error('Invalid current password. Please check your current password and try again.');
+        toast.error('Invalid current password. Please check your current password and try again.', {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
       } else if (status === 404) {
-        toast.error('Account not found. Please contact support.');
+        toast.error('Account not found. Please contact support.', {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
       } else {
-        toast.error(errorMessage);
+        toast.error(errorMessage, {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
       }
     },
   });
@@ -291,14 +313,20 @@ export const useResetPassword = () => {
       return response.data.data;
     },
     onSuccess: () => {
-      toast.success('Password reset successfully!');
+      toast.success('Password reset successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
       console.error('Reset password request failed:', error);
       const axiosError = error as { response?: { data?: { message?: string } } };
       const errorMessage = axiosError.response?.data?.message || 'Failed to reset password';
       console.error('Reset password error message:', errorMessage);
-      toast.error('Failed to reset password');
+      toast.error('Failed to reset password', {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -416,10 +444,10 @@ export const useResendVerification = () => {
 
       return { message: response.data.message };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast.success('Verification email sent!', {
-        description: data.message,
-        duration: 5000,
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
       });
     },
     onError: (error: unknown) => {
@@ -435,20 +463,11 @@ export const useResendVerification = () => {
       const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to resend verification email';
       const status = axiosError.response?.status;
       
-      if (status === 404) {
-        toast.error('User not found', {
-          description: 'No account found with this email address',
-          duration: 5000,
-        });
-      } else if (status === 409) {
-        toast.error('Email already verified', {
-          description: 'This email address has already been verified',
-          duration: 5000,
-        });
-      } else {
-        toast.error('Failed to resend verification email', {
-          description: errorMessage,
-          duration: 5000,
+      // Don't show toast for 409 (already verified) or 401 (auth issues)
+      if (status !== 409 && status !== 401) {
+        toast.error(errorMessage, {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
         });
       }
     },
@@ -489,13 +508,13 @@ export const useSetPasswordAndVerify = () => {
       return response.data.data;
     },
     onSuccess: () => {
-      // Clear verification data after successful password setting
-      localStorage.removeItem('verification_token');
-      localStorage.removeItem('verification_email');
-      toast.success('Account verified and password set successfully!');
+      toast.success('Password set and email verified successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      console.error('Set password and verify failed:', error);
+      console.error('Set password and verify request failed:', error);
       const axiosError = error as { 
         response?: { 
           data?: { message?: string };
@@ -504,15 +523,15 @@ export const useSetPasswordAndVerify = () => {
         message?: string;
       };
       
-      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to set password and verify account';
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Failed to set password and verify email';
       const status = axiosError.response?.status;
       
-      if (status === 409) {
-        toast.error('Account is already verified. You can now login.');
-      } else if (status === 401) {
-        toast.error('Verification session expired. Please try again from the email link.');
-      } else {
-        toast.error(errorMessage);
+      // Don't show toast for 409 (already verified) or 401 (auth issues)
+      if (status !== 409 && status !== 401) {
+        toast.error(errorMessage, {
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
+        });
       }
     },
   });
@@ -558,24 +577,20 @@ export const useCreateOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success('Organization created successfully!');
+      toast.success('Organization created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create organization.'));
+      console.error('Create organization request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create organization';
+      console.error('Create organization error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -593,24 +608,20 @@ export const useUpdateOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success('Organization updated successfully!');
+      toast.success('Organization updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update organization.'));
+      console.error('Update organization request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update organization';
+      console.error('Update organization error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -627,24 +638,20 @@ export const useDeleteOrganization = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      toast.success('Organization disabled successfully!');
+      toast.success('Organization deleted successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to disable organization.'));
+      console.error('Delete organization request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to delete organization';
+      console.error('Delete organization error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -707,24 +714,20 @@ export const useCreateUnit = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
-      toast.success('Unit created successfully!');
+      toast.success('Unit created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create unit.'));
+      console.error('Create unit request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create unit';
+      console.error('Create unit error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -755,24 +758,20 @@ export const useUpdateOrganizationUnit = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
-      toast.success('Unit updated successfully!');
+      toast.success('Unit updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update unit.'));
+      console.error('Update unit request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update unit';
+      console.error('Update unit error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -788,24 +787,20 @@ export const useOrganizationDeleteUnit = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['units'] });
-      toast.success('Unit deleted successfully!');
+      toast.success('Unit deleted successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete unit.'));
+      console.error('Delete unit request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to delete unit';
+      console.error('Delete unit error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -847,24 +842,20 @@ export const useCreatePosition = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
-      toast.success('Position created successfully!');
+      toast.success('Position created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create position.'));
+      console.error('Create position request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create position';
+      console.error('Create position error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -879,24 +870,20 @@ export const useDeletePosition = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['unit-positions', variables.unit_id] });
-      toast.success('Position deleted successfully!');
+      toast.success('Position deleted successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete position.'));
+      console.error('Delete position request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to delete position';
+      console.error('Delete position error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -925,24 +912,20 @@ export const useAssignPositionToUser = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
       queryClient.invalidateQueries({ queryKey: ['all-positions'] });
-      toast.success('User assigned to position successfully!');
+      toast.success('User assigned to position successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to assign user to position.'));
+      console.error('Assign position to user request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to assign user to position';
+      console.error('Assign position to user error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -971,24 +954,20 @@ export const useUpdatePosition = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['unit-positions'] });
-      toast.success('Position updated successfully!');
+      toast.success('Position updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update position.'));
+      console.error('Update position request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update position';
+      console.error('Update position error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1127,25 +1106,20 @@ export const useCreateVehicleModel = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-models'] });
-      toast.success('Vehicle model created successfully!');
+      toast.success('Vehicle model created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      // Show raw error if nothing else
-      toast.error(apiMsg || JSON.stringify(error) || (error instanceof Error ? error.message : 'Failed to create vehicle model.'));
+      console.error('Create vehicle model request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create vehicle model';
+      console.error('Create vehicle model error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1163,24 +1137,20 @@ export const useUpdateVehicleModel = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-models'] });
-      toast.success('Vehicle model updated successfully!');
+      toast.success('Vehicle model updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update vehicle model.'));
+      console.error('Update vehicle model request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update vehicle model';
+      console.error('Update vehicle model error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1196,25 +1166,20 @@ export const useDeleteVehicleModel = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-models'] });
-      toast.success(data.message || 'Vehicle model deleted successfully!');
+      toast.success(data.message || 'Vehicle model deleted successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      // Show a user-friendly fallback if no message
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to delete vehicle model. Please try again.'));
+      console.error('Delete vehicle model request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to delete vehicle model';
+      console.error('Delete vehicle model error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1276,24 +1241,20 @@ export const useCreateVehicle = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success('Vehicle created successfully!');
+      toast.success('Vehicle created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to create vehicle.'));
+      console.error('Create vehicle request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create vehicle';
+      console.error('Create vehicle error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1328,24 +1289,20 @@ export const useUpdateVehicle = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      toast.success('Vehicle updated successfully!');
+      toast.success('Vehicle updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      toast.error(apiMsg || (error instanceof Error ? error.message : 'Failed to update vehicle.'));
+      console.error('Update vehicle request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to update vehicle';
+      console.error('Update vehicle error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1511,27 +1468,20 @@ export const useCreateReservation = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reservations'] });
-      toast.success('Reservation created successfully!');
+      toast.success('Reservation created successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      console.error('Create reservation error:', error);
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        error.response &&
-        typeof error.response === 'object' &&
-        'data' in error.response &&
-        error.response.data &&
-        typeof error.response.data === 'object' &&
-        'message' in error.response.data
-      ) {
-        apiMsg = (error.response.data as { message?: string }).message;
-      }
-      const errorMessage = apiMsg || (error instanceof Error ? error.message : 'Failed to create reservation.');
-      console.error('Toast error message:', errorMessage);
-      toast.error(errorMessage);
+      console.error('Create reservation request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to create reservation';
+      console.error('Create reservation error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1560,20 +1510,20 @@ export const useCancelReservation = () => {
       // Update the specific reservation in cache
       queryClient.setQueryData(['reservation', variables.id], data);
       
-      toast.success('Reservation cancelled successfully!');
+      toast.success('Reservation cancelled successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
-      console.error('Reservation cancellation error:', error);
-      let apiMsg: string | undefined;
-      if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        (error as { response?: { data?: { message?: string } } }).response?.data?.message
-      ) {
-        apiMsg = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-      }
-      toast.error(apiMsg || 'Failed to cancel reservation');
+      console.error('Reservation cancellation request failed:', error);
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage = axiosError.response?.data?.message || 'Failed to cancel reservation';
+      console.error('Reservation cancellation error message:', errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
@@ -1966,7 +1916,10 @@ export const useCreateVehicleIssue = () => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-issues'] });
     },
     onSuccess: () => {
-      toast.success('Vehicle issue reported successfully!');
+      toast.success('Vehicle issue reported successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
   });
 };
@@ -2010,7 +1963,10 @@ export const useUpdateVehicleIssue = () => {
       }
     },
     onSuccess: () => {
-      toast.success('Vehicle issue updated successfully!');
+      toast.success('Vehicle issue updated successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
     },
     onError: (error: unknown) => {
       console.error('Update vehicle issue request failed:', error);
@@ -2050,7 +2006,10 @@ export const useRespondToVehicleIssue = () => {
       }
     },
     onSuccess: () => {
-      toast.success('Response sent successfully!');
+      toast.success('Response sent successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
       // Invalidate and refetch issues to get updated data
       queryClient.invalidateQueries({ queryKey: ['vehicle-issues'] });
     },
@@ -2059,7 +2018,10 @@ export const useRespondToVehicleIssue = () => {
       const axiosError = error as { response?: { data?: { message?: string } } };
       const errorMessage = axiosError.response?.data?.message || 'Failed to send response';
       console.error('Respond to vehicle issue error message:', errorMessage);
-      toast.error(errorMessage);
+      toast.error(errorMessage, {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
     },
   });
 };
