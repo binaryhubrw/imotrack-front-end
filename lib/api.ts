@@ -47,6 +47,9 @@ api.interceptors.response.use(
                               url?.includes('/v2/auth/set-password-and-verify') ||
                               url?.includes('/v2/auth/resend-invitation');
     
+    // Don't clear localStorage for logout calls
+    const isLogoutCall = url?.includes('/v2/auth/logout');
+    
     // Suppress logging for 401 errors on verification calls (they might be expected)
     // Also suppress logging if data is undefined or an empty object
     const isEmptyData =
@@ -71,11 +74,12 @@ api.interceptors.response.use(
       url,
       status: error.response?.status,
       isVerificationCall,
+      isLogoutCall,
       message: error.response?.data?.message
     });
     
-    if (error.response?.status === 401 && !isVerificationCall) {
-      console.log('401 error on non-verification call, clearing auth data and redirecting to login');
+    if (error.response?.status === 401 && !isVerificationCall && !isLogoutCall) {
+      console.log('401 error on non-verification/non-logout call, clearing auth data and redirecting to login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('position');
@@ -84,6 +88,8 @@ api.interceptors.response.use(
       window.location.href = '/login';
     } else if (error.response?.status === 401 && isVerificationCall) {
       console.log('401 error on verification call, not clearing auth data');
+    } else if (error.response?.status === 401 && isLogoutCall) {
+      console.log('401 error on logout call, not clearing auth data (logout will handle it)');
     }
     
     return Promise.reject(error);

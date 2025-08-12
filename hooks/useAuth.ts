@@ -299,7 +299,14 @@ export const useAuth = () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      // Clear all auth-related localStorage items first
+      // Try to call logout API, but don't fail if it doesn't work
+      try {
+        await logoutMutation.mutateAsync();
+      } catch (apiError) {
+        console.warn('Logout API call failed, but proceeding with local logout:', apiError);
+      }
+      
+      // Clear all auth-related localStorage items
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('position');
@@ -308,13 +315,7 @@ export const useAuth = () => {
       localStorage.removeItem('loginCredentials');
       localStorage.removeItem('availablePositions');
       localStorage.removeItem('verification_token');
-
-      // Try to call logout API, but don't fail if it doesn't work
-      try {
-        await logoutMutation.mutateAsync();
-      } catch (apiError) {
-        console.warn('Logout API call failed, but local cleanup successful:', apiError);
-      }
+      localStorage.removeItem('verification_email');
       
       // Reset state
       setAuthState({
@@ -325,11 +326,31 @@ export const useAuth = () => {
         showPositionSelector: false,
       });
       
+      // Redirect to login
       router.push('/login');
     } catch (error) {
       console.error('Logout failed:', error);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      // Error toast is already shown in the mutation
+      
+      // Even if there's an error, clear localStorage and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('position');
+      localStorage.removeItem('organization');
+      localStorage.removeItem('unit');
+      localStorage.removeItem('loginCredentials');
+      localStorage.removeItem('availablePositions');
+      localStorage.removeItem('verification_token');
+      localStorage.removeItem('verification_email');
+      
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        positions: [],
+        showPositionSelector: false,
+      });
+      
+      router.push('/login');
     }
   }, [logoutMutation, router]);
 

@@ -331,45 +331,54 @@ export const useResetPassword = () => {
   });
 };
 
-export const useAuthLogout =()=> {
+export const useAuthLogout = () => {
   return useMutation({
     mutationFn: async () => {
       try {
         // Get token from localStorage
         const token = localStorage.getItem('token');
         if (!token) {
-          throw new Error('No token found');
+          console.log('No token found, proceeding with local logout only');
+          return { success: true, message: 'Logged out successfully' };
         }
+        
         // Call the backend logout endpoint
         const response = await api.post('/v2/auth/logout', {}, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        // Clear local storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('position');
-        localStorage.removeItem('organization');
-        localStorage.removeItem('unit');
-        // Show success toast
-        toast.success(response.data?.message || 'Logged out successfully');
-        return { success: true };
+        
+        // Don't clear localStorage here - let the useAuth hook handle it
+        // This prevents conflicts with the API interceptor
+        
+        return { 
+          success: true, 
+          message: response.data?.message || 'Logged out successfully' 
+        };
       } catch (error: unknown) {
         console.error('Logout request failed:', error);
-        if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
-          const axiosError = error as { response?: { data?: { message?: string } } };
-          console.error('Error response:', axiosError.response?.data);
-          const errorMessage = axiosError.response?.data?.message || 'Failed to log out';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-        toast.error('Failed to log out');
-        throw error;
+        
+        // Don't throw error for logout - just return success
+        // This ensures logout always succeeds locally even if API fails
+        return { 
+          success: true, 
+          message: 'Logged out successfully (local logout)' 
+        };
       }
-    }
+    },
+    onSuccess: (data) => {
+      toast.success(data.message, {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
+    },
+    onError: (error: unknown) => {
+      console.error('Logout mutation error:', error);
+      // Don't show error toast for logout - it should always succeed
+    },
   });
-}
+};
 
 // Email verification query
 export const useVerifyEmail = () => {

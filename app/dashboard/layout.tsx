@@ -419,32 +419,6 @@ export default function DashboardLayout({
               </span>
             </button>
           </div>
-
-          {/* Footer - Designed by Imotarak System */}
-          <div className="p-4 border-t border-white/10">
-            <div className="text-center space-y-3">
-              {/* Imotarak Logo */}
-              <div className="flex justify-center">
-                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                  <Image
-                    width={24}
-                    height={24}
-                    src="/logo/logo.png"
-                    alt="Imotarak Logo"
-                    className="h-6 w-auto rounded-sm opacity-90"
-                  />
-                </div>
-              </div>
-
-              {/* Powered by Binary Hub */}
-              <div className="pt-2 border-t border-white/10">
-                <p className="text-xs text-blue-200/80 font-medium">
-                  Powered by{" "}
-                  <span className="text-white font-semibold">Binary Hub</span>
-                </p>
-              </div>
-            </div>
-          </div>
         </aside>
 
         {/* Main content area */}
@@ -562,6 +536,37 @@ export default function DashboardLayout({
               )}
             </div>
           </main>
+
+          {/* Dashboard Footer */}
+          <footer className="bg-white/95 backdrop-blur-sm border-t border-gray-200/80 px-4 py-2 md:px-6">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-evenly gap-2">
+              {/* Center - Copyright */}
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Image
+                    width={16}
+                    height={16}
+                    src="/logo/logo.png"
+                    alt="Imotarak Logo"
+                    className="rounded-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    © {new Date().getFullYear()} Imotarak System
+                  </p>
+                </div>
+              </div>
+
+              {/* Right side - Powered by */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-500">Powered by</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-semibold text-[#0872B3]">
+                    Binary Hub
+                  </span>
+                </div>
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </DashboardAccessContext.Provider>
