@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car } from "lucide-react";
+import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car, FileSpreadsheet, Filter, Calendar } from "lucide-react";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { format } from 'date-fns';
 import {
   useReservations,
   useMyReservations,
@@ -13,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import type {
   CreateReservationDto,
   ReservationStatus,
+  ReservedVehicle,
 } from "@/types/next-auth";
 import { useAuth } from "@/hooks/useAuth";
 import ErrorUI from "@/components/ErrorUI";
@@ -505,6 +509,7 @@ export default function ReservationsPage() {
   const [endDate, setEndDate] = useState<string>("");
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
 
   // Enhanced data fetching based on permissions
@@ -678,6 +683,155 @@ export default function ReservationsPage() {
     { id: "COMPLETED", name: "Completed" },
   ];
 
+  // Excel Export Functions
+  const exportReservationsToExcel = async (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, selectedColumns: string[]) => {
+    try {
+      // Apply filters
+      let filteredData = filteredReservations;
+      if (filters.searchTerm) {
+        filteredData = filteredData.filter(reservation =>
+          reservation.reservation_purpose.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+          reservation.start_location.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+          reservation.reservation_destination.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+          reservation.user?.first_name?.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+          reservation.user?.last_name?.toLowerCase().includes(filters.searchTerm!.toLowerCase())
+        );
+      }
+      if (filters.statusFilter && filters.statusFilter !== 'all') {
+        filteredData = filteredData.filter(reservation => reservation.reservation_status === filters.statusFilter);
+      }
+      if (filters.dateRange?.startDate || filters.dateRange?.endDate) {
+        filteredData = filteredData.filter(reservation => {
+          const departureDate = new Date(reservation.departure_date);
+          if (filters.dateRange?.startDate && departureDate < filters.dateRange.startDate) return false;
+          if (filters.dateRange?.endDate && departureDate > filters.dateRange.endDate) return false;
+          return true;
+        });
+      }
+
+      // Transform data for Excel
+      const excelData = filteredData.map(reservation => {
+        const row: Record<string, string> = {};
+        
+        if (selectedColumns.includes('reservation_purpose')) {
+          row['Purpose'] = reservation.reservation_purpose;
+        }
+        if (selectedColumns.includes('user_info')) {
+          const userName = reservation.user ? `${reservation.user.first_name} ${reservation.user.last_name}` : 'N/A';
+          row['User'] = userName;
+        }
+        if (selectedColumns.includes('user_phone')) {
+          row['User Phone'] = reservation.user?.user_phone || 'N/A';
+        }
+        if (selectedColumns.includes('start_location')) {
+          row['Start Location'] = reservation.start_location;
+        }
+        if (selectedColumns.includes('destination')) {
+          row['Destination'] = reservation.reservation_destination;
+        }
+        if (selectedColumns.includes('departure_date')) {
+          row['Departure Date'] = reservation.departure_date ? format(new Date(reservation.departure_date), 'MMM dd, yyyy HH:mm') : 'N/A';
+        }
+        if (selectedColumns.includes('return_date')) {
+          row['Return Date'] = reservation.expected_returning_date ? format(new Date(reservation.expected_returning_date), 'MMM dd, yyyy HH:mm') : 'N/A';
+        }
+        if (selectedColumns.includes('status')) {
+          row['Status'] = RESERVATION_STATUSES[reservation.reservation_status as ReservationStatus] || reservation.reservation_status;
+        }
+        if (selectedColumns.includes('passengers')) {
+          row['Passengers'] = reservation.passengers.toString();
+        }
+        if (selectedColumns.includes('description')) {
+          row['Description'] = reservation.description;
+        }
+        if (selectedColumns.includes('created_at')) {
+          row['Created Date'] = format(new Date(reservation.created_at), 'MMM dd, yyyy');
+        }
+        if (selectedColumns.includes('vehicles_count')) {
+          row['Vehicles Count'] = reservation.reserved_vehicles?.length?.toString() || '0';
+        }
+        if (selectedColumns.includes('vehicle_details')) {
+          const vehicleDetails = reservation.reserved_vehicles?.map((v: ReservedVehicle) => 
+            `${v.vehicle.plate_number} (${v.vehicle.vehicle_model.vehicle_model_name})`
+          ).join(', ') || 'No vehicles';
+          row['Vehicle Details'] = vehicleDetails;
+        }
+        if (selectedColumns.includes('reviewed_at')) {
+          row['Reviewed Date'] = reservation.reviewed_at ? format(new Date(reservation.reviewed_at), 'MMM dd, yyyy') : 'N/A';
+        }
+        if (selectedColumns.includes('rejection_comment')) {
+          row['Rejection Comment'] = reservation.rejection_comment || 'N/A';
+        }
+        
+        return row;
+      });
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Apply styling
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "2563EB" } },
+        alignment: { horizontal: "center" as const }
+      };
+
+      // Apply header styling
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        worksheet[cellAddress].s = headerStyle;
+      }
+
+      // Set column widths
+      worksheet['!cols'] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reservations');
+
+      // Generate filename with timestamp
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      const filename = `reservations_export_${timestamp}.xlsx`;
+
+      // Save file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, filename);
+
+      toast.success('Reservations exported successfully!');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export reservations');
+    }
+  };
+
+  // Available columns for export
+  const availableColumns = [
+    { key: 'reservation_purpose', label: 'Purpose', default: true },
+    { key: 'user_info', label: 'User', default: true },
+    { key: 'user_phone', label: 'User Phone', default: true },
+    { key: 'start_location', label: 'Start Location', default: true },
+    { key: 'destination', label: 'Destination', default: true },
+    { key: 'departure_date', label: 'Departure Date', default: true },
+    { key: 'return_date', label: 'Return Date', default: true },
+    { key: 'status', label: 'Status', default: true },
+    { key: 'passengers', label: 'Passengers', default: true },
+    { key: 'description', label: 'Description', default: false },
+    { key: 'created_at', label: 'Created Date', default: true },
+    { key: 'vehicles_count', label: 'Vehicles Count', default: true },
+    { key: 'vehicle_details', label: 'Vehicle Details', default: false },
+    { key: 'reviewed_at', label: 'Reviewed Date', default: false },
+    { key: 'rejection_comment', label: 'Rejection Comment', default: false },
+  ];
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Search and Filter Controls */}
@@ -726,16 +880,27 @@ export default function ReservationsPage() {
             </div>
           </div>
 
-          {/* Create Button */}
-          {canCreate && (
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-6 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 h-10"
-            >
-              <Plus className="w-4 h-4" />
-              Create Reservation
-            </Button>
-          )}
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            {canViewPage && (
+              <Button
+                onClick={() => setShowExportModal(true)}
+                className="flex items-center gap-2 px-5 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors h-10"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Export Excel
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                onClick={() => setShowCreate(true)}
+                className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-6 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 h-10"
+              >
+                <Plus className="w-4 h-4" />
+                Create Reservation
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Custom Date Range Inputs */}
@@ -1092,7 +1257,284 @@ export default function ReservationsPage() {
         onCreate={handleCreate}
         isLoading={createReservation.isPending}
       />
+      
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={exportReservationsToExcel}
+        data={reservations}
+        availableColumns={availableColumns}
+        title="Reservations"
+      />
       {/* Edit Reason, Assign Vehicle, Complete Reservation modals are now handled on [id] page only */}
+    </div>
+  );
+}
+
+// Export Modal Component
+function ExportModal({
+  isOpen,
+  onClose,
+  onExport,
+  data,
+  availableColumns,
+  title
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onExport: (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, columns: string[]) => Promise<void>;
+  data: unknown[];
+  availableColumns: { key: string; label: string; default?: boolean }[];
+  title: string;
+}) {
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    statusFilter: 'all',
+    startDate: '',
+    endDate: ''
+  });
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    availableColumns.filter(col => col.default).map(col => col.key)
+  );
+  const [exporting, setExporting] = useState(false);
+
+  const handleColumnToggle = (columnKey: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(columnKey) 
+        ? prev.filter(key => key !== columnKey)
+        : [...prev, columnKey]
+    );
+  };
+
+  const handleSelectAllColumns = () => {
+    setSelectedColumns(availableColumns.map(col => col.key));
+  };
+
+  const handleDeselectAllColumns = () => {
+    setSelectedColumns([]);
+  };
+
+  const handleExport = async () => {
+    if (selectedColumns.length === 0) {
+      toast.error('Please select at least one column to export');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      await onExport({
+        searchTerm: filters.searchTerm || undefined,
+        statusFilter: filters.statusFilter === 'all' ? undefined : filters.statusFilter,
+        dateRange: {
+          startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+          endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+        }
+      }, selectedColumns);
+      onClose();
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: '',
+      statusFilter: 'all',
+      startDate: '',
+      endDate: ''
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Export {title}</h2>
+              <p className="text-sm text-gray-600">Configure your export settings</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={exporting}
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Filters Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Search Term</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search reservations..."
+                    value={filters.searchTerm}
+                    onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Status Filter</label>
+                <select
+                  value={filters.statusFilter}
+                  onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="UNDER_REVIEW">Under Review</option>
+                  <option value="ACCEPTED">Accepted</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="REJECTED">Rejected</option>
+                  <option value="CANCELLED">Cancelled</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Start Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">End Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+
+          {/* Column Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Select Columns</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSelectAllColumns}
+                  className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleDeselectAllColumns}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableColumns.map((column) => (
+                <label key={column.key} className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(column.key)}
+                    onChange={() => handleColumnToggle(column.key)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{column.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Export Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <span className="font-medium text-blue-900">Total records:</span>
+                <span className="text-blue-700 ml-1">{data.length}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-900">Selected columns:</span>
+                <span className="text-blue-700 ml-1">{selectedColumns.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={exporting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting || selectedColumns.length === 0}
+              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export to Excel
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

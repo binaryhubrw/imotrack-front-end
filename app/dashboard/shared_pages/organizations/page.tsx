@@ -11,7 +11,10 @@ import {
   useReactTable,
   VisibilityState,
 } from "@tanstack/react-table";
-import { Download, Plus, Search, Filter } from "lucide-react";
+import { Download, Plus, Search, Filter, FileSpreadsheet, Calendar } from "lucide-react";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { format } from 'date-fns';
 import {
   Table,
   TableHeader,
@@ -296,6 +299,7 @@ export default function OrganizationsPage() {
   const [updateOrg, setUpdateOrg] = useState<Organization | null>(null);
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showExportModal, setShowExportModal] = useState(false);
   const { user, isLoading: authLoading } = useAuth();
 
   // Call all hooks unconditionally at the top
@@ -453,6 +457,141 @@ export default function OrganizationsPage() {
     await createOrg.mutateAsync(formData);
   };
 
+  // Excel Export Functions
+  const exportOrganizationsToExcel = async (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, selectedColumns: string[]) => {
+    try {
+      // Apply filters
+      let filteredData = organizations;
+      if (filters.searchTerm) {
+        filteredData = filteredData.filter(org =>
+          org.organization_name.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+          org.organization_email.toLowerCase().includes(filters.searchTerm!.toLowerCase())
+        );
+      }
+      if (filters.statusFilter) {
+        filteredData = filteredData.filter(org => org.organization_status === filters.statusFilter);
+      }
+      if (filters.dateRange?.startDate || filters.dateRange?.endDate) {
+        filteredData = filteredData.filter(org => {
+          const createdDate = new Date(org.created_at);
+          if (filters.dateRange!.startDate && createdDate < filters.dateRange!.startDate) return false;
+          if (filters.dateRange!.endDate && createdDate > filters.dateRange!.endDate) return false;
+          return true;
+        });
+      }
+
+      // Transform data for Excel
+      const excelData = filteredData.map(org => {
+        const row: Record<string, string> = {};
+        selectedColumns.forEach(col => {
+          switch (col) {
+            case 'organization_customId':
+              row['Custom ID'] = org.organization_customId || 'N/A';
+              break;
+            case 'organization_name':
+              row['Organization Name'] = org.organization_name;
+              break;
+            case 'organization_email':
+              row['Email'] = org.organization_email;
+              break;
+            case 'organization_phone':
+              row['Phone'] = org.organization_phone;
+              break;
+            case 'organization_status':
+              row['Status'] = org.organization_status.charAt(0) + org.organization_status.slice(1).toLowerCase();
+              break;
+            case 'street_address':
+              row['Address'] = org.street_address || 'N/A';
+              break;
+            case 'created_at':
+              row['Created Date'] = format(new Date(org.created_at), 'yyyy-MM-dd HH:mm:ss');
+              break;
+            case 'organization_logo':
+              row['Has Logo'] = org.organization_logo ? 'Yes' : 'No';
+              break;
+          }
+        });
+        return row;
+      });
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Apply styling
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      
+      // Style headers
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (worksheet[cellAddress]) {
+          worksheet[cellAddress].s = {
+            font: { bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { type: 'pattern', patternType: 'solid', fgColor: { rgb: '4472C4' } },
+            alignment: { horizontal: 'center', vertical: 'middle' }
+          };
+        }
+      }
+
+      // Set column widths
+      worksheet['!cols'] = selectedColumns.map(() => ({ wch: 20 }));
+
+      // Add auto filter
+      worksheet['!autofilter'] = {
+        ref: XLSX.utils.encode_range({
+          s: { r: 0, c: 0 },
+          e: { r: range.e.r, c: range.e.c }
+        })
+      };
+
+      // Freeze first row
+      worksheet['!views'] = [{
+        state: 'frozen',
+        xSplit: 0,
+        ySplit: 1
+      }];
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Organizations');
+
+      // Generate and download file
+      const excelBuffer = XLSX.write(workbook, { 
+        bookType: 'xlsx', 
+        type: 'array',
+        compression: true
+      });
+
+      const blob = new Blob([excelBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      const filename = `Organizations_Report_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.xlsx`;
+      saveAs(blob, filename);
+
+      toast.success(`Exported ${filteredData.length} organizations successfully!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Export failed. Please try again.');
+    }
+  };
+
+  const availableColumns = [
+    { key: 'organization_customId', label: 'Custom ID', default: true },
+    { key: 'organization_name', label: 'Organization Name', default: true },
+    { key: 'organization_email', label: 'Email', default: true },
+    { key: 'organization_phone', label: 'Phone', default: true },
+    { key: 'organization_status', label: 'Status', default: true },
+    { key: 'street_address', label: 'Address', default: false },
+    { key: 'created_at', label: 'Created Date', default: true },
+    { key: 'organization_logo', label: 'Has Logo', default: false },
+  ];
+
   return (
     <div className="flex h-screen bg-gray-50">
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -471,9 +610,12 @@ export default function OrganizationsPage() {
             </div>
             <div className="flex items-center gap-2">
               {canView && (
-                <button className="flex cursor-pointer items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Download className="w-5 h-5" />
-                  Export
+                <button 
+                  className="flex cursor-pointer items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowExportModal(true)}
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Export Excel
                 </button>
               )}
               {canCreate && (
@@ -742,6 +884,18 @@ export default function OrganizationsPage() {
         onCreate={handleCreateOrganization}
       />
 
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          onExport={exportOrganizationsToExcel}
+          data={organizations}
+          availableColumns={availableColumns}
+          title="Organizations"
+        />
+      )}
+
       {/* Update Organization Modal */}
       {showUpdate && updateOrg && canUpdate && (
         <UpdateOrganizationModal
@@ -759,6 +913,285 @@ export default function OrganizationsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Export Modal Component
+function ExportModal({
+  isOpen,
+  onClose,
+  onExport,
+  data,
+  availableColumns,
+  title
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onExport: (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, columns: string[]) => Promise<void>;
+  data: Organization[];
+  availableColumns: { key: string; label: string; default?: boolean }[];
+  title: string;
+}) {
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    statusFilter: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    availableColumns.filter(col => col.default).map(col => col.key)
+  );
+  const [exporting, setExporting] = useState(false);
+
+  const handleColumnToggle = (columnKey: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(columnKey)
+        ? prev.filter(key => key !== columnKey)
+        : [...prev, columnKey]
+    );
+  };
+
+  const handleSelectAllColumns = () => {
+    setSelectedColumns(availableColumns.map(col => col.key));
+  };
+
+  const handleDeselectAllColumns = () => {
+    setSelectedColumns([]);
+  };
+
+  const handleExport = async () => {
+    if (selectedColumns.length === 0) {
+      toast.error('Please select at least one column to export');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const exportFilters = {
+        searchTerm: filters.searchTerm || undefined,
+        statusFilter: filters.statusFilter || undefined,
+        dateRange: filters.startDate || filters.endDate ? {
+          startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+          endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+        } : undefined,
+      };
+
+      await onExport(exportFilters, selectedColumns);
+      onClose();
+    } catch (error) {
+      console.error('Export error:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: '',
+      statusFilter: '',
+      startDate: '',
+      endDate: '',
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Export {title}</h2>
+              <p className="text-sm text-gray-600">Configure your export settings</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={exporting}
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Filters Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Search Term</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search organizations..."
+                    value={filters.searchTerm}
+                    onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Status Filter</label>
+                <select
+                  value={filters.statusFilter}
+                  onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="PENDING">Pending</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Start Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">End Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                disabled={exporting}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+
+          {/* Columns Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Select Columns</h3>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllColumns}
+                  disabled={exporting}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeselectAllColumns}
+                  disabled={exporting}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-4">
+              {availableColumns.map((column) => (
+                <div key={column.key} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={column.key}
+                    checked={selectedColumns.includes(column.key)}
+                    onChange={() => handleColumnToggle(column.key)}
+                    disabled={exporting}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor={column.key}
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
+                    {column.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Export Info */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Total records:</span>
+              <span className="font-semibold">{data.length}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-1">
+              <span className="text-gray-600">Selected columns:</span>
+              <span className="font-semibold">{selectedColumns.length}</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={exporting}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting || selectedColumns.length === 0}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export to Excel
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
