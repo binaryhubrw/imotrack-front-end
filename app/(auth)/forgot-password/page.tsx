@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -30,10 +29,6 @@ function ForgotPasswordForm() {
     try {
       await forgotPassword.mutateAsync({ email });
       setIsSubmitted(true);
-      toast.success("Reset link sent successfully!", {
-        description: "Please check your email inbox",
-        duration: 4000,
-      });
     } catch (error) {
       // Error handling is already done in the mutation
       console.error("Error sending reset link:", error);
