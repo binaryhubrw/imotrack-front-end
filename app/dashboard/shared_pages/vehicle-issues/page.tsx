@@ -7,7 +7,11 @@ import {
   Eye,
   Plus,
   MessageSquare,
+  FileSpreadsheet,
 } from "lucide-react";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { format } from 'date-fns';
 import {
   useVehicleIssues,
   useCreateVehicleIssue,
@@ -22,6 +26,8 @@ import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateVehicleIssueDto, Reservation } from "@/types/next-auth";
+import { toast } from "sonner";
+import { toastStyles } from "@/lib/toast-config";
 
 // Report Issue Modal Component
 function ReportIssueModal({
@@ -398,6 +404,7 @@ export default function VehicleIssuesPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
+  const [showExportModal, setShowExportModal] = useState(false);
   const router = useRouter();
 
   // Permission checks
@@ -454,6 +461,138 @@ export default function VehicleIssuesPage() {
       // Error handled by mutation
     }
   };
+
+  // Excel Export Functions
+  const exportVehicleIssuesToExcel = async (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, selectedColumns: string[]) => {
+    try {
+      // Filter data based on current filters
+      const filteredData = issues.filter((issue) => {
+        const matchesSearch = !filters.searchTerm || 
+          issue.issue_title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+          issue.issue_description.toLowerCase().includes(filters.searchTerm.toLowerCase());
+        
+        const matchesStatus = !filters.statusFilter || 
+          filters.statusFilter === 'all' ||
+          (filters.statusFilter === 'open' && issue.issue_status === 'OPEN') ||
+          (filters.statusFilter === 'closed' && issue.issue_status === 'CLOSED');
+        
+        const matchesDateRange = !filters.dateRange?.startDate || !filters.dateRange?.endDate ||
+          (new Date(issue.issue_date) >= filters.dateRange.startDate && 
+           new Date(issue.issue_date) <= filters.dateRange.endDate);
+        
+        return matchesSearch && matchesStatus && matchesDateRange;
+      });
+
+      // Transform data for Excel
+      const excelData = filteredData.map((issue) => {
+        const row: Record<string, string> = {};
+        
+        if (selectedColumns.includes('issue_title')) {
+          row['Issue Title'] = issue.issue_title;
+        }
+        if (selectedColumns.includes('issue_status')) {
+          row['Issue Status'] = issue.issue_status;
+        }
+        if (selectedColumns.includes('issue_description')) {
+          row['Issue Description'] = issue.issue_description;
+        }
+        if (selectedColumns.includes('issue_date')) {
+          row['Issue Date'] = format(new Date(issue.issue_date), 'MMM dd, yyyy HH:mm');
+        }
+        if (selectedColumns.includes('created_at')) {
+          row['Created At'] = format(new Date(issue.created_at), 'MMM dd, yyyy HH:mm');
+        }
+        if (selectedColumns.includes('updated_at')) {
+          row['Updated At'] = issue.updated_at ? format(new Date(issue.updated_at), 'MMM dd, yyyy HH:mm') : 'N/A';
+        }
+        if (selectedColumns.includes('message')) {
+          row['Reviewer Message'] = typeof issue.message === 'string' ? issue.message : 'N/A';
+        }
+        if (selectedColumns.includes('issue_responder')) {
+          row['Issue Responder'] = issue.issue_responder || 'N/A';
+        }
+        if (selectedColumns.includes('vehicle_details')) {
+          const vehicleDetails = issue.reserved_vehicle && typeof issue.reserved_vehicle === 'object' && 'vehicle' in issue.reserved_vehicle
+            ? (issue.reserved_vehicle.vehicle as Record<string, unknown>)?.plate_number as string || 'N/A'
+            : 'N/A';
+          row['Vehicle Plate Number'] = vehicleDetails;
+        }
+        if (selectedColumns.includes('reservation_details')) {
+          const reservationDetails = issue.reserved_vehicle && typeof issue.reserved_vehicle === 'object' && 'reservation' in issue.reserved_vehicle
+            ? (issue.reserved_vehicle.reservation as Record<string, unknown>)?.reservation_purpose as string || 'N/A'
+            : 'N/A';
+          row['Reservation Purpose'] = reservationDetails;
+        }
+        
+        return row;
+      });
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Apply styling
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "2563EB" } },
+        alignment: { horizontal: "center" as const }
+      };
+
+      // Apply header styling
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        worksheet[cellAddress].s = headerStyle;
+      }
+
+      // Set column widths
+      worksheet['!cols'] = Object.keys(excelData[0] || {}).map(() => ({ wch: 25 }));
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Issues Report');
+
+      // Generate filename with timestamp
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      const filename = `vehicle_issues_${timestamp}.xlsx`;
+
+      // Save file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, filename);
+
+      toast.success('Vehicle issues exported successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export vehicle issues', {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
+    }
+  };
+
+  // Available columns for export
+  const availableColumns = [
+    { key: 'issue_title', label: 'Issue Title', default: true },
+    { key: 'issue_status', label: 'Issue Status', default: true },
+    { key: 'issue_description', label: 'Issue Description', default: true },
+    { key: 'issue_date', label: 'Issue Date', default: true },
+    { key: 'created_at', label: 'Created At', default: true },
+    { key: 'updated_at', label: 'Updated At', default: false },
+    { key: 'message', label: 'Reviewer Message', default: true },
+    { key: 'issue_responder', label: 'Issue Responder', default: false },
+    { key: 'vehicle_details', label: 'Vehicle Plate Number', default: true },
+    { key: 'reservation_details', label: 'Reservation Purpose', default: true },
+  ];
 
   if (authLoading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -563,6 +702,20 @@ export default function VehicleIssuesPage() {
               <option value="open">Open Issues</option>
               <option value="closed">Closed Issues</option>
             </motion.select>
+            {canView && (
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  onClick={() => setShowExportModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 text-sm text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export Excel
+                </Button>
+              </motion.div>
+            )}
           </div>
         </motion.div>
 
@@ -727,6 +880,264 @@ export default function VehicleIssuesPage() {
         onSubmit={handleRespondToIssue}
         isLoading={respondToIssue.isPending}
       />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={exportVehicleIssuesToExcel}
+        data={issues}
+        availableColumns={availableColumns}
+        title="Vehicle Issues"
+      />
+    </div>
+  );
+}
+
+// Export Modal Component
+function ExportModal({
+  isOpen,
+  onClose,
+  onExport,
+  data,
+  availableColumns,
+  title
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onExport: (filters: {
+    searchTerm?: string;
+    statusFilter?: string;
+    dateRange?: {
+      startDate?: Date;
+      endDate?: Date;
+    };
+  }, columns: string[]) => Promise<void>;
+  data: unknown[];
+  availableColumns: { key: string; label: string; default?: boolean }[];
+  title: string;
+}) {
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    statusFilter: 'all',
+    startDate: undefined as Date | undefined,
+    endDate: undefined as Date | undefined,
+  });
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    availableColumns.filter(col => col.default).map(col => col.key)
+  );
+  const [exporting, setExporting] = useState(false);
+
+  const handleColumnToggle = (columnKey: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(columnKey) 
+        ? prev.filter(key => key !== columnKey)
+        : [...prev, columnKey]
+    );
+  };
+
+  const handleSelectAllColumns = () => {
+    setSelectedColumns(availableColumns.map(col => col.key));
+  };
+
+  const handleDeselectAllColumns = () => {
+    setSelectedColumns([]);
+  };
+
+  const handleExport = async () => {
+    if (selectedColumns.length === 0) {
+      toast.error('Please select at least one column to export', {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
+      return;
+    }
+
+    setExporting(true);
+    try {
+      await onExport(filters, selectedColumns);
+      onClose();
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: '',
+      statusFilter: 'all',
+      startDate: undefined,
+      endDate: undefined,
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Export {title}</h2>
+              <p className="text-sm text-gray-600">Configure your export settings</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={exporting}
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Filter Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search Term</label>
+                <input
+                  type="text"
+                  value={filters.searchTerm}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  placeholder="Search in title or description..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status Filter</label>
+                <select
+                  value={filters.statusFilter}
+                  onChange={(e) => setFilters(prev => ({ ...prev, statusFilter: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="open">Open Issues</option>
+                  <option value="closed">Closed Issues</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate ? filters.startDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setFilters(prev => ({ 
+                    ...prev, 
+                    startDate: e.target.value ? new Date(e.target.value) : undefined 
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <input
+                  type="date"
+                  value={filters.endDate ? filters.endDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setFilters(prev => ({ 
+                    ...prev, 
+                    endDate: e.target.value ? new Date(e.target.value) : undefined 
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+              >
+                Reset Filters
+              </button>
+            </div>
+          </div>
+
+          {/* Column Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Select Columns</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSelectAllColumns}
+                  className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleDeselectAllColumns}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableColumns.map((column) => (
+                <label key={column.key} className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(column.key)}
+                    onChange={() => handleColumnToggle(column.key)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{column.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Export Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <span className="font-medium text-blue-900">Selected columns:</span>
+                <span className="text-blue-700 ml-1">{selectedColumns.length}</span>
+              </div>
+              <div>
+                <span className="font-medium text-blue-900">Total records:</span>
+                <span className="text-blue-700 ml-1">{data.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={exporting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting || selectedColumns.length === 0}
+              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export to Excel
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

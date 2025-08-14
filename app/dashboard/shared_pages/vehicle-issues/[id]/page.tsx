@@ -7,11 +7,14 @@ import {
   Calendar,
   Car,
   Clock,
-  Download,
   CheckCircle,
   // Edit,
   Ban,
+  FileSpreadsheet,
 } from "lucide-react";
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +25,8 @@ import {
 } from "@/lib/queries";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
-// import { toast } from "sonner";
+import { toast } from "sonner";
+import { toastStyles } from "@/lib/toast-config";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -218,6 +222,8 @@ export default function IssueDetailsPage() {
   // Edit modal state
   // const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+ 
   // const [editForm, setEditForm] = useState({
   //   issue_title: "",
   //   issue_description: "",
@@ -270,35 +276,134 @@ export default function IssueDetailsPage() {
     }
   };
 
-  // Export as text report
-  const generateReport = () => {
+  // Excel Export Functions
+  const exportIssueToExcel = async (selectedColumns: string[]) => {
     if (!issue) return;
-    const reportData = `
-Issue Report
-============
+    
+    try {
+      // Transform data for Excel
+      const excelData: Record<string, string>[] = [{
+        'Issue Title': issue.issue_title,
+        'Issue Status': issue.issue_status,
+        'Issue Description': issue.issue_description,
+        'Issue Date': format(new Date(issue.issue_date), 'MMM dd, yyyy HH:mm'),
+        'Created At': format(new Date(issue.created_at), 'MMM dd, yyyy HH:mm'),
+        'Updated At': issue.updated_at ? format(new Date(issue.updated_at), 'MMM dd, yyyy HH:mm') : 'N/A',
+        'Reviewer Message': typeof issue.message === 'string' ? issue.message : 'N/A',
+        'Issue Responder': issue.issue_responder || 'N/A',
+      }];
 
-Title: ${issue.issue_title}
-Status: ${issue.issue_status}
-Date Reported: ${new Date(issue.issue_date).toLocaleString()}
+      // Add vehicle details if available
+      if (issue.reserved_vehicle && typeof issue.reserved_vehicle === 'object' && 'vehicle' in issue.reserved_vehicle) {
+        const vehicle = issue.reserved_vehicle.vehicle as Record<string, unknown>;
+        if (vehicle) {
+          const vehicleData: Record<string, string> = {
+            'Vehicle Plate Number': (vehicle.plate_number as string) || 'N/A',
+            'Vehicle Model': (vehicle.vehicle_model as Record<string, unknown>)?.vehicle_model_name as string || 'N/A',
+            'Vehicle Year': (vehicle.vehicle_year as number)?.toString() || 'N/A',
+            'Vehicle Status': (vehicle.vehicle_status as string) || 'N/A',
+            'Energy Type': (vehicle.energy_type as string) || 'N/A',
+            'Vehicle Capacity': (vehicle.vehicle_capacity as number)?.toString() || 'N/A',
+          };
+          Object.assign(excelData[0], vehicleData);
+        }
+      }
 
-Description:
-${issue.issue_description}
+      // Add reservation details if available
+      if (issue.reserved_vehicle && typeof issue.reserved_vehicle === 'object' && 'reservation' in issue.reserved_vehicle) {
+        const reservation = issue.reserved_vehicle.reservation as Record<string, unknown>;
+        if (reservation) {
+          const reservationData: Record<string, string> = {
+            'Reservation Purpose': (reservation.reservation_purpose as string) || 'N/A',
+            'Start Location': (reservation.start_location as string) || 'N/A',
+            'Destination': (reservation.reservation_destination as string) || 'N/A',
+            'Departure Date': reservation.departure_date ? format(new Date(reservation.departure_date as string), 'MMM dd, yyyy HH:mm') : 'N/A',
+            'Expected Return': reservation.expected_returning_date ? format(new Date(reservation.expected_returning_date as string), 'MMM dd, yyyy HH:mm') : 'N/A',
+            'Passengers': (reservation.passengers as number)?.toString() || 'N/A',
+            'Reservation Status': (reservation.reservation_status as string) || 'N/A',
+          };
+          Object.assign(excelData[0], reservationData);
+        }
+      }
 
+      // Filter columns based on selection
+      const filteredData: Record<string, string>[] = [{}];
+      selectedColumns.forEach(col => {
+        if (excelData[0][col]) {
+          filteredData[0][col] = excelData[0][col];
+        }
+      });
 
----
-Generated on: ${new Date().toLocaleString()}
-    `;
-    const blob = new Blob([reportData], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `issue_report_${
-      new Date().toISOString().split("T")[0]
-    }.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(filteredData);
+
+      // Apply styling
+      const headerStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "2563EB" } },
+        alignment: { horizontal: "center" as const }
+      };
+
+      // Apply header styling
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        worksheet[cellAddress].s = headerStyle;
+      }
+
+      // Set column widths
+      worksheet['!cols'] = Object.keys(filteredData[0] || {}).map(() => ({ wch: 25 }));
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Issue Report');
+
+      // Generate filename with timestamp
+      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      const filename = `vehicle_issue_${issue.issue_id}_${timestamp}.xlsx`;
+
+      // Save file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, filename);
+
+      toast.success('Vehicle issue report exported successfully!', {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export vehicle issue report', {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
+    }
   };
+
+  // Available columns for export
+  const availableColumns = [
+    { key: 'Issue Title', label: 'Issue Title', default: true },
+    { key: 'Issue Status', label: 'Issue Status', default: true },
+    { key: 'Issue Description', label: 'Issue Description', default: true },
+    { key: 'Issue Date', label: 'Issue Date', default: true },
+    { key: 'Created At', label: 'Created At', default: true },
+    { key: 'Updated At', label: 'Updated At', default: false },
+    { key: 'Reviewer Message', label: 'Reviewer Message', default: true },
+    { key: 'Issue Responder', label: 'Issue Responder', default: false },
+    { key: 'Vehicle Plate Number', label: 'Vehicle Plate Number', default: true },
+    { key: 'Vehicle Model', label: 'Vehicle Model', default: true },
+    { key: 'Vehicle Year', label: 'Vehicle Year', default: false },
+    { key: 'Vehicle Status', label: 'Vehicle Status', default: true },
+    { key: 'Energy Type', label: 'Energy Type', default: false },
+    { key: 'Vehicle Capacity', label: 'Vehicle Capacity', default: false },
+    { key: 'Reservation Purpose', label: 'Reservation Purpose', default: true },
+    { key: 'Start Location', label: 'Start Location', default: true },
+    { key: 'Destination', label: 'Destination', default: true },
+    { key: 'Departure Date', label: 'Departure Date', default: true },
+    { key: 'Expected Return', label: 'Expected Return', default: true },
+    { key: 'Passengers', label: 'Passengers', default: false },
+    { key: 'Reservation Status', label: 'Reservation Status', default: true },
+  ];
 
   // Delete handlers
   const handleDelete = () => {
@@ -363,12 +468,12 @@ Generated on: ${new Date().toLocaleString()}
           </Button>
           <div className="flex gap-2">
             <Button
-              onClick={generateReport}
+              onClick={() => setShowExportModal(true)}
               variant="outline"
               className="border-[#0872B3] text-[#0872B3] hover:bg-[#0872B3] hover:text-white"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Export Excel
             </Button>
             {/* {canUpdate && (
               <Button
@@ -648,6 +753,174 @@ Generated on: ${new Date().toLocaleString()}
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={exportIssueToExcel}
+        availableColumns={availableColumns}
+        title="Vehicle Issue Report"
+      />
     </main>
+  );
+}
+
+// Export Modal Component
+function ExportModal({
+  isOpen,
+  onClose,
+  onExport,
+  availableColumns,
+  title
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onExport: (columns: string[]) => Promise<void>;
+  availableColumns: { key: string; label: string; default?: boolean }[];
+  title: string;
+}) {
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    availableColumns.filter(col => col.default).map(col => col.key)
+  );
+  const [exporting, setExporting] = useState(false);
+
+  const handleColumnToggle = (columnKey: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(columnKey) 
+        ? prev.filter(key => key !== columnKey)
+        : [...prev, columnKey]
+    );
+  };
+
+  const handleSelectAllColumns = () => {
+    setSelectedColumns(availableColumns.map(col => col.key));
+  };
+
+  const handleDeselectAllColumns = () => {
+    setSelectedColumns([]);
+  };
+
+  const handleExport = async () => {
+    if (selectedColumns.length === 0) {
+      toast.error('Please select at least one column to export', {
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
+      });
+      return;
+    }
+
+    setExporting(true);
+    try {
+      await onExport(selectedColumns);
+      onClose();
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-in fade-in-0 zoom-in-95 duration-300 border border-blue-100">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Export {title}</h2>
+              <p className="text-sm text-gray-600">Configure your export settings</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            disabled={exporting}
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Column Selection Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Select Columns</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSelectAllColumns}
+                  className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={handleDeselectAllColumns}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableColumns.map((column) => (
+                <label key={column.key} className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(column.key)}
+                    onChange={() => handleColumnToggle(column.key)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{column.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Export Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <span className="font-medium text-blue-900">Selected columns:</span>
+                <span className="text-blue-700 ml-1">{selectedColumns.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={exporting}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting || selectedColumns.length === 0}
+              className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {exporting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export to Excel
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
