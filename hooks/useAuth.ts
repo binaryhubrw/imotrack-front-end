@@ -9,6 +9,7 @@ import {
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { toastStyles } from '@/lib/toast-config';
 
 interface AuthState {
   user: AuthenticatedUserWithPosition | null;
@@ -270,7 +271,10 @@ export const useAuth = () => {
         // Redirect to dashboard
         router.push('/dashboard');
         
-        toast.success('Position selected successfully!');
+        toast.success('Position selected successfully!', {
+          style: toastStyles.success.style,
+          duration: toastStyles.success.duration,
+        });
       } else {
         throw new Error(data.message || 'Position authentication failed');
       }

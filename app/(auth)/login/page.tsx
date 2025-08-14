@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { LoginCredentials } from "@/types/next-auth";
 import { toast } from "sonner";
+import { toastStyles } from "@/lib/toast-config";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Position Selection Modal Component
@@ -158,21 +159,20 @@ function LoginForm() {
         await selectPosition(pos.position_id, positionsResult);
         toast.success("Login successful! Redirecting to dashboard...", {
           description: `Welcome as ${pos.position_name}`,
-          duration: 3000,
+          style: toastStyles.success.style,
+          duration: toastStyles.success.duration,
         });
         // router.push('/dashboard'); // selectPosition already redirects
       } else if (positionsResult && positionsResult.length === 0) {
         // No positions, redirect to dashboard (or handle as needed)
         toast.success("Login successful! Redirecting to dashboard...", {
           description: `No positions found, redirecting...`,
-          duration: 3000,
+          style: toastStyles.success.style,
+          duration: toastStyles.success.duration,
         });
         router.push("/dashboard");
       } else {
-        toast.success("Login successful! Please select your position.", {
-          description: "Choose the position you want to access",
-          duration: 3000,
-        });
+        console.log("positionsResult", positionsResult);
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
@@ -205,7 +205,8 @@ function LoginForm() {
 
       toast.error("Login Failed", {
         description: errorMessage,
-        duration: 4000,
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
       });
 
       setError(errorMessage);
@@ -223,9 +224,9 @@ function LoginForm() {
       });
       console.log("Available positions in handlePositionSelect:", positions);
       await selectPosition(positionId, positions);
-      toast.success("Position selected! Redirecting to dashboard...", {
-        description: `Welcome as ${positionName}`,
-        duration: 3000,
+      toast.success(`Position selected! Redirecting to ${positionName} dashboard...`, {
+        style: toastStyles.success.style,
+        duration: toastStyles.success.duration,
       });
     } catch (err: unknown) {
       console.error("Position selection error:", err);
@@ -237,7 +238,8 @@ function LoginForm() {
 
       toast.error("Position Selection Failed", {
         description: errorMessage,
-        duration: 4000,
+        style: toastStyles.error.style,
+        duration: toastStyles.error.duration,
       });
     }
   };
