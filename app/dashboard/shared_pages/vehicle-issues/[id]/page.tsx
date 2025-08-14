@@ -22,7 +22,7 @@ import {
 } from "@/lib/queries";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -303,7 +303,7 @@ Generated on: ${new Date().toLocaleString()}
   // Delete handlers
   const handleDelete = () => {
     if (!canDelete) {
-      toast.error("You do not have permission to delete vehicle issues");
+      // toast.error("You do not have permission to delete vehicle issues");
       return;
     }
     setShowDeleteDialog(true);
@@ -313,10 +313,10 @@ Generated on: ${new Date().toLocaleString()}
     if (!canDelete) return;
     try {
       await deleteVehicleIssue.mutateAsync({ issueId });
-      toast.success("Issue deleted successfully!");
+      // toast.success("Issue deleted successfully!");
       router.push("/dashboard/shared_pages/vehicle-issues");
     } catch {
-      toast.error("Failed to delete issue");
+      // toast.error("Failed to delete issue");
     }
   };
 
@@ -477,7 +477,7 @@ Generated on: ${new Date().toLocaleString()}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors duration-200"
                       >
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Reservation
+                        Back to Your Reservation
                       </Button>
                     </div>
                   )}

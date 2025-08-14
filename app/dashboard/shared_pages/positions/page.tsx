@@ -19,7 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { CreatePositionModal } from "./CreatePositionModal";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -554,7 +554,7 @@ export default function PositionsPage() {
 
   const handleAssignUser = async (email: string) => {
     if (!selectedPosition || !canAssignUser) {
-      toast.error("You do not have permission to assign users to positions");
+      // toast.error("You do not have permission to assign users to positions");
       return;
     }
 
@@ -567,13 +567,13 @@ export default function PositionsPage() {
       window.location.reload();
     } catch (error) {
       console.error("Error assigning user:", error);
-      toast.error("Failed to assign user to position");
+      // toast.error("Failed to assign user to position");
     }
   };
 
   const openAssignModal = (positionId: string, positionName: string) => {
     if (!canAssignUser) {
-      toast.error("You do not have permission to assign users to positions");
+      // toast.error("You do not have permission to assign users to positions");
       return;
     }
     setSelectedPosition({ id: positionId, name: positionName });

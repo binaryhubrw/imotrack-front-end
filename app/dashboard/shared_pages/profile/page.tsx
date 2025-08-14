@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUpdatePassword } from "@/lib/queries";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { SkeletonUserProfilePage } from "@/components/ui/skeleton";
@@ -87,16 +87,16 @@ export default function UserProfilePage() {
   const handleSaveProfile = async () => {
     try {
       // TODO: Implement profile update endpoint in backend
-      toast.info(
-        "Profile update feature is not yet implemented in the backend"
-      );
+      // toast.info(
+      //   "Profile update feature is not yet implemented in the backend"
+      // );
       setIsEditing(false);
       // await api.put('/auth/profile', editForm);
       // refetch(); // Refetch the user data
       // toast.success('Profile updated successfully');
     } catch (error: unknown) {
       console.error("Profile update error:", error);
-      toast.error("Failed to update profile");
+      // toast.error("Failed to update profile");
     }
   };
 
@@ -109,17 +109,17 @@ export default function UserProfilePage() {
       !passwordForm.newPassword ||
       !passwordForm.confirmPassword
     ) {
-      toast.error("Please fill in all password fields");
+      // toast.error("Please fill in all password fields");
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("New passwords do not match");
+      // toast.error("New passwords do not match");
       return;
     }
 
     if (passwordForm.newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long");
+      // toast.error("Password must be at least 8 characters long");
       return;
     }
 

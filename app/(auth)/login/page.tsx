@@ -157,16 +157,14 @@ function LoginForm() {
         // Only one position, select it automatically
         const pos = positionsResult[0];
         await selectPosition(pos.position_id, positionsResult);
-        toast.success("Login successful! Redirecting to dashboard...", {
-          description: `Welcome as ${pos.position_name}`,
+        toast.success(`Login successful! Redirecting to ${pos.position_name} dashboard...`, {
           style: toastStyles.success.style,
           duration: toastStyles.success.duration,
         });
         // router.push('/dashboard'); // selectPosition already redirects
       } else if (positionsResult && positionsResult.length === 0) {
         // No positions, redirect to dashboard (or handle as needed)
-        toast.success("Login successful! Redirecting to dashboard...", {
-          description: `No positions found, redirecting...`,
+        toast.success(`Login successful! Redirecting to your dashboard...`, {
           style: toastStyles.success.style,
           duration: toastStyles.success.duration,
         });

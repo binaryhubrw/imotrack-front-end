@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Search, Check, Trash2, Clock, CheckCircle } from 'lucide-react';
 import { useNotifications, useMarkNotificationAsRead } from '@/lib/queries';
-import { toast } from 'sonner';
+// import { toast } from 'sonner';
 import ErrorUI from '@/components/ErrorUI';
 import { useRouter } from 'next/navigation';
 import { SkeletonNotificationsPage } from '@/components/ui/skeleton';
@@ -35,10 +35,10 @@ export default function NotificationsPage() {
     try {
       await markAsRead.mutateAsync({ notification_id });
       setReadNotifications(prev => new Set([...prev, notification_id]));
-      toast.success('Notification marked as read');
+      // toast.success('Notification marked as read');
       refetch();
     } catch {
-      toast.error('Failed to mark notification as read');
+      // toast.error('Failed to mark notification as read');
     }
   };
 
@@ -55,7 +55,7 @@ export default function NotificationsPage() {
         console.error('Failed to mark notification as read:', error);
       }
     }
-    toast.success('All notifications marked as read');
+    // toast.success('All notifications marked as read');
     refetch();
   };
 

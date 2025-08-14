@@ -42,7 +42,7 @@ import { ModelType   } from "@/types/enums";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
 // Searchable Dropdown Component
@@ -568,7 +568,7 @@ export default function VehicleModelsPage() {
 
   const handleCreateVehicleModel = async (formData: CreateVehicleModelDto) => {
     if (!canCreate) {
-      toast.error("You do not have permission to create vehicle models");
+      // toast.error("You do not have permission to create vehicle models");
       return;
     }
 

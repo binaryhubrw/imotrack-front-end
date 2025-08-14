@@ -33,7 +33,7 @@ import {
 import { Organization } from "@/types/next-auth";
 import { OrganizationStatusEnum } from "@/types/enums";
 
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { SkeletonOrganizationsTable } from "@/components/ui/skeleton";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
@@ -574,10 +574,10 @@ export default function OrganizationsPage() {
       const filename = `Organizations_Report_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.xlsx`;
       saveAs(blob, filename);
 
-      toast.success(`Exported ${filteredData.length} organizations successfully!`);
+      // toast.success(`Exported ${filteredData.length} organizations successfully!`);
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Export failed. Please try again.');
+      // toast.error('Export failed. Please try again.');
     }
   };
 
@@ -909,7 +909,7 @@ export default function OrganizationsPage() {
             });
             setShowUpdate(false);
             setUpdateOrg(null);
-            toast.success("Organization updated successfully!");
+            // toast.success("Organization updated successfully!");
           }}
         />
       )}
@@ -969,7 +969,7 @@ function ExportModal({
 
   const handleExport = async () => {
     if (selectedColumns.length === 0) {
-      toast.error('Please select at least one column to export');
+      // toast.error('Please select at least one column to export');
       return;
     }
 

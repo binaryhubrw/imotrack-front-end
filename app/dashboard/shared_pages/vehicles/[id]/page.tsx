@@ -8,7 +8,7 @@ import {
   useVehicleModel,
 } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -98,7 +98,7 @@ export default function VehicleDetailPage() {
   // Open edit modal and prefill form
   const handleEdit = () => {
     if (!canUpdate) {
-      toast.error("You do not have permission to update vehicles");
+      // toast.error("You do not have permission to update vehicles");
       return;
     }
 
@@ -119,7 +119,7 @@ export default function VehicleDetailPage() {
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canUpdate) {
-      toast.error("You do not have permission to update vehicles");
+      // toast.error("You do not have permission to update vehicles");
       return;
     }
 
@@ -132,7 +132,7 @@ export default function VehicleDetailPage() {
           transmission_mode: editForm.transmission_mode as TransmissionMode,
         },
       });
-      toast.success("Vehicle updated!");
+      // toast.success("Vehicle updated!");
       setShowEdit(false);
       refetch();
     } catch {
@@ -144,7 +144,7 @@ export default function VehicleDetailPage() {
 
   const handleDelete = () => {
     if (!canDelete) {
-      toast.error("You do not have permission to delete vehicles");
+      // toast.error("You do not have permission to delete vehicles");
       return;
     }
     setShowDeleteDialog(true);
@@ -155,7 +155,7 @@ export default function VehicleDetailPage() {
 
     try {
       await deleteVehicle.mutateAsync({ id });
-      toast.success("Vehicle deleted!");
+      // toast.success("Vehicle deleted!");
       setShowDeleteDialog(false);
       router.push("/dashboard/shared_pages/vehicles");
     } catch {

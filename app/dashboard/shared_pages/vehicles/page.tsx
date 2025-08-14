@@ -49,7 +49,7 @@ import type {
   VehicleModel,
 } from "@/types/next-auth";
 import Image from "next/image";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { TransmissionMode } from "@/types/enums";
@@ -308,7 +308,7 @@ function EditVehicleModal({
       await onUpdate(vehicle.vehicle_id, form);
       onClose();
     } catch {
-      toast.error("Failed to update vehicle");
+      // toast.error("Failed to update vehicle");
     }
   };
 
@@ -411,7 +411,7 @@ function EditVehicleModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Year *
+                  Manufactured Year *
                 </label>
                 <Input
                   name="vehicle_year"
@@ -707,12 +707,12 @@ function CreateVehicleModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Year <span className="text-red-500">*</span>
+                    Year Manufactured <span className="text-red-500">*</span>
                   </label>
                   <Input
                     name="vehicle_year"
                     type="number"
-                    placeholder="Enter vehicle year"
+                    placeholder="Enter vehicle year of manufacture"
                     value={form.vehicle_year || ""}
                     onChange={handleChange}
                     min="1900"
@@ -1066,7 +1066,7 @@ export default function VehiclesPage() {
 
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {
     if (!canCreate) {
-      toast.error("You do not have permission to create vehicles");
+      // toast.error("You do not have permission to create vehicles");
       return;
     }
 
@@ -1089,7 +1089,7 @@ export default function VehiclesPage() {
     data: Partial<CreateVehicleDto>
   ) => {
     if (!canUpdate) {
-      toast.error("You do not have permission to update vehicles");
+      // toast.error("You do not have permission to update vehicles");
       return;
     }
 

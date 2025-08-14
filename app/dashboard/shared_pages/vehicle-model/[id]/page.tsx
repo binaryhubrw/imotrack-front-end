@@ -108,7 +108,6 @@ export default function VehicleModelDetailPage() {
     setSubmitting(true);
     try {
       await updateVehicleModel.mutateAsync({ id, updates: editForm });
-      toast.success("Vehicle model updated!");
       setShowEdit(false);
       refetch();
     } catch {
@@ -131,7 +130,7 @@ export default function VehicleModelDetailPage() {
     
     try {
       await deleteVehicleModel.mutateAsync({ id });
-      toast.success("Vehicle model deleted!");
+      // toast.success("Vehicle model deleted!");
       setShowDeleteDialog(false);
       router.push("/dashboard/shared_pages/vehicle-model");
     } catch {
