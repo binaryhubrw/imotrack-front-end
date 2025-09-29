@@ -103,18 +103,19 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
     }
   }, [initialVehicles])
 
-  // Update markers when vehicles change and map is loaded
-  useEffect(() => {
-    if (!mapLoaded || !mapInstanceRef.current || vehicles.length === 0) return
+  // // Update markers when vehicles change and map is loaded
+  // useEffect(() => {
+  //   if (!mapLoaded || !mapInstanceRef.current || vehicles.length === 0) return
 
-    const updateAllMarkers = async () => {
-      for (const vehicle of vehicles) {
-        await updateSingleVehicleMarker(vehicle)
-      }
-    }
+  //   const updateAllMarkers = async () => {
+  //     for (const vehicle of vehicles) {
+  //       await updateSingleVehicleMarker(vehicle)
+  //     }
+  //   }
 
-    updateAllMarkers()
-  }, [vehicles, mapLoaded])
+  //   updateAllMarkers()
+  // }, [vehicles, mapLoaded])
+  
 
   // Initialize map - FIXED VERSION
   useEffect(() => {
