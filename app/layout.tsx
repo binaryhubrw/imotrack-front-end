@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -30,6 +29,13 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/favicon.ico" />
+        {/* Load Leaflet CSS globally - ONLY ONCE */}
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
+          integrity="sha512-o9N1jHQtJt0h4xHgj1N1H5xQj7GEx1ENtzY3vMbqj4JqvM9K3oP0msqHyt1E1vOEq6CGiAt+rWS+3Dd5wUu5wQ=="
+          crossOrigin=""
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

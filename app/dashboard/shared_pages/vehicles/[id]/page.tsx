@@ -301,13 +301,12 @@ export default function VehicleDetailPage() {
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-sm font-medium">Status:</span>
                 <span
-                  className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                    vehicle?.vehicle_status === "AVAILABLE"
+                  className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${vehicle?.vehicle_status === "AVAILABLE"
                       ? "bg-green-100 text-green-700"
                       : vehicle?.vehicle_status === "OCCUPIED"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                 >
                   {vehicle?.vehicle_status}
                 </span>
@@ -344,13 +343,12 @@ export default function VehicleDetailPage() {
               </div>
               {/* Show vehicle_status as a badge or text */}
               <div
-                className={`text-sm px-3 py-1 rounded-full ${
-                  vehicle.vehicle_status === "AVAILABLE"
+                className={`text-sm px-3 py-1 rounded-full ${vehicle.vehicle_status === "AVAILABLE"
                     ? "bg-green-100 text-green-700"
                     : vehicle.vehicle_status === "OCCUPIED"
-                    ? "bg-red-100 text-red-700"
-                    : "bg-gray-100 text-gray-700"
-                }`}
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-100 text-gray-700"
+                  }`}
               >
                 {vehicle.vehicle_status}
               </div>
@@ -386,7 +384,7 @@ export default function VehicleDetailPage() {
                   {vehicle.vehicle_year}
                 </div>
               </div>
-              
+
               {/* Energy Type */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 uppercase tracking-wide">
@@ -409,8 +407,8 @@ export default function VehicleDetailPage() {
               </div>
               {/* Vehicle Photo */}
               {vehicle.vehicle_photo &&
-              typeof vehicle.vehicle_photo === "string" &&
-              vehicle.vehicle_photo.trim() !== "" ? (
+                typeof vehicle.vehicle_photo === "string" &&
+                vehicle.vehicle_photo.trim() !== "" ? (
                 <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center">
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">
                     Photo
@@ -498,16 +496,34 @@ export default function VehicleDetailPage() {
                   Status
                 </div>
                 <div
-                  className={`font-medium text-gray-900 inline-block px-2 py-1 rounded-full text-xs ${
-                    vehicle.vehicle_status === "AVAILABLE"
+                  className={`font-medium text-gray-900 inline-block px-2 py-1 rounded-full text-xs ${vehicle.vehicle_status === "AVAILABLE"
                       ? "bg-green-100 text-green-700"
                       : vehicle.vehicle_status === "OCCUPIED"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
                 >
                   {vehicle.vehicle_status}
                 </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 mt-4">
+                {/* <button
+                  onClick={() =>
+                    router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/tracking`)
+                  }
+                  className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-colors duration-300"
+                >
+                  Track The Car
+                </button> */}
+
+                <button
+                  onClick={() =>
+                    router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/locations`)
+                  }
+                  className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-green-700 transition-colors duration-300"
+                >
+                  Locate The Car
+                </button>
               </div>
             </div>
 

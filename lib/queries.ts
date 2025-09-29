@@ -39,10 +39,15 @@ import {
   RemoveVehicleFromReservationDto,
   VehicleOperationApiResponse,
   AddVehicleToReservationDto,
+  TrackingData,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { toastStyles } from '@/lib/toast-config';
 import { TransmissionMode } from '@/types/enums';
+import { useEffect, useRef, useState } from 'react';
+
+// API configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://imoteack.onrender.com';
 
 // 1. AUTH
 export const useLogin = () => {
@@ -1452,6 +1457,284 @@ export const useDeleteVehicle = () => {
   });
 };
 
+
+interface LocationUpdateRequest {
+  vehicleId: string;
+  coords: Coords;
+  timestamp?: number;
+}
+
+// Types matching your backend schema
+interface Coords {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  accuracy: number;
+  altitudeAccuracy: number | null;
+  heading: number | null;
+  speed: number | null;
+}
+
+interface LocationUpdate {
+  vehicle_id: string;
+  coords: Coords;
+  timestamp: string | number;
+}
+
+/**
+ * Hook to stream vehicle location updates via SSE
+ * @param vehicleId - UUID of the vehicle to track
+ * @param enabled - Whether to enable the stream
+ * @returns Stream state and location data
+ */
+export const useVehicleLocationStream = (vehicleId: string, enabled: boolean = true) => {
+  const [location, setLocation] = useState<LocationUpdate | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const maxReconnectAttempts = 5;
+
+  // Get auth token - FIXED to handle multiple storage methods
+  const getAuthToken = async (): Promise<string | null> => {
+    // Try multiple common token storage keys
+    if (typeof window !== 'undefined') {
+      const tokenKeys = ['authToken', 'token', 'accessToken', 'jwt', 'auth_token'];
+      
+      for (const key of tokenKeys) {
+        const token = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (token) {
+          console.log(`Found auth token in ${key}`);
+          return token;
+        }
+      }
+
+      // Check if token is in cookies
+      const cookieToken = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('token=') || row.startsWith('authToken='));
+      
+      if (cookieToken) {
+        const token = cookieToken.split('=')[1];
+        console.log('Found auth token in cookies');
+        return token;
+      }
+    }
+    
+    console.warn('No auth token found in storage or cookies');
+    return null;
+  };
+
+  useEffect(() => {
+    // Don't connect if not enabled or no vehicle ID
+    if (!enabled || !vehicleId || vehicleId.length === 0) {
+      console.log('SSE stream not enabled or no vehicle ID provided');
+      return;
+    }
+
+    let mounted = true;
+
+    const connectSSE = async () => {
+      try {
+        // Get auth token
+        const token = await getAuthToken();
+        
+        if (!token) {
+          setError('Authentication required. Please log in.');
+          setIsConnected(false);
+          return;
+        }
+
+        // Construct SSE URL - FIXED to use correct env var
+        const apiBaseURL = process.env.NEXT_API_URL || 'https://imoteack.onrender.com';
+        const url = `${apiBaseURL}/v2/vehicles/${vehicleId}/locations/stream?token=${encodeURIComponent(token)}`;
+
+        console.log('Connecting to SSE stream:', url.replace(token, 'TOKEN_HIDDEN'));
+
+        // Create EventSource
+        const eventSource = new EventSource(url);
+        
+        eventSource.onopen = () => {
+          if (!mounted) return;
+          console.log('SSE connection opened for vehicle:', vehicleId);
+          setIsConnected(true);
+          setError(null);
+          setReconnectAttempts(0);
+        };
+        
+        eventSource.onmessage = (event) => {
+          if (!mounted) return;
+          
+          try {
+            const locationData: LocationUpdate = JSON.parse(event.data);
+            
+            // Validate location data
+            if (!locationData.vehicle_id || !locationData.coords) {
+              console.warn('Invalid location data received:', locationData);
+              return;
+            }
+
+            if (!locationData.coords.latitude || !locationData.coords.longitude) {
+              console.warn('Missing coordinates in location data:', locationData);
+              return;
+            }
+
+            console.log('Location update received:', {
+              vehicle_id: locationData.vehicle_id,
+              lat: locationData.coords.latitude,
+              lng: locationData.coords.longitude,
+              speed: locationData.coords.speed,
+              timestamp: locationData.timestamp
+            });
+
+            setLocation(locationData);
+            setError(null);
+          } catch (err) {
+            console.error('Error parsing SSE location data:', err);
+            setError('Invalid location data format received');
+          }
+        };
+        
+        eventSource.onerror = (event) => {
+          console.error('SSE connection error:', event);
+          
+          if (!mounted) return;
+          
+          setIsConnected(false);
+          
+          // Close the current connection
+          eventSource.close();
+          
+          // Determine if we should reconnect
+          if (reconnectAttempts < maxReconnectAttempts) {
+            // Exponential backoff with max 30 seconds
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+            setError(`Connection lost. Reconnecting in ${Math.round(delay/1000)}s... (Attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+            
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+            }
+
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (mounted) {
+                setReconnectAttempts(prev => prev + 1);
+                connectSSE();
+              }
+            }, delay);
+          } else {
+            setError('Failed to connect to location stream. Please refresh the page.');
+          }
+        };
+        
+        eventSourceRef.current = eventSource;
+      } catch (err) {
+        if (!mounted) return;
+        
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(`Failed to establish connection: ${errorMessage}`);
+        console.error('SSE connection setup error:', err);
+      }
+    };
+
+    connectSSE();
+
+    // Cleanup function
+    return () => {
+      mounted = false;
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      
+      if (eventSourceRef.current) {
+        console.log('Closing SSE connection for vehicle:', vehicleId);
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      
+      setIsConnected(false);
+      setReconnectAttempts(0);
+    };
+  }, [vehicleId, enabled, reconnectAttempts]);
+
+  // Manual disconnect function
+  const disconnect = () => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    
+    if (eventSourceRef.current) {
+      console.log('Manual disconnect for vehicle:', vehicleId);
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    
+    setIsConnected(false);
+    setReconnectAttempts(0);
+    setError(null);
+  };
+
+  return {
+    location,
+    isConnected,
+    error,
+    reconnectAttempts,
+    disconnect
+  };
+};
+
+// Helper function to get auth token
+async function getAuthToken(): Promise<string | null> {
+  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+  if (token) return token;
+  
+  console.warn('getAuthToken: No token found in localStorage');
+  return null;
+}
+
+// Update vehicle location mutation
+export const useUpdateVehicleLocation = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation<any, Error, LocationUpdateRequest>({
+    mutationFn: async ({ vehicleId, coords, timestamp }: LocationUpdateRequest) => {
+      console.log('Updating vehicle location for:', vehicleId);
+      try {
+        const payload = {
+          vehicle_id: vehicleId,
+          coords,
+          timestamp: timestamp || Date.now()
+        };
+        
+        const response = await api.post(`/v2/vehicles/${vehicleId}/locations`, payload);
+        console.log('Location update full response:', response);
+        const { data } = response;
+        console.log('Location update data:', data);
+        
+        // Handle different response formats
+        if (data.data) {
+          return data.data;
+        } else if (data && data.message) {
+          return data;
+        } else {
+          return { message: 'Location updated successfully' };
+        }
+      } catch (error) {
+        console.error('Location update API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-locations'] });
+    },
+    onError: (error) => {
+      console.error('Location update failed:', error);
+    }
+  });
+};
 
 
 // reservation

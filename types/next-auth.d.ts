@@ -745,3 +745,16 @@ export interface NoPermissionUIProps {
   onContactSupport?: () => void;
   showRefresh?: boolean;
 }
+export interface TrackingData{
+  vehicle_id: string;
+  coords: {
+    latitude: number;
+    longitude: number;
+    altitude: number;
+    accuracy: number;
+    altitudeAccuracy: number;
+    heading: number;
+    speed: number;
+  };
+  timestamp: number;
+};

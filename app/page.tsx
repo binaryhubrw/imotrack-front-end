@@ -25,6 +25,9 @@ import { Button } from "@/components/ui/button"; // shadcn/ui button
 import { useState } from "react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+
 
 // Video Modal Component
 const VideoModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
@@ -73,6 +76,13 @@ export default function HomePage() {
 
   const openVideoModal = () => {
     setIsVideoModalOpen(true);
+  };
+
+  
+   const router = useRouter();
+
+  const handleClick = () => {
+    router.push('/tracking'); // Adjust path as needed
   };
 
   const closeVideoModal = () => {
@@ -353,7 +363,7 @@ export default function HomePage() {
           <Button
             variant="outline"
             className=" hover:border-0  hover:text-white hover:bg-[#0872b3] flex items-center gap-2 text-lg px-10 py-8 rounded cursor-pointer "
-            onClick={openVideoModal}
+             onClick={handleClick}
           >
             <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
             Schedule Demo
