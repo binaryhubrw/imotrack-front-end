@@ -366,7 +366,7 @@ export default function HomePage() {
              onClick={handleClick}
           >
             <FontAwesomeIcon className="mr-3" icon={faPlayCircle} />
-            Schedule Demo
+            Track Vehicle
           </Button>
         </div>
       </section>
