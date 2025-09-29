@@ -1,62 +1,21 @@
 "use client"
 
 import { useParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Navigation, ArrowLeft, Wifi, WifiOff, Activity, Clock } from "lucide-react"
+import { MapPin, Navigation, ArrowLeft, Activity } from "lucide-react"
 import Link from 'next/link'
-import VehicleMap from '@/components/VehicleMap' // Adjust import path as needed
+import VehicleMap from '@/components/VehicleMap'
+import { useVehicle } from '@/lib/queries'
 
-// Mock vehicle data - replace with actual API call
-interface Vehicle {
-  vehicle_id: string
-  name: string
-  license_plate: string
-  driver_name?: string
-  status: 'active' | 'inactive' | 'maintenance'
-}
 
 export default function VehicleLocationPage() {
   const params = useParams()
   const vehicleId = params.id as string
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  // Load vehicle data
-  useEffect(() => {
-    const loadVehicle = async () => {
-      try {
-        setLoading(true)
-        // Replace with actual API call
-        // const response = await fetch(`/api/vehicles/${vehicleId}`)
-        // const vehicleData = await response.json()
-        
-        // Mock data for now
-        const mockVehicle: Vehicle = {
-          vehicle_id: vehicleId,
-          name: `Vehicle ${vehicleId.slice(0, 8)}`,
-          license_plate: 'ABC-123',
-          driver_name: 'John Doe',
-          status: 'active'
-        }
-        
-        setVehicle(mockVehicle)
-        setError(null)
-      } catch (err) {
-        console.error('Failed to load vehicle:', err)
-        setError('Failed to load vehicle data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (vehicleId) {
-      loadVehicle()
-    }
-  }, [vehicleId])
+  
+  // Fetch vehicle data using the API hook
+  const { data: vehicle, isLoading: loading, isError } = useVehicle(vehicleId)
 
   if (loading) {
     return (
@@ -73,7 +32,7 @@ export default function VehicleLocationPage() {
     )
   }
 
-  if (error || !vehicle) {
+  if (isError || !vehicle) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -83,7 +42,7 @@ export default function VehicleLocationPage() {
             </div>
             <p className="text-destructive font-medium">Vehicle Not Found</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {error || 'The requested vehicle could not be found'}
+              The requested vehicle could not be found
             </p>
             <Button
               className="mt-4"
@@ -118,7 +77,7 @@ export default function VehicleLocationPage() {
               Live Location Tracking
             </h1>
             <p className="text-muted-foreground">
-              Real-time GPS tracking for {vehicle.name}
+              Real-time GPS tracking for {vehicle.vehicle_model?.vehicle_model_name || 'Vehicle'}
             </p>
           </div>
         </div>
@@ -129,25 +88,51 @@ export default function VehicleLocationPage() {
         <Card className="lg:col-span-1 p-4">
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-lg">{vehicle.name}</h3>
-              <p className="text-muted-foreground text-sm">License: {vehicle.license_plate}</p>
+              <h3 className="font-semibold text-lg">
+                {vehicle.vehicle_model?.vehicle_model_name || 'Unknown Model'}
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                License: {vehicle.plate_number}
+              </p>
+              {vehicle.vehicle_model?.manufacturer_name && (
+                <p className="text-xs text-muted-foreground">
+                  {vehicle.vehicle_model.manufacturer_name} • {vehicle.vehicle_year}
+                </p>
+              )}
             </div>
             
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Status:</span>
                 <Badge 
-                  variant={vehicle.status === 'active' ? 'default' : 
-                          vehicle.status === 'maintenance' ? 'destructive' : 'secondary'}
+                  variant={vehicle.vehicle_status === 'active' ? 'default' : 
+                          vehicle.vehicle_status === 'maintenance' ? 'destructive' : 'secondary'}
                 >
-                  {vehicle.status}
+                  {vehicle.vehicle_status}
                 </Badge>
               </div>
               
-              {vehicle.driver_name && (
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Energy Type:</span>
+                <span className="text-sm font-medium capitalize">{vehicle.energy_type}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Transmission:</span>
+                <span className="text-sm font-medium capitalize">{vehicle.transmission_mode}</span>
+              </div>
+
+              {vehicle.vehicle_model?.vehicle_type && (
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Driver:</span>
-                  <span className="text-sm font-medium">{vehicle.driver_name}</span>
+                  <span className="text-sm text-muted-foreground">Type:</span>
+                  <span className="text-sm font-medium capitalize">{vehicle.vehicle_model.vehicle_type}</span>
+                </div>
+              )}
+
+              {vehicle.vehicle_model?.vehicle_capacity && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Capacity:</span>
+                  <span className="text-sm font-medium">{vehicle.vehicle_model.vehicle_capacity} passengers</span>
                 </div>
               )}
               
@@ -200,14 +185,14 @@ export default function VehicleLocationPage() {
               vehicleId={vehicleId}
               vehicles={[{
                 id: vehicleId,
-                name: vehicle.name,
+                name: vehicle.vehicle_model?.vehicle_model_name || 'Unknown Vehicle',
                 lat: 40.7128, // Default coordinates - will be updated by stream
                 lng: -74.006,
                 speed: 0,
                 heading: 0,
-                status: vehicle.status,
+                status: "inactive",
                 fuel: 100,
-                driver: vehicle.driver_name || 'Unknown Driver',
+                driver: 'Unknown Driver', // Add driver info when available
                 lastUpdate: new Date().toISOString()
               }]}
             />
