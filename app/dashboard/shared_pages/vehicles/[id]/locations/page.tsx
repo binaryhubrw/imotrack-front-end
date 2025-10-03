@@ -136,12 +136,12 @@ export default function VehicleLocationPage() {
                 </div>
               )}
               
-              <div className="flex justify-between items-center">
+              {/* <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Vehicle ID:</span>
                 <span className="text-xs font-mono bg-muted px-2 py-1 rounded">
                   {vehicleId.slice(0, 8)}...
                 </span>
-              </div>
+              </div> */}
             </div>
 
             <div className="pt-3 border-t">
@@ -154,7 +154,7 @@ export default function VehicleLocationPage() {
               </p>
             </div>
 
-            <div className="space-y-2 pt-2">
+            {/* <div className="space-y-2 pt-2">
               <Button 
                 size="sm" 
                 className="w-full" 
@@ -174,7 +174,7 @@ export default function VehicleLocationPage() {
                   Track This Vehicle
                 </Button>
               </Link>
-            </div>
+            </div> */}
           </div>
         </Card>
 
