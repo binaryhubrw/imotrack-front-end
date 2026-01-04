@@ -91,6 +91,7 @@ export default function VehicleTracking() {
       setLastStatus("Invalid GPS coordinates received")
       return
     }
+    
 
     // Check if this is a significant location update
     if (!isSignificantLocationUpdate(lastLocation?.coords || null, coords)) {
