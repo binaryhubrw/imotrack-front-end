@@ -421,7 +421,7 @@ export default function UserProfilePage() {
                       <div className="flex gap-3 pt-4">
                         <Button
                           onClick={handleSaveProfile}
-                          className="cursor-pointer bg-blue-600 hover:bg-blue-700"
+                          className="cursor-pointer text-white bg-[#0872b3] hover:bg-blue-700"
                         >
                           <Save className="w-4 h-4 mr-2" />
                           Save Changes

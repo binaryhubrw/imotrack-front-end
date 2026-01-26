@@ -21,6 +21,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useDashboard } from "@/hooks/DashboardContext";
@@ -148,6 +149,8 @@ export default function MainDashboard() {
   const { stats, recentActivity, quickActions, isLoading, error } =
     useDashboard();
   const router = useRouter();
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 5;
 
   // Map stat card titles to routes
   const statCardRoutes: Record<string, string> = {
@@ -363,7 +366,7 @@ export default function MainDashboard() {
 
         {/* Main Content Grid - Only show if user has any permissions */}
         {hasAnyPermissions && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quick Actions */}
             <div className="lg:col-span-1">
               <Card>
@@ -414,40 +417,114 @@ export default function MainDashboard() {
             </div>
 
             {/* Recent Activity */}
-            <div className="lg:col-span-2">
-              <Card>
+            <div className="lg:col-span-1">
+              <Card className="flex flex-col h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <AlertCircle className="w-5 h-5" />
                     Recent Activity
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1">
                   {recentActivity.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentActivity.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50"
-                        >
-                          <div
-                            className={`p-2 rounded-lg bg-white ${getActivityColor(
-                              activity.type
-                            )}`}
-                          >
-                            <ActivityIcon type={activity.type} />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {activity.message}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatTimeAgo(activity.timestamp)}
-                            </p>
-                          </div>
+                    <>
+                      <div className="space-y-4">
+                        {recentActivity
+                          .slice(
+                            (currentPage - 1) * itemsPerPage,
+                            currentPage * itemsPerPage
+                          )
+                          .map((activity) => (
+                            <div
+                              key={activity.id}
+                              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50"
+                            >
+                              <div
+                                className={`p-2 rounded-lg bg-white ${getActivityColor(
+                                  activity.type
+                                )}`}
+                              >
+                                <ActivityIcon type={activity.type} />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {activity.message}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {formatTimeAgo(activity.timestamp)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      {Math.ceil(recentActivity.length / itemsPerPage) > 1 && (
+                        <div className="mt-4 border-t pt-4">
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    if (currentPage > 1)
+                                      setCurrentPage(currentPage - 1);
+                                  }}
+                                  className={
+                                    currentPage === 1
+                                      ? "pointer-events-none opacity-50"
+                                      : ""
+                                  }
+                                />
+                              </PaginationItem>
+                              {Array.from(
+                                {
+                                  length: Math.ceil(
+                                    recentActivity.length / itemsPerPage
+                                  ),
+                                },
+                                (_, i) => i + 1
+                              ).map((page) => (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    href="#"
+                                    isActive={currentPage === page}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setCurrentPage(page);
+                                    }}
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              ))}
+                              <PaginationItem>
+                                <PaginationNext
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    if (
+                                      currentPage <
+                                      Math.ceil(
+                                        recentActivity.length / itemsPerPage
+                                      )
+                                    )
+                                      setCurrentPage(currentPage + 1);
+                                  }}
+                                  className={
+                                    currentPage ===
+                                    Math.ceil(
+                                      recentActivity.length / itemsPerPage
+                                    )
+                                      ? "pointer-events-none opacity-50"
+                                      : ""
+                                  }
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -464,7 +541,7 @@ export default function MainDashboard() {
         )}
 
         {/* Position Access Overview */}
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
@@ -547,7 +624,7 @@ export default function MainDashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   );
