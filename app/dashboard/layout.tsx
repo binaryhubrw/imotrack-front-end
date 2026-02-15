@@ -538,32 +538,38 @@ export default function DashboardLayout({
           </main>
 
           {/* Dashboard Footer */}
-          <footer className="bg-white/95 backdrop-blur-sm border-t border-gray-200/80 px-4 py-2 md:px-6">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-evenly gap-2">
-              {/* Center - Copyright */}
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <Image
-                    width={16}
-                    height={16}
-                    src="/logo/logo.png"
-                    alt="Imotarak Logo"
-                    className="rounded-sm"
-                  />
-                  <p className="text-xs text-gray-500">
-                    © {new Date().getFullYear()} Imotarak System
+          <footer className="bg-white border-t border-indigo-200 px-4 py-4 md:px-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Left - Copyright */}
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-gray-700">
+                    © {new Date().getFullYear()} Imotarak. All rights reserved.
                   </p>
                 </div>
-              </div>
-            
 
-              {/* Right side - Powered by */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-500">Powered by</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-semibold text-[#0872B3]">
-                    Binary Hub
-                  </span>
+                {/* Center - Navigation Links */}
+                <div className="flex items-center gap-6 flex-wrap justify-center">
+                  <a href="#" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                    Support & FAQs
+                  </a>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-700">User Manuals:</span>
+                    <a href="#" className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors underline">
+                      Submit
+                    </a>
+                  </div>
+                  <a href="#" className="text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors underline">
+                    Review & Approve
+                  </a>
+                </div>
+
+                {/* Right side - Powered by */}
+                <div className="text-right flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-700">Powered by</span>
+                  <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors underline">
+                    Imotarak
+                  </a>
                 </div>
               </div>
             </div>

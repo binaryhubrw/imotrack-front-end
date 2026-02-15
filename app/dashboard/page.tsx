@@ -64,7 +64,7 @@ const StatCard = ({
   onClick,
 }: StatCardProps) => (
   <div
-    className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1"
+    className="bg-white rounded-xl shadow-sm p-6 border border-indigo-100 hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1"
     onClick={onClick}
   >
     <div className="flex items-start justify-between">
@@ -326,7 +326,7 @@ export default function MainDashboard() {
             ))}
           </div>
         ) : (
-          <Card className="p-8 text-center">
+          <Card className="p-8 text-center border-2 border-indigo-200">
             <div className="flex flex-col items-center gap-4">
               <Shield className="w-16 h-16 text-gray-300" />
               <div>
@@ -369,7 +369,7 @@ export default function MainDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Quick Actions */}
             <div className="lg:col-span-1">
-              <Card>
+              <Card className="border-2 border-indigo-200">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="w-5 h-5" />
@@ -386,7 +386,7 @@ export default function MainDashboard() {
                         <button
                           key={action.id}
                           onClick={() => router.push(action.href)}
-                          className="block cursor-pointer w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors bg-white hover:bg-gray-50"
+                          className="block cursor-pointer w-full text-left p-3 rounded-lg border border-indigo-200 hover:border-indigo-300 transition-colors bg-white hover:bg-gray-50"
                           style={{ cursor: "pointer" }}
                         >
                           <div className="flex items-center gap-3">
@@ -418,7 +418,7 @@ export default function MainDashboard() {
 
             {/* Recent Activity */}
             <div className="lg:col-span-1">
-              <Card className="flex flex-col h-full">
+              <Card className="flex flex-col h-full border-2 border-indigo-200">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <AlertCircle className="w-5 h-5" />
@@ -568,7 +568,7 @@ export default function MainDashboard() {
                       className={`p-4 rounded-lg border ${
                         hasAnyPermission
                           ? "border-green-200 bg-green-50"
-                          : "border-gray-200 bg-gray-50"
+                          : "border-indigo-200 bg-gray-50"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
