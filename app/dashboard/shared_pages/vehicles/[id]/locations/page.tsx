@@ -169,7 +169,6 @@ export default function VehicleLocationPage() {
 
   // Sample Data for Demo
   const sampleData = {
-    driver: "John Okafor",
     location: realLocation.locationName,
     lastUpdate: new Date(2026, 0, 4, 14, 19, 57),
     odometer: 6728.34,
@@ -230,11 +229,11 @@ export default function VehicleLocationPage() {
               
               {/* Key Info Section */}
               <div className="space-y-2.5 pt-4 border-t border-white/20">
-                <div className="flex items-center gap-2 text-xs">
+                {/* <div className="flex items-center gap-2 text-xs">
                   <User className="w-3.5 h-3.5 opacity-75" />
                   <span className="opacity-80">Driver:</span>
                   <span className="font-semibold ml-auto">{sampleData.driver}</span>
-                </div>
+                </div> */}
                 <div className="flex items-center gap-2 text-xs">
                   <MapPin className="w-3.5 h-3.5 opacity-75" />
                   <span className="opacity-80">Location:</span>
