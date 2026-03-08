@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Josefin_Sans, Marcellus } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/ClientLayout";
 import QueryProvider from "@/components/QueryProvider";
 import { Toaster } from "sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const josefinSans = Josefin_Sans({
   subsets: ["latin"],
+  variable: "--font-josefin-sans",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const marcellus = Marcellus({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-marcellus",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,9 +40,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${josefinSans.variable} ${marcellus.variable} antialiased`}>
         <QueryProvider>
           <ClientLayout>{children}</ClientLayout>
         </QueryProvider>

@@ -2,6 +2,39 @@
 @import "tw-animate-css";
 @import "leaflet/dist/leaflet.css";
 
+:root {
+  --color-primary: #00628B;
+  --font-size-scale: 1.1;
+}
+
+html {
+  font-size: calc(1rem * var(--font-size-scale));
+}
+
+body {
+  font-family: var(--font-josefin-sans), "Josefin Sans", sans-serif;
+  font-optical-sizing: auto;
+}
+
+/* Font utility classes - Marcellus (serif) */
+.font-marcellus {
+  font-family: var(--font-marcellus), "Marcellus", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Font utility classes - Josefin Sans */
+.font-josefin {
+  font-family: var(--font-josefin-sans), "Josefin Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+}
+
+/* Use Marcellus for headings by default */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-marcellus), "Marcellus", serif;
+}
+
 @keyframes jump {
   0% {
     transform: translateY(0);
