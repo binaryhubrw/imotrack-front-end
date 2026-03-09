@@ -36,7 +36,7 @@ export default function Navbar() {
               alt="Imotrak Logo"
               width={48}
               height={48}
-              className="h-12 w-auto"
+              className="h-12 w-12 rounded-full object-cover ring-2 ring-white/30 bg-white/10 shadow-md"
             />
           </Link>
           <span className="text-xl font-bold text-white drop-shadow-md">

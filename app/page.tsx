@@ -1,9 +1,9 @@
 "use client";
 
 import {
+  faChevronUp,
   faEnvelope,
   faSignInAlt,
-  faPlayCircle,
   faTimes,
   faCheckCircle,
   faChartLine,
@@ -31,9 +31,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/button";
+import AuthModal from "@/components/auth/AuthModal";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 const PRIMARY = "#00628B";
 
@@ -84,9 +84,9 @@ const VideoModal = ({
 
 export default function HomePage() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  const router = useRouter();
 
   useEffect(() => {
     const v = videoRef.current;
@@ -94,9 +94,16 @@ export default function HomePage() {
     v.play().catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <main className="text-black">
       <VideoModal isOpen={isVideoModalOpen} onClose={() => setIsVideoModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       {/* 1. Hero Section */}
       <section
@@ -127,13 +134,12 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button
+              type="button"
               className="bg-transparent text-white hover:bg-white hover:text-black border-2 border-white flex items-center gap-2 text-lg px-8 py-6 rounded-lg transition-colors"
-              asChild
+              onClick={() => setIsAuthModalOpen(true)}
             >
-              <Link href="/login">
-                <FontAwesomeIcon icon={faSignInAlt} className="mr-2" />
-                Login
-              </Link>
+              <FontAwesomeIcon icon={faSignInAlt} className="mr-2" />
+              Login
             </Button>
           </div>
         </div>
@@ -538,6 +544,14 @@ export default function HomePage() {
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Button
+            type="button"
+            className="bg-white text-[#00628B] hover:bg-white/90 border-2 border-white text-lg px-8 py-6 rounded-lg transition-colors"
+            onClick={() => setIsAuthModalOpen(true)}
+          >
+            <FontAwesomeIcon icon={faSignInAlt} className="mr-2" />
+            Login
+          </Button>
+          <Button
             variant="outline"
             className="border-2 border-white text-white hover:bg-white hover:text-black text-lg px-8 py-6 rounded-lg transition-colors"
             asChild
@@ -549,6 +563,21 @@ export default function HomePage() {
           </Button>
         </div>
       </section>
+
+      {/* Scroll to top button */}
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Scroll to top"
+        className={`fixed bottom-8 right-8 z-40 w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all duration-300 ${
+          showScrollTop
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+        style={{ backgroundColor: PRIMARY }}
+      >
+        <FontAwesomeIcon icon={faChevronUp} className="text-lg" />
+      </button>
 
       {/* Footer is in layout/Footer.tsx - section 13 */}
     </main>
