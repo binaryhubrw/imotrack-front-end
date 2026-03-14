@@ -34,6 +34,39 @@ const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
   COMPLETED: "Completed",
 };
 
+const RWANDAN_DISTRICTS = [
+  { id: "Nyarugenge", name: "Nyarugenge" },
+  { id: "Gasabo", name: "Gasabo" },
+  { id: "Kicukiro", name: "Kicukiro" },
+  { id: "Musanze", name: "Musanze" },
+  { id: "Burera", name: "Burera" },
+  { id: "Gicumbi", name: "Gicumbi" },
+  { id: "Rulindo", name: "Rulindo" },
+  { id: "Gakenke", name: "Gakenke" },
+  { id: "Huye", name: "Huye" },
+  { id: "Nyanza", name: "Nyanza" },
+  { id: "Gisagara", name: "Gisagara" },
+  { id: "Nyamagabe", name: "Nyamagabe" },
+  { id: "Nyaruguru", name: "Nyaruguru" },
+  { id: "Ruhango", name: "Ruhango" },
+  { id: "Muhanga", name: "Muhanga" },
+  { id: "Kamonyi", name: "Kamonyi" },
+  { id: "Rubavu", name: "Rubavu" },
+  { id: "Nyabihu", name: "Nyabihu" },
+  { id: "Rutsiro", name: "Rutsiro" },
+  { id: "Ngororero", name: "Ngororero" },
+  { id: "Karongi", name: "Karongi" },
+  { id: "Nyamasheke", name: "Nyamasheke" },
+  { id: "Rusizi", name: "Rusizi" },
+  { id: "Rwamagana", name: "Rwamagana" },
+  { id: "Nyagatare", name: "Nyagatare" },
+  { id: "Gatsibo", name: "Gatsibo" },
+  { id: "Kayonza", name: "Kayonza" },
+  { id: "Kirehe", name: "Kirehe" },
+  { id: "Ngoma", name: "Ngoma" },
+  { id: "Bugesera", name: "Bugesera" },
+];
+
 // Searchable Dropdown Component (same as users page)
 function SearchableDropdown({
   options,
@@ -278,6 +311,9 @@ function CreateReservationModal({
     onClose();
   };
 
+  const minDepartureDate = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+  const minReturnDate = form.departure_date || minDepartureDate;
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
@@ -294,7 +330,7 @@ function CreateReservationModal({
               Create Reservation
             </h2>
             <p className="text-sm text-gray-600">
-              Fill in the details to create a new reservation
+              Fill in the details to create a new reservation (fields marked with <span className="text-orange-500">*</span> are required)
             </p>
           </div>
 
@@ -303,7 +339,7 @@ function CreateReservationModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Purpose
+                  Purpose <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="reservation_purpose"
@@ -323,7 +359,7 @@ function CreateReservationModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Description
+                  Description <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="description"
@@ -347,7 +383,7 @@ function CreateReservationModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Start Location
+                  Start Location <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="start_location"
@@ -367,16 +403,22 @@ function CreateReservationModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Destination
+                  Destination <span className="text-orange-500">*</span>
                 </label>
-                <Input
-                  name="reservation_destination"
+                <SearchableDropdown
+                  options={RWANDAN_DISTRICTS}
                   value={form.reservation_destination}
-                  onChange={handleChange}
-                  className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
+                  onChange={(val) => {
+                    setForm({ ...form, reservation_destination: val });
+                    if (errors.reservation_destination) {
+                      setErrors({ ...errors, reservation_destination: "" });
+                    }
+                  }}
+                  placeholder="Select Destination District"
+                  className={`h-9 ${
                     errors.reservation_destination &&
                     touched.reservation_destination
-                      ? "border-orange-500 focus:border-orange-500 focus:ring-orange-500"
+                      ? "border-orange-500"
                       : ""
                   }`}
                 />
@@ -393,7 +435,7 @@ function CreateReservationModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Passengers
+                  Passengers <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="passengers"
@@ -415,11 +457,12 @@ function CreateReservationModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Departure Date
+                  Departure Date <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="departure_date"
                   type="datetime-local"
+                  min={minDepartureDate}
                   value={form.departure_date}
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
@@ -436,11 +479,12 @@ function CreateReservationModal({
               </div>
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="block text-sm font-medium text-[#0872b3] mb-1">
-                  Expected Return Date
+                  Expected Return Date <span className="text-orange-500">*</span>
                 </label>
                 <Input
                   name="expected_returning_date"
                   type="datetime-local"
+                  min={minReturnDate}
                   value={form.expected_returning_date}
                   onChange={handleChange}
                   className={`h-9 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3] ${
@@ -762,6 +806,20 @@ export default function ReservationsPage() {
             `${v.vehicle.plate_number} (${v.vehicle.vehicle_model.vehicle_model_name})`
           ).join(', ') || 'No vehicles';
           row['Vehicle Details'] = vehicleDetails;
+        }
+        if (selectedColumns.includes('odometer_logic')) {
+          const startOdo = reservation.reserved_vehicles?.[0]?.starting_odometer || 'N/A';
+          const endOdo = reservation.reserved_vehicles?.[0]?.ending_odometer || 'N/A';
+          row['Starting Odometer'] = startOdo.toString();
+          row['Ending Odometer'] = endOdo.toString();
+          if (typeof startOdo === 'number' && typeof endOdo === 'number') {
+            row['Total Distance'] = (endOdo - startOdo).toString();
+          }
+        }
+        if (selectedColumns.includes('fuel_details')) {
+          row['Fuel Level (Start)'] = reservation.reserved_vehicles?.[0]?.starting_fuel_level || 'N/A';
+          row['Fuel Level (End)'] = reservation.reserved_vehicles?.[0]?.ending_fuel_level || 'N/A';
+          row['Fuel Provided'] = reservation.reserved_vehicles?.[0]?.fuel_provided?.toString() || '0';
         }
         if (selectedColumns.includes('reviewed_at')) {
           row['Reviewed Date'] = reservation.reviewed_at ? format(new Date(reservation.reviewed_at), 'MMM dd, yyyy') : 'N/A';

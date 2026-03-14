@@ -206,9 +206,17 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
     value: string
   ) => {
     setVehicleAssignments((prev) =>
-      prev.map((assignment, i) =>
-        i === index ? { ...assignment, [field]: value } : assignment
-      )
+      prev.map((assignment, i) => {
+        if (i !== index) return assignment;
+        const newAssignment = { ...assignment, [field]: value };
+        if (field === "vehicle_id") {
+          const selectedVehicleObj = vehicles.find(v => v.vehicle_id === value);
+          if (selectedVehicleObj?.energy_type?.toUpperCase() === 'ELECTRIC') {
+            newAssignment.fuel_provided = "0";
+          }
+        }
+        return newAssignment;
+      })
     );
   };
 
@@ -243,7 +251,7 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
         reservation.reserved_vehicles.map((vehicle: ReservedVehicle) => ({
           vehicle_id: vehicle.vehicle.vehicle_id,
           starting_odometer: "",
-          fuel_provided: "",
+          fuel_provided: vehicle.vehicle.energy_type?.toUpperCase() === "ELECTRIC" ? "0" : "",
         }))
       );
     }
@@ -928,10 +936,10 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                               e.target.value
                             )
                           }
-                          disabled={isAssignVehiclesLoading}
-                          placeholder="Fuel amount"
+                          disabled={isAssignVehiclesLoading || vehicles.find(v => v.vehicle_id === assignment.vehicle_id)?.energy_type?.toUpperCase() === 'ELECTRIC'}
+                          placeholder={vehicles.find(v => v.vehicle_id === assignment.vehicle_id)?.energy_type?.toUpperCase() === 'ELECTRIC' ? "N/A (Electric)" : "Fuel amount"}
                           className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          required
+                          required={vehicles.find(v => v.vehicle_id === assignment.vehicle_id)?.energy_type?.toUpperCase() !== 'ELECTRIC'}
                         />
                       </div>
                     </div>
@@ -1041,10 +1049,10 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                                 e.target.value
                               )
                             }
-                            disabled={isApproveWithOdometerLoading}
-                            placeholder="Fuel amount"
+                            disabled={isApproveWithOdometerLoading || vehicle?.vehicle.energy_type?.toUpperCase() === 'ELECTRIC'}
+                            placeholder={vehicle?.vehicle.energy_type?.toUpperCase() === 'ELECTRIC' ? "N/A (Electric)" : "Fuel amount"}
                             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            required
+                            required={vehicle?.vehicle.energy_type?.toUpperCase() !== 'ELECTRIC'}
                           />
                         </div>
                       </div>

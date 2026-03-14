@@ -2,19 +2,21 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
+  faArrowLeft,
+  faEdit,
+  faCar,
+  faCalendarAlt,
+} from "@fortawesome/free-solid-svg-icons";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
+import { format, parseISO, startOfDay, addDays } from "date-fns";
+import {
   useVehicle,
   useUpdateVehicle,
   useDeleteVehicle,
   useVehicleModel,
+  useReservations,
 } from "@/lib/queries";
-import { Button } from "@/components/ui/button";
-// import { toast } from "sonner";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowLeft,
-  faEdit,
-  faCar,
-} from "@fortawesome/free-solid-svg-icons";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -31,6 +33,8 @@ import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
 import { Ban } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,11 +43,36 @@ export default function VehicleDetailPage() {
 
   // Move all data fetching hooks to the top
   const { data: vehicle, isLoading, isError, refetch } = useVehicle(id);
+  const { data: allReservations } = useReservations();
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
   const { data: vehicleModel } = useVehicleModel(
     vehicle?.vehicle_model_id || ""
   );
+
+  const reservedDates = React.useMemo(() => {
+    if (!allReservations || !id) return [];
+    
+    return allReservations
+      .filter((res: any) => 
+        res.reservation_status !== "CANCELLED" && 
+        res.reservation_status !== "REJECTED" && 
+        res.reserved_vehicles?.some((rv: any) => rv.vehicle?.vehicle_id === id)
+      )
+      .flatMap((res: any) => {
+        const start = parseISO(res.departure_date);
+        const end = parseISO(res.expected_returning_date);
+        const dates = [];
+        let current = startOfDay(start);
+        const last = startOfDay(end);
+        
+        while (current <= last) {
+          dates.push(new Date(current));
+          current = addDays(current, 1);
+        }
+        return dates;
+      });
+  }, [allReservations, id]);
 
   const [showEdit, setShowEdit] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -546,6 +575,44 @@ export default function VehicleDetailPage() {
                     <div className="text-blue-700 text-sm">
                       This Car was manufactured by{" "}
                       {vehicleModel?.manufacturer_name}.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Availability Calendar Section */}
+            <div className="mt-8">
+              <h2 className="text-lg font-bold mb-4 text-gray-900 flex items-center gap-2">
+                <FontAwesomeIcon icon={faCalendarAlt} className="text-[#0872b3]" />
+                Vehicle Availability
+              </h2>
+              <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
+                  <div className="border rounded-md p-2 bg-gray-50">
+                    <DayPicker
+                      mode="multiple"
+                      selected={reservedDates}
+                      modifiers={{ reserved: reservedDates }}
+                      modifiersClassNames={{
+                        reserved: "bg-red-500 text-white font-bold rounded-full hover:bg-red-600 focus:bg-red-600"
+                      }}
+                      styles={{
+                        selected: { backgroundColor: '#ef4444', color: 'white', borderRadius: '50%' }
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-4 max-w-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-red-500 rounded"></div>
+                      <span className="text-sm text-gray-700 font-medium">Reserved / Busy</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
+                      <span className="text-sm text-gray-700 font-medium">Available</span>
+                    </div>
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg text-xs text-blue-800 leading-relaxed border border-blue-100">
+                      <strong>How it works:</strong> The red dots indicate days where this vehicle has approved or active reservations. This helps you track when the car is busy or out of the station.
                     </div>
                   </div>
                 </div>
