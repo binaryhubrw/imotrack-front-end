@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car, FileSpreadsheet, Filter, Calendar } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -14,6 +15,7 @@ import {
 // import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 import type {
   CreateReservationDto,
   ReservationStatus,
@@ -23,6 +25,28 @@ import { useAuth } from "@/hooks/useAuth";
 import ErrorUI from "@/components/ErrorUI";
 import { useRouter } from "next/navigation";
 import { SkeletonReservationDetailPage } from "@/components/ui/skeleton";
+
+/* Staggered load animation (match dashboard) */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: (i as number) * 0.05 },
+  }),
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+
+/** Decorative circles overlay for gradient stat cards */
+const CardDecoration = () => (
+  <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+    <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
+    <div className="absolute top-1/2 -left-8 w-24 h-24 rounded-full bg-white/10" />
+    <div className="absolute -bottom-4 right-1/3 w-20 h-20 rounded-full bg-white/5" />
+  </div>
+);
 
 // Status enum for better type safety
 const RESERVATION_STATUSES: Record<ReservationStatus, string> = {
@@ -264,11 +288,27 @@ function CreateReservationModal({
       newErrors.passengers = "Passengers must be at least 1";
     if (!form.expected_returning_date)
       newErrors.expected_returning_date = "Expected return date is required";
-    // Validate dates
+    // Disallow past dates: departure and return must be present or future
+    const now = new Date();
+    if (form.departure_date) {
+      const departure = new Date(form.departure_date);
+      if (departure < now) {
+        newErrors.departure_date =
+          "Departure date must be today or in the future";
+      }
+    }
+    if (form.expected_returning_date) {
+      const returnDate = new Date(form.expected_returning_date);
+      if (returnDate < now) {
+        newErrors.expected_returning_date =
+          "Return date must be today or in the future";
+      }
+    }
+    // Validate return is after departure
     if (form.departure_date && form.expected_returning_date) {
       const departure = new Date(form.departure_date);
       const returnDate = new Date(form.expected_returning_date);
-      if (departure >= returnDate) {
+      if (departure >= returnDate && !newErrors.expected_returning_date) {
         newErrors.expected_returning_date =
           "Return date must be after departure date";
       }
@@ -557,17 +597,17 @@ export default function ReservationsPage() {
   const [showExportModal, setShowExportModal] = useState(false);
 
 
-  // Enhanced data fetching based on permissions
+  // Only fetch when user has permission (avoids 403/400)
   const {
     data: allReservations,
     isLoading: isLoadingAll,
     isError: isErrorAll,
-  } = useReservations();
+  } = useReservations({ enabled: canViewAll });
   const {
     data: myReservations,
     isLoading: isLoadingMy,
     isError: isErrorMy,
-  } = useMyReservations();
+  } = useMyReservations({ enabled: canViewOwn });
 
   const router = useRouter();
 
@@ -666,11 +706,22 @@ export default function ReservationsPage() {
 
   if (!canViewPage) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-orange-500 text-lg font-semibold">
-          You do not have permission to access reservations.
-        </div>
-      </div>
+      <motion.div
+        className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/40 p-4 md:p-6 flex items-center justify-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25 }}
+      >
+        <Card className="p-8 text-center border border-gray-200 bg-white/80 backdrop-blur-sm shadow-lg rounded-2xl max-w-md">
+          <div className="flex flex-col items-center gap-4">
+            <div className="p-4 rounded-2xl bg-gray-100/80">
+              <Calendar className="w-16 h-16 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">No Access</h3>
+            <p className="text-gray-600 text-sm">You do not have permission to access reservations.</p>
+          </div>
+        </Card>
+      </motion.div>
     );
   }
 
@@ -892,25 +943,159 @@ export default function ReservationsPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Search and Filter Controls */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
+    <motion.div
+      className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/40 p-4 md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
+      <div className="max-w-7xl mx-auto w-full min-w-0 space-y-6">
+        {/* Header - match dashboard */}
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              Reservations
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+              Manage trip requests and vehicle reservations • {filteredReservations.length} total
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.div
+              className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-gray-100 shadow-md"
+              whileHover={{ scale: 1.02, boxShadow: "0 10px 40px -10px rgba(0,0,0,0.12)" }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            >
+              <Calendar className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {new Date().toLocaleDateString()}
+              </span>
+            </motion.div>
+            {canViewPage && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => setShowExportModal(true)}
+                  variant="outline"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm border-gray-200 rounded-xl bg-white/95 backdrop-blur-sm shadow-md hover:shadow-lg hover:border-gray-300 h-10"
+                >
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Export Excel
+                </Button>
+              </motion.div>
+            )}
+            {canCreate && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => setShowCreate(true)}
+                  className="bg-[#0872b3] hover:bg-[#066399] text-white font-semibold px-6 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-colors flex items-center gap-2 h-10"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Reservation
+                </Button>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Stats Cards - gradient style + stagger (match dashboard) */}
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Total</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Car className="w-5 h-5 text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">{filteredReservations.length}</p>
+            </div>
+          </motion.div>
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-amber-500 to-orange-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Under Review</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Clock className="w-5 h-5 text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">
+                {filteredReservations.filter(r => r.reservation_status === "UNDER_REVIEW").length}
+              </p>
+            </div>
+          </motion.div>
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-violet-500 to-purple-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Approved</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Clock className="w-5 h-5 text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">
+                {filteredReservations.filter(r => r.reservation_status === "APPROVED").length}
+              </p>
+            </div>
+          </motion.div>
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Completed</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <CheckCircle className="w-5 h-5 text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">
+                {filteredReservations.filter(r => r.reservation_status === "COMPLETED").length}
+              </p>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Filters card */}
+        <motion.div
+          className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+        >
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3 bg-white/80">
+            <div className="relative flex-1 min-w-0 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 type="text"
                 placeholder="Search reservations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
+                className="pl-10 h-10 text-sm border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm"
               />
             </div>
-
-            {/* Status Filter */}
             <div className="w-full sm:w-48">
               <SearchableDropdown
                 options={statusOptions}
@@ -920,8 +1105,6 @@ export default function ReservationsPage() {
                 className="h-10"
               />
             </div>
-
-            {/* Date Filter */}
             <div className="w-full sm:w-48">
               <SearchableDropdown
                 options={[
@@ -938,203 +1121,114 @@ export default function ReservationsPage() {
               />
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            {canViewPage && (
-              <Button
-                onClick={() => setShowExportModal(true)}
-                className="flex items-center gap-2 px-5 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors h-10"
+          {dateFilter === "custom" && (
+            <div className="flex flex-wrap gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+              <div className="flex-1 min-w-[140px] max-w-xs">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-9 text-sm border-gray-200 rounded-xl"
+                />
+              </div>
+              <div className="flex-1 min-w-[140px] max-w-xs">
+                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-9 text-sm border-gray-200 rounded-xl"
+                />
+              </div>
+            </div>
+          )}
+          {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-t border-gray-100 text-sm text-gray-600 bg-gray-50/30">
+              <span>Active filters:</span>
+              {searchTerm && (
+                <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-lg text-xs font-medium">
+                  Search: &ldquo;{searchTerm}&rdquo;
+                </span>
+              )}
+              {statusFilter !== "all" && (
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-lg text-xs font-medium">
+                  Status: {statusOptions.find(s => s.id === statusFilter)?.name}
+                </span>
+              )}
+              {dateFilter !== "all" && (
+                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-lg text-xs font-medium">
+                  Date: {dateFilter === "custom" ? "Custom Range" : dateFilter}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                  setDateFilter("all");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="text-indigo-600 hover:text-indigo-800 text-xs font-medium underline"
               >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export Excel
-              </Button>
-            )}
-            {canCreate && (
-              <Button
-                onClick={() => setShowCreate(true)}
-                className="bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold px-6 py-2 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 h-10"
-              >
-                <Plus className="w-4 h-4" />
-                Create Reservation
-              </Button>
-            )}
-          </div>
-        </div>
+                Clear all
+              </button>
+            </div>
+          )}
+        </motion.div>
 
-        {/* Custom Date Range Inputs */}
-        {dateFilter === "custom" && (
-          <div className="flex gap-3 mt-3">
-            <div className="flex-1 max-w-xs">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Start Date
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-8 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-              />
-            </div>
-            <div className="flex-1 max-w-xs">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="h-8 text-sm border-gray-300 focus:border-[#0872b3] focus:ring-[#0872b3]"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Active Filters Summary */}
-        {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
-          <div className="flex items-center gap-2 mt-3 text-sm text-gray-600">
-            <span>Active filters:</span>
-            {searchTerm && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                Search: &ldquo;{searchTerm}&rdquo;
-              </span>
-            )}
-            {statusFilter !== "all" && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                Status: {statusOptions.find(s => s.id === statusFilter)?.name}
-              </span>
-            )}
-            {dateFilter !== "all" && (
-              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                Date: {dateFilter === "custom" ? "Custom Range" : dateFilter}
-              </span>
-            )}
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setStatusFilter("all");
-                setDateFilter("all");
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="text-orange-600 hover:text-orange-800 text-xs underline"
-            >
-              Clear all
-            </button>
-          </div>
-        )}
-      </div>
-    
-   {/* Stats Cards Header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 px-6 pt-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Reservations</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredReservations.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Car className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Under Review</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {filteredReservations.filter(r => r.reservation_status === 'UNDER_REVIEW').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {filteredReservations.filter(r => r.reservation_status === 'APPROVED').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-green-600">
-                {filteredReservations.filter(r => r.reservation_status === 'COMPLETED').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto px-6 pb-6">
-                 {isLoading ? (
-           <SkeletonReservationDetailPage />
-         ) : isError ? (
+        {/* Main Content */}
+        {isLoading ? (
+          <SkeletonReservationDetailPage />
+        ) : isError ? (
           <ErrorUI
             resource="reservations"
             onBack={() => router.back()}
             onRetry={() => window.location.reload()}
           />
         ) : filteredReservations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 shadow-lg">
-            <div className="bg-white p-6 rounded-full shadow-md mb-6">
-              <svg
-                className="w-20 h-20 text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5zM12 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5zM15.75 18.75a1.5 1.5 0 01-3 0V8.25a1.5 1.5 0 013 0v10.5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-bold text-gray-800 mb-3">No Reservations Found</h3>
-            <p className="text-lg text-gray-600 mb-6 text-center max-w-md leading-relaxed">
-              There are no reservations matching your criteria. Try adjusting your filters or create a new reservation at top right.
-            </p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <Card className="p-8 text-center border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-4 rounded-2xl bg-gray-100/80">
+                  <Calendar className="w-16 h-16 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">No Reservations Found</h3>
+                <p className="text-gray-600 text-sm max-w-md">
+                  There are no reservations matching your criteria. Try adjusting your filters or create a new reservation.
+                </p>
+              </div>
+            </Card>
+          </motion.div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            {/* Compact Table */}
+          <motion.div
+            className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden min-w-0"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">#</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Purpose</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">User</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Route</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Departure</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Return</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 text-sm">Status</th>
+                  <tr className="bg-gray-50/90 border-b border-gray-100">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">#</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Purpose</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">User</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Route</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Departure</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Return</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedReservations.map((reservation, idx) => (
                     <tr
                       key={reservation.reservation_id}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+                      className="hover:bg-indigo-50/70 cursor-pointer transition-colors duration-150"
                       onClick={() => router.push(`/dashboard/shared_pages/reservations/${reservation.reservation_id}`)}
                     >
                       {/* Serial Number */}
@@ -1245,68 +1339,72 @@ export default function ReservationsPage() {
               </table>
             </div>
 
-            {/* Enhanced Pagination */}
+            {/* Pagination */}
             {filteredReservations.length > pageSize && (
-              <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing {pageIndex * pageSize + 1} to{' '}
-                    {Math.min((pageIndex + 1) * pageSize, filteredReservations.length)} of{' '}
-                    {filteredReservations.length} reservations
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                      onClick={() => setPageIndex(0)}
-                      disabled={pageIndex === 0}
-                    >
-                      First
-                    </button>
-                    <button
-                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                      onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-                      disabled={pageIndex === 0}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
-                    >
-                      {pageIndex + 1}
-                    </button>
-                    <button
-                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                      onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
-                      disabled={pageIndex >= pageCount - 1}
-                    >
-                      Next
-                    </button>
-                    <button
-                      className="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-                      onClick={() => setPageIndex(pageCount - 1)}
-                      disabled={pageIndex >= pageCount - 1}
-                    >
-                      Last
-                    </button>
-                    <select
-                      className="ml-3 px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                      value={pageSize}
-                      onChange={e => {
-                        setPageSize(Number(e.target.value));
-                        setPageIndex(0);
-                      }}
-                    >
-                      {[10, 20, 30, 40, 50].map(size => (
-                        <option key={size} value={size}>
-                          {size} per page
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              <div className="bg-gray-50/50 border-t border-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm text-gray-600">
+                  Showing {pageIndex * pageSize + 1} to{' '}
+                  {Math.min((pageIndex + 1) * pageSize, filteredReservations.length)} of{' '}
+                  {filteredReservations.length} reservations
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border-gray-200"
+                    onClick={() => setPageIndex(0)}
+                    disabled={pageIndex === 0}
+                  >
+                    First
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border-gray-200"
+                    onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                    disabled={pageIndex === 0}
+                  >
+                    Previous
+                  </Button>
+                  <span className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg shadow-sm">
+                    {pageIndex + 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border-gray-200"
+                    onClick={() => setPageIndex((p) => Math.min(pageCount - 1, p + 1))}
+                    disabled={pageIndex >= pageCount - 1}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg border-gray-200"
+                    onClick={() => setPageIndex(pageCount - 1)}
+                    disabled={pageIndex >= pageCount - 1}
+                  >
+                    Last
+                  </Button>
+                  <select
+                    className="ml-2 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white"
+                    value={pageSize}
+                    onChange={e => {
+                      setPageSize(Number(e.target.value));
+                      setPageIndex(0);
+                    }}
+                  >
+                    {[10, 20, 30, 40, 50].map(size => (
+                      <option key={size} value={size}>
+                        {size} per page
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
       </div> 
       {/* Modals */}
@@ -1327,7 +1425,7 @@ export default function ReservationsPage() {
         title="Reservations"
       />
       {/* Edit Reason, Assign Vehicle, Complete Reservation modals are now handled on [id] page only */}
-    </div>
+    </motion.div>
   );
 }
 

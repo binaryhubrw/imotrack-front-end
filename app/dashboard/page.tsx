@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 import {
   Car,
   FileText,
   TrendingUp,
+  TrendingDown,
   Calendar,
   Users,
   AlertCircle,
@@ -20,12 +22,33 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { SkeletonDashboard } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useDashboard } from "@/hooks/DashboardContext";
 import { useRouter } from "next/navigation";
+
+/* Staggered load animation config */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: (i = 0) => ({
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: i * 0.05 },
+  }),
+  exit: { opacity: 0 },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+const slideInLeft = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 },
+};
+const slideInRight = {
+  hidden: { opacity: 0, x: 20 },
+  visible: { opacity: 1, x: 0 },
+};
 
 // Icon mapping
 const iconMap = {
@@ -47,45 +70,62 @@ type StatCardProps = {
   title: string;
   value: string | number;
   subtitle?: string;
-  bgColor: string;
-  textColor: string;
+  /** Tailwind gradient classes e.g. "from-orange-400 to-rose-500" */
+  gradient: string;
   trend?: string;
+  trendUp?: boolean;
   onClick?: () => void;
 };
+
+/** Decorative circles overlay for gradient cards */
+const CardDecoration = () => (
+  <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+    <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
+    <div className="absolute top-1/2 -left-8 w-24 h-24 rounded-full bg-white/10" />
+    <div className="absolute -bottom-4 right-1/3 w-20 h-20 rounded-full bg-white/5" />
+    <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-white/8" />
+  </div>
+);
 
 const StatCard = ({
   icon: Icon,
   title,
   value,
   subtitle,
-  bgColor,
-  textColor,
+  gradient,
   trend,
+  trendUp = true,
   onClick,
 }: StatCardProps) => (
   <div
-    className="bg-white rounded-xl shadow-sm p-6 border border-indigo-100 hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1"
+    className={`relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br ${gradient} transition-all duration-300 cursor-pointer group hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]`}
     onClick={onClick}
   >
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-2">
-          <Icon className={`w-5 h-5 ${textColor}`} />
-          <p className="text-gray-600 text-sm font-medium">{title}</p>
+    <CardDecoration />
+    <div className="relative flex flex-col h-full min-h-[120px]">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-white/95 text-sm font-medium">{title}</p>
+        <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+          <Icon className="w-5 h-5 text-white" strokeWidth={2} />
         </div>
-        <p className={`text-3xl font-bold ${textColor} mb-1`}>{value}</p>
-        {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+      </div>
+      <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">
+        {value}
+      </p>
+      <div className="mt-auto pt-3 space-y-0.5">
+        {subtitle && (
+          <p className="text-white/80 text-xs font-medium">{subtitle}</p>
+        )}
         {trend && (
-          <div className="flex items-center gap-1 mt-2">
-            <TrendingUp className="w-3 h-3 text-green-500" />
-            <span className="text-xs text-green-600 font-medium">{trend}</span>
+          <div className="flex items-center gap-1">
+            {trendUp ? (
+              <TrendingUp className="w-3.5 h-3.5 text-white/90" />
+            ) : (
+              <TrendingDown className="w-3.5 h-3.5 text-white/90" />
+            )}
+            <span className="text-xs font-medium text-white/90">{trend}</span>
           </div>
         )}
-      </div>
-      <div
-        className={`p-3 rounded-xl ${bgColor} group-hover:scale-110 transition-transform duration-200`}
-      >
-        <Icon className="w-6 h-6 text-white" />
       </div>
     </div>
   </div>
@@ -166,8 +206,8 @@ export default function MainDashboard() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="max-w-7xl mx-auto w-full min-w-0">
           <SkeletonDashboard />
         </div>
       </div>
@@ -188,8 +228,7 @@ export default function MainDashboard() {
         icon: Users,
         title: "Total Users",
         value: stats.totalUsers,
-        bgColor: "bg-blue-600",
-        textColor: "text-blue-600",
+        gradient: "from-sky-400 to-blue-600",
         subtitle: "Active users in system",
       });
     }
@@ -200,8 +239,7 @@ export default function MainDashboard() {
         icon: Building,
         title: "Organizations",
         value: stats.totalOrganizations,
-        bgColor: "bg-purple-600",
-        textColor: "text-purple-600",
+        gradient: "from-violet-400 to-purple-600",
         subtitle: "Registered organizations",
       });
     }
@@ -212,8 +250,7 @@ export default function MainDashboard() {
         icon: MapPin,
         title: "Units",
         value: stats.totalUnits,
-        bgColor: "bg-green-600",
-        textColor: "text-green-600",
+        gradient: "from-emerald-400 to-teal-600",
         subtitle: "Organizational units",
       });
     }
@@ -224,8 +261,7 @@ export default function MainDashboard() {
         icon: Shield,
         title: "Positions",
         value: stats.totalPositions,
-        bgColor: "bg-orange-600",
-        textColor: "text-orange-600",
+        gradient: "from-amber-400 to-orange-500",
         subtitle: "Total positions",
       });
     }
@@ -236,8 +272,7 @@ export default function MainDashboard() {
         icon: Car,
         title: "Fleet Vehicles",
         value: stats.totalVehicles,
-        bgColor: "bg-indigo-600",
-        textColor: "text-indigo-600",
+        gradient: "from-indigo-400 to-indigo-600",
         subtitle: `${stats.activeVehicles} active, ${stats.inactiveVehicles} inactive`,
       });
     }
@@ -248,8 +283,7 @@ export default function MainDashboard() {
         icon: Settings,
         title: "Vehicle Models",
         value: stats.totalVehicleModels,
-        bgColor: "bg-teal-600",
-        textColor: "text-teal-600",
+        gradient: "from-cyan-400 to-teal-600",
         subtitle: "Available models",
       });
     }
@@ -259,8 +293,7 @@ export default function MainDashboard() {
         icon: AlertCircle,
         title: "Vehicle Issues",
         value: stats.totalVehicleIssues,
-        bgColor: "bg-red-600",
-        textColor: "text-red-600",
+        gradient: "from-rose-400 to-red-600",
         subtitle: "Total issues",
       });
     }
@@ -271,8 +304,7 @@ export default function MainDashboard() {
         icon: FileText,
         title: "Reservations",
         value: stats.totalReservations,
-        bgColor: "bg-pink-600",
-        textColor: "text-pink-600",
+        gradient: "from-pink-400 to-rose-500",
         subtitle: "Total reservations",
       });
     }
@@ -288,59 +320,86 @@ export default function MainDashboard() {
   ).some((module) => Object.values(module).some(Boolean));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <motion.div
+      className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/40 p-4 md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
+      <div className="max-w-7xl mx-auto w-full min-w-0 space-y-6">
+        {/* Header - animate on load */}
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
               Welcome back, {user.user.first_name}!
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
               {user.position.position_name} •{" "}
               {user.organization.organization_name} • {user.unit.unit_name}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-700">
-                {new Date().toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-        </div>
+          <motion.div
+            className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-gray-100 shadow-md"
+            whileHover={{ scale: 1.02, boxShadow: "0 10px 40px -10px rgba(0,0,0,0.12)" }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+          >
+            <Calendar className="w-4 h-4 text-indigo-500" />
+            <span className="text-sm font-medium text-gray-700">
+              {new Date().toLocaleDateString()}
+            </span>
+          </motion.div>
+        </motion.div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - stagger on load (cards themselves unchanged) */}
         {dashboardCards.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {dashboardCards.map((card, index) => (
-              <StatCard
-                key={index}
-                {...card}
-                onClick={() => {
-                  const route = statCardRoutes[card.title];
-                  if (route) router.push(route);
-                }}
-              />
+              <motion.div key={index} variants={itemVariants}>
+                <StatCard
+                  {...card}
+                  onClick={() => {
+                    const route = statCardRoutes[card.title];
+                    if (route) router.push(route);
+                  }}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <Card className="p-8 text-center border-2 border-indigo-200">
-            <div className="flex flex-col items-center gap-4">
-              <Shield className="w-16 h-16 text-gray-300" />
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No Dashboard Access
-                </h3>
-                <p className="text-gray-600">
-                  You don&apos;t have permission to view any dashboard
-                  statistics. Contact your administrator to get access to
-                  relevant modules.
-                </p>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <Card className="p-8 text-center border border-gray-200 bg-white/80 backdrop-blur-sm shadow-lg rounded-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-4 rounded-2xl bg-gray-100/80">
+                  <Shield className="w-16 h-16 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No Dashboard Access
+                  </h3>
+                  <p className="text-gray-600 text-sm max-w-md mx-auto">
+                    You don&apos;t have permission to view any dashboard
+                    statistics. Contact your administrator to get access to
+                    relevant modules.
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
         )}
 
         {/* Loading overlay for stats */}
@@ -364,103 +423,143 @@ export default function MainDashboard() {
           </div>
         )}
 
-        {/* Main Content Grid - Only show if user has any permissions */}
+        {/* Main Content Grid - animate in, hover effects */}
         {hasAnyPermissions && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Quick Actions */}
-            <div className="lg:col-span-1">
-              <Card className="border-2 border-indigo-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
+          <motion.div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 min-w-0"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            {/* Quick Actions - slide in from left */}
+            <motion.div className="lg:col-span-1 min-w-0" variants={slideInLeft}>
+              <Card className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg h-full rounded-2xl overflow-hidden">
+                <CardHeader className="pb-3 border-b border-gray-100/80">
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <span className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                      <Clock className="w-5 h-5" />
+                    </span>
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 pt-4">
                   {quickActions.length > 0 ? (
                     quickActions.map((action) => {
                       const IconComponent =
                         iconMap[action.icon as keyof typeof iconMap] ||
                         Activity;
                       return (
-                        <button
+                        <motion.button
                           key={action.id}
                           onClick={() => router.push(action.href)}
-                          className="block cursor-pointer w-full text-left p-3 rounded-lg border border-indigo-200 hover:border-indigo-300 transition-colors bg-white hover:bg-gray-50"
-                          style={{ cursor: "pointer" }}
+                          className="block w-full text-left p-3.5 rounded-xl border border-gray-100 bg-white shadow-sm min-w-0 cursor-pointer group"
+                          whileHover={{
+                            scale: 1.01,
+                            boxShadow: "0 8px 24px -8px rgba(99, 102, 241, 0.35)",
+                            borderColor: "rgb(224 231 255)",
+                            backgroundColor: "rgb(238 242 255 / 0.8)",
+                          }}
+                          whileTap={{ scale: 0.99 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 25 }}
                         >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${action.color}`}>
-                              <IconComponent className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-gray-900">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <motion.div
+                              className={`p-2.5 rounded-lg shadow-sm flex-shrink-0 ${action.color}`}
+                              whileHover={{ scale: 1.08 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                            >
+                              <IconComponent className="w-4 h-4 text-white" />
+                            </motion.div>
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-gray-900 truncate group-hover:text-indigo-700 transition-colors">
                                 {action.title}
                               </h4>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 truncate">
                                 {action.description}
                               </p>
                             </div>
                           </div>
-                        </button>
+                        </motion.button>
                       );
                     })
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p>No quick actions available</p>
-                      <p className="text-sm">Check your position permissions</p>
-                    </div>
+                    <motion.div
+                      className="text-center py-8 text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <div className="p-3 rounded-2xl bg-gray-100/80 inline-flex mb-4">
+                        <Shield className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <p className="font-medium text-gray-700">No quick actions available</p>
+                      <p className="text-sm mt-1">Check your position permissions</p>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>
-            </div>
+            </motion.div>
 
-            {/* Recent Activity */}
-            <div className="lg:col-span-1">
-              <Card className="flex flex-col h-full border-2 border-indigo-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
+            {/* Recent Activity - slide in from right */}
+            <motion.div className="lg:col-span-1 min-w-0 flex flex-col min-h-0" variants={slideInRight}>
+              <Card className="flex flex-col border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg h-full min-h-0 rounded-2xl overflow-hidden">
+                <CardHeader className="pb-3 flex-shrink-0 border-b border-gray-100/80">
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <span className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                      <AlertCircle className="w-5 h-5" />
+                    </span>
                     Recent Activity
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1">
+                <CardContent className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   {recentActivity.length > 0 ? (
                     <>
-                      <div className="space-y-4">
+                      <div className="space-y-3 overflow-y-auto min-h-0 flex-1 pr-1">
                         {recentActivity
                           .slice(
                             (currentPage - 1) * itemsPerPage,
                             currentPage * itemsPerPage
                           )
-                          .map((activity) => (
-                            <div
+                          .map((activity, idx) => (
+                            <motion.div
                               key={activity.id}
-                              className="flex items-center gap-3 p-3 rounded-lg bg-gray-50"
+                              className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50/80 border border-gray-100 shadow-sm min-w-0 cursor-default"
+                              initial={{ opacity: 0, x: 8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.1 + idx * 0.03, duration: 0.25 }}
+                              whileHover={{
+                                backgroundColor: "rgb(255 255 255 / 0.95)",
+                                borderColor: "rgb(229 231 235)",
+                                boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)",
+                              }}
                             >
                               <div
-                                className={`p-2 rounded-lg bg-white ${getActivityColor(
+                                className={`p-2 rounded-lg bg-white shadow-sm flex-shrink-0 ${getActivityColor(
                                   activity.type
                                 )}`}
                               >
                                 <ActivityIcon type={activity.type} />
                               </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-gray-900">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
                                   {activity.message}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-gray-500 mt-0.5">
                                   {formatTimeAgo(activity.timestamp)}
                                 </p>
                               </div>
-                            </div>
+                            </motion.div>
                           ))}
                       </div>
                       {Math.ceil(recentActivity.length / itemsPerPage) > 1 && (
-                        <div className="mt-4 border-t pt-4">
+                        <motion.div
+                          className="mt-4 border-t border-gray-100 pt-4 flex-shrink-0"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                        >
                           <Pagination>
-                            <PaginationContent>
+                            <PaginationContent className="gap-1">
                               <PaginationItem>
                                 <PaginationPrevious
                                   href="#"
@@ -472,7 +571,7 @@ export default function MainDashboard() {
                                   className={
                                     currentPage === 1
                                       ? "pointer-events-none opacity-50"
-                                      : ""
+                                      : "rounded-lg transition-colors hover:bg-gray-100"
                                   }
                                 />
                               </PaginationItem>
@@ -492,6 +591,7 @@ export default function MainDashboard() {
                                       e.preventDefault();
                                       setCurrentPage(page);
                                     }}
+                                    className="rounded-lg transition-colors hover:bg-indigo-50 hover:text-indigo-700"
                                   >
                                     {page}
                                   </PaginationLink>
@@ -516,28 +616,35 @@ export default function MainDashboard() {
                                       recentActivity.length / itemsPerPage
                                     )
                                       ? "pointer-events-none opacity-50"
-                                      : ""
+                                      : "rounded-lg transition-colors hover:bg-gray-100"
                                   }
                                 />
                               </PaginationItem>
                             </PaginationContent>
                           </Pagination>
-                        </div>
+                        </motion.div>
                       )}
                     </>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Activity className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p>No recent activity</p>
-                      <p className="text-sm">
+                    <motion.div
+                      className="text-center py-10 text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.15 }}
+                    >
+                      <div className="p-3 rounded-2xl bg-gray-100/80 inline-flex mb-4">
+                        <Activity className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <p className="font-medium text-gray-700">No recent activity</p>
+                      <p className="text-sm mt-1">
                         Activity will appear here as changes are made
                       </p>
-                    </div>
+                    </motion.div>
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Position Access Overview */}
@@ -626,6 +733,6 @@ export default function MainDashboard() {
           </CardContent>
         </Card> */}
       </div>
-    </div>
+    </motion.div>
   );
 }

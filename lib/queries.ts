@@ -549,7 +549,8 @@ export const useSetPasswordAndVerify = () => {
 };
 
 // Fetch paginated organizations
-export const useOrganizations = (page = 1, limit = 10) => {
+export const useOrganizations = (page = 1, limit = 10, options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<PaginatedOrganizations, Error>({
     queryKey: ['organizations', page, limit],
     queryFn: async () => {
@@ -559,6 +560,7 @@ export const useOrganizations = (page = 1, limit = 10) => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 
@@ -671,18 +673,19 @@ export const useDeleteOrganization = () => {
 };
 
 
-export const useOrganizationUnits = () => {
+export const useOrganizationUnits = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<Unit[], Error>({
     queryKey: ['units'],
     queryFn: async () => {
       const response = await api.get<{ message: string; data: Unit[] }>('/v2/organizations/units');
-      console.log('Units API response:', response.data);
       if (!response.data.data) throw new Error('No data');
       return response.data.data.map((unit) => ({
         ...unit,
         status: unit.status || 'ACTIVE',
       }));
     },
+    enabled,
   });
 };
 
@@ -994,7 +997,8 @@ export const useUpdatePosition = () => {
 };
 
 // --- GET all users grouped by unit ---
-export const useOrganizationUsers = () => {
+export const useOrganizationUsers = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<UserWithPositions[], Error>({
     queryKey: ['users'],
     queryFn: async () => {
@@ -1002,6 +1006,7 @@ export const useOrganizationUsers = () => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 
@@ -1120,7 +1125,8 @@ export const useOrganizationUpdateUser = (user_id: string) => {
 
 
 // --- Get all vehicle models ---
-export const useVehicleModels = () => {
+export const useVehicleModels = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<VehicleModel[], Error>({
     queryKey: ['vehicle-models'],
     queryFn: async () => {
@@ -1128,6 +1134,7 @@ export const useVehicleModels = () => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 
@@ -1240,15 +1247,27 @@ export const useDeleteVehicleModel = () => {
 
 
 // --- Get all vehicles (with nested vehicle_model and organization) ---
-export const useVehicles = () => {
+// Optional startDate/endDate filter by availability for the given date range (for reservation)
+export const useVehicles = (
+  params?: { startDate?: string; endDate?: string },
+  options?: { enabled?: boolean }
+) => {
+  const startDate = params?.startDate?.trim() || undefined;
+  const endDate = params?.endDate?.trim() || undefined;
+  const enabled = options?.enabled !== false;
   return useQuery<Vehicle[], Error>({
-    queryKey: ['vehicles'],
+    queryKey: ['vehicles', startDate ?? null, endDate ?? null],
     queryFn: async () => {
-      // Returns Vehicle[] with nested vehicle_model and organization objects
-      const { data } = await api.get<{ data: Vehicle[] }>('/v2/vehicles');
+      const searchParams = new URLSearchParams();
+      if (startDate) searchParams.set('startDate', startDate);
+      if (endDate) searchParams.set('endDate', endDate);
+      const query = searchParams.toString();
+      const url = query ? `/v2/vehicles?${query}` : '/v2/vehicles';
+      const { data } = await api.get<{ data: Vehicle[] }>(url);
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 
@@ -1753,20 +1772,21 @@ export const useReservation = (id: string) => {
   });
 };
 
-export const useReservations = () => {
+export const useReservations = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<Reservation[], Error>({
     queryKey: ['reservations'],
     queryFn: async () => {
-      console.log('Fetching reservations...');
       const { data } = await api.get<{ data: Reservation[] }>('/v2/reservations');
-      console.log('Reservations response:', data);
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 
-export const useMyReservations = () => {
+export const useMyReservations = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<Reservation, Error>({
     queryKey: ['myReservations'],
     queryFn: async () => {
@@ -1774,8 +1794,9 @@ export const useMyReservations = () => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
-}
+};
 
 export const useCreateReservation = () => {
   const queryClient = useQueryClient();
@@ -2226,7 +2247,8 @@ export const useCompleteReservation = () => {
 
 // vehicleIssues
 
-export const useVehicleIssues = () => {
+export const useVehicleIssues = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<VehicleIssue[], Error>({
     queryKey: ['vehicle-issues'],
     queryFn: async () => {
@@ -2234,6 +2256,7 @@ export const useVehicleIssues = () => {
       if (!data.data) throw new Error('No data');
       return data.data;
     },
+    enabled,
   });
 };
 

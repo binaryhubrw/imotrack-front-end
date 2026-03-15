@@ -17,7 +17,11 @@ import {
   Search,
   X,
   AlertCircle,
+  FileDown,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { format } from "date-fns";
 import {
   Table,
   TableHeader,
@@ -1062,6 +1066,32 @@ export default function UsersPage() {
     globalFilter,
   ]);
 
+  const handleExportUsers = () => {
+    try {
+      const excelData = filteredUsers.map((u: UserRow) => ({
+        "First Name": u.first_name,
+        "Last Name": u.last_name,
+        "Email": u.email ?? "N/A",
+        "Phone": u.user_phone ?? "N/A",
+        "Position": u.position_name ?? "N/A",
+        "Unit": u.unit_name ?? "N/A",
+        "Organization": u.organization_name ?? "N/A",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
+      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `users_export_${timestamp}.xlsx`);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
+  };
+
   const columns: ColumnDef<UserRow>[] = useMemo(
     () => [
       {
@@ -1277,14 +1307,26 @@ export default function UsersPage() {
             Manage your organization&apos;s users and their permissions
           </p>
         </div>
-        {canCreate && (
-          <Button
-            className="flex text-white items-center gap-2 bg-[#0872b3] hover:bg-blue-700"
-            onClick={() => setShowCreate(true)}
-          >
-            <Plus className="w-4 h-4" /> Add User
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {canView && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportUsers}
+              className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+            >
+              <FileDown className="w-4 h-4" /> Export Excel
+            </Button>
+          )}
+          {canCreate && (
+            <Button
+              className="flex text-white items-center gap-2 bg-[#0872b3] hover:bg-blue-700"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="w-4 h-4" /> Add User
+            </Button>
+          )}
+        </div>
       </div>
       {/* Main Content */}
       {canView ? (

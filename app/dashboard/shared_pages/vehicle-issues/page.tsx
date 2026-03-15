@@ -393,7 +393,14 @@ function ResponseModal({
 }
 
 export default function VehicleIssuesPage() {
-  const { data: issues = [], isLoading, isError } = useVehicleIssues();
+  const { user, isLoading: authLoading } = useAuth();
+
+  // Permission checks (before data hooks so we skip API when no permission)
+  const canView = !!user?.position?.position_access?.vehicleIssues?.view;
+  const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
+  const canRespond = !!user?.position?.position_access?.vehicleIssues?.update;
+
+  const { data: issues = [], isLoading, isError } = useVehicleIssues({ enabled: canView });
   const { data: reservations = [] } = useMyReservations();
   const createIssue = useCreateVehicleIssue();
   const respondToIssue = useRespondToVehicleIssue();
@@ -401,16 +408,10 @@ export default function VehicleIssuesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [showReportModal, setShowReportModal] = useState(false);
-  const { user, isLoading: authLoading } = useAuth();
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [selectedIssueId, setSelectedIssueId] = useState<string>("");
   const [showExportModal, setShowExportModal] = useState(false);
   const router = useRouter();
-
-  // Permission checks
-  const canView = !!user?.position?.position_access?.vehicleIssues?.view;
-  const canReport = !!user?.position?.position_access?.vehicleIssues?.report;
-  const canRespond = !!user?.position?.position_access?.vehicleIssues?.update;
 
   const filteredIssues = useMemo(() => {
     return issues.filter((issue) => {

@@ -41,9 +41,10 @@ export default function VehicleDetailPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
 
-  // Move all data fetching hooks to the top
+  // Only fetch reservations when user can view them (for calendar dots)
+  const canViewReservations = !!user?.position?.position_access?.reservations?.view;
   const { data: vehicle, isLoading, isError, refetch } = useVehicle(id);
-  const { data: allReservations } = useReservations();
+  const { data: allReservations } = useReservations({ enabled: canViewReservations });
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
   const { data: vehicleModel } = useVehicleModel(
@@ -276,9 +277,12 @@ export default function VehicleDetailPage() {
               className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col gap-4"
             >
               <h2 className="text-xl font-bold mb-2">Edit Vehicle</h2>
+              <p className="text-xs text-amber-700 mb-2">
+                <span className="text-red-500 font-semibold">*</span> Required field
+              </p>
 
               <label className="text-sm font-medium">
-                Plate Number
+                Plate Number <span className="text-red-500">*</span>
                 <input
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
                   value={editForm.plate_number}
@@ -290,7 +294,7 @@ export default function VehicleDetailPage() {
               </label>
 
               <label className="text-sm font-medium">
-                Transmission Mode
+                Transmission Mode <span className="text-red-500">*</span>
                 <select
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
                   value={editForm.transmission_mode}

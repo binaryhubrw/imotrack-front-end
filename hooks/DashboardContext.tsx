@@ -108,14 +108,14 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   const canViewReservations = !!user?.position?.position_access?.reservations?.view;
   const canViewVehicleIssues = !!user && !!user.position?.position_access?.vehicleIssues?.view;
 
-  // Always call all hooks to maintain consistent order
-  const orgsHook = useOrganizations(1, 100);
-  const unitsHook = useOrganizationUnits();
-  const usersHook = useOrganizationUsers();
-  const vehiclesHook = useVehicles();
-  const vehicleModelsHook = useVehicleModels();
-  const reservationsHook = useReservations();
-  const vehicleIssuesHook = useVehicleIssues();
+  // Only fetch data for modules the user has permission to view (avoids 403/400)
+  const orgsHook = useOrganizations(1, 100, { enabled: canViewOrganizations });
+  const unitsHook = useOrganizationUnits({ enabled: canViewUnits });
+  const usersHook = useOrganizationUsers({ enabled: canViewUsers });
+  const vehiclesHook = useVehicles(undefined, { enabled: canViewVehicles });
+  const vehicleModelsHook = useVehicleModels({ enabled: canViewVehicleModels });
+  const reservationsHook = useReservations({ enabled: canViewReservations });
+  const vehicleIssuesHook = useVehicleIssues({ enabled: canViewVehicleIssues });
 
   // Get data and loading states based on permissions
   const organizations = canViewOrganizations ? orgsHook.data : undefined;

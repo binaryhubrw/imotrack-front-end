@@ -19,7 +19,11 @@ import {
   AlertCircle,
   Car,
   ChevronDown,
+  FileDown,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { format } from "date-fns";
 import {
   Table,
   TableHeader,
@@ -319,6 +323,9 @@ function CreateVehicleModal({
               <p className="text-sm text-gray-600 mt-1">
                 Add a new vehicle model to the system
               </p>
+              <p className="text-xs text-amber-700 mt-2">
+                <span className="text-red-500 font-semibold">*</span> Required field
+              </p>
             </div>
           </div>
         </div>
@@ -531,7 +538,7 @@ export default function VehicleModelsPage() {
     [modelToEdit, editForm, updateVehicleModel, closeEditModal]
   );
 
-  const { data: vehicleModels, isLoading, isError } = useVehicleModels();
+  const { data: vehicleModels, isLoading, isError } = useVehicleModels({ enabled: canView || canCreate });
   const createVehicleModel = useCreateVehicleModel();
 
   // Filtering logic
@@ -577,6 +584,30 @@ export default function VehicleModelsPage() {
       setShowCreate(false);
     } catch (error) {
       console.error("Error creating vehicle model:", error);
+    }
+  };
+
+  const handleExportVehicleModels = () => {
+    try {
+      const excelData = filteredVehicleModels.map((m) => ({
+        "Model Name": m.vehicle_model_name,
+        "Type": m.vehicle_type,
+        "Manufacturer": m.manufacturer_name,
+        "Capacity": m.vehicle_capacity,
+        "Created": m.created_at ? formatDate(m.created_at) : "N/A",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Models");
+      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
+      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `vehicle_models_export_${timestamp}.xlsx`);
+    } catch (err) {
+      console.error("Export error:", err);
     }
   };
 
@@ -748,14 +779,26 @@ export default function VehicleModelsPage() {
               </p>
             </div>
           </div>
-          {canCreate && (
-            <Button
-              className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white"
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus className="w-4 h-4" /> Add Model
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {canView && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportVehicleModels}
+                className="flex items-center gap-2 border-gray-300 hover:bg-gray-50"
+              >
+                <FileDown className="w-4 h-4" /> Export Excel
+              </Button>
+            )}
+            {canCreate && (
+              <Button
+                className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white"
+                onClick={() => setShowCreate(true)}
+              >
+                <Plus className="w-4 h-4" /> Add Model
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

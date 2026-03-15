@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Info, UserPlus, Search, ChevronDown, X } from "lucide-react";
+import { Plus, Info, UserPlus, Search, ChevronDown, X, FileDown } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { format } from "date-fns";
 import {
   useUnitPositions,
   useCreatePosition,
@@ -617,6 +620,30 @@ export default function PositionsPage() {
     pageIndex * pageSize + pageSize
   );
 
+  const handleExportPositions = () => {
+    try {
+      const excelData = filteredPositions.map((pos: Position) => ({
+        "Position Name": pos.position_name,
+        "Description": (pos as { position_description?: string }).position_description ?? "N/A",
+        "Status": pos.position_status ?? "N/A",
+        "Unit ID": pos.unit_id ?? "N/A",
+        "Created": pos.created_at ? new Date(pos.created_at).toLocaleDateString() : "N/A",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Positions");
+      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 22 }));
+      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `positions_export_${timestamp}.xlsx`);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header with Org & Unit Selector */}
@@ -657,16 +684,29 @@ export default function PositionsPage() {
             />
           </div>
         )}
-        {canCreate && selectedUnitId && isSelectedUnitActive && (
-          <Button
-            onClick={() => setShowCreate(true)}
-            disabled={!selectedUnitId || !isSelectedUnitActive}
-            className="ml-auto flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4" />
-            Create Position
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {canView && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportPositions}
+              className="flex items-center gap-2 border-gray-300 hover:bg-gray-50 px-4 py-2 text-sm font-medium rounded-md"
+            >
+              <FileDown className="w-4 h-4" />
+              Export Excel
+            </Button>
+          )}
+          {canCreate && selectedUnitId && isSelectedUnitActive && (
+            <Button
+              onClick={() => setShowCreate(true)}
+              disabled={!selectedUnitId || !isSelectedUnitActive}
+              className="flex items-center gap-2 bg-[#0872b3] hover:bg-[#065a8f] text-white px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" />
+              Create Position
+            </Button>
+          )}
+        </div>
         {selectedUnitId && !isSelectedUnitActive && (
           <Alert className="ml-4 max-w-md border border-blue-200 bg-blue-50 text-blue-800">
             <Info className="h-4 w-4 text-blue-500" />

@@ -51,33 +51,20 @@ api.interceptors.response.use(
     // Don't clear localStorage for logout calls
     const isLogoutCall = url?.includes('/v2/auth/logout');
     
-    // Suppress logging for 401 errors on verification calls (they might be expected)
-    // Also suppress logging if data is undefined or an empty object
     const isEmptyData =
       data === undefined ||
       (typeof data === 'object' && data !== null && Object.keys(data).length === 0);
-    
-    const shouldSuppressLogging = 
-      (status === 401 && isVerificationCall) ||
-      (status === 403 && status !== 404) ||
-      isEmptyData;
-    
-    if (!shouldSuppressLogging) {
-      console.error('API Error Response:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: url,
-      });
+
+    const payload = isEmptyData ? '(no body)' : data;
+    const statusText = error.response?.statusText ?? '';
+    const summary = `API Error: ${status ?? 'network'} ${statusText} ${url ?? ''}`.trim();
+
+    const shouldSuppressFullLog =
+      (status === 401 && (isVerificationCall || isLogoutCall));
+
+    if (!shouldSuppressFullLog) {
+      console.error(summary, payload);
     }
-    
-    console.log('API Error Response:', {
-      url,
-      status: error.response?.status,
-      isVerificationCall,
-      isLogoutCall,
-      message: error.response?.data?.message
-    });
     
     if (error.response?.status === 401 && !isVerificationCall && !isLogoutCall) {
       console.log('401 error on non-verification/non-logout call, clearing auth data and redirecting to login');

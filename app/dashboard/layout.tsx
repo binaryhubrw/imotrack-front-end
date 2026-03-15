@@ -239,13 +239,13 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        {/* Sidebar Skeleton */}
-        <aside className="fixed z-40 h-full w-64 bg-[#0872B3] text-white">
-          <div className="flex items-center justify-between border-b border-[#0872B3] p-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-10 h-10 rounded-sm bg-white/20" />
-              <Skeleton className="h-6 w-32 bg-white/20" />
+      <div className="flex h-dvh h-screen w-full max-w-[100vw] overflow-hidden bg-gray-50">
+        {/* Sidebar Skeleton - full height */}
+        <aside className="fixed z-40 top-0 bottom-0 left-0 h-dvh h-full w-[min(280px,85vw)] md:w-64 flex-shrink-0 bg-[#0872B3] text-white flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[#0872B3] p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Skeleton className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 flex-shrink-0" />
+              <Skeleton className="h-5 w-24 sm:w-32 bg-white/20 flex-1 min-w-0" />
             </div>
           </div>
           <nav className="flex-1 p-2 space-y-2">
@@ -264,9 +264,9 @@ export default function DashboardLayout({
           </div>
         </aside>
 
-        {/* Main Content Skeleton */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <header className="sticky top-0 z-20 flex items-center justify-between bg-white shadow px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
+        {/* Main Content Skeleton - only main scrolls */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full overflow-hidden">
+          <header className="flex-shrink-0 z-20 flex items-center justify-between bg-white shadow px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
             <Skeleton className="h-8 w-8 md:hidden" />
             <Skeleton className="h-6 w-48 hidden md:block" />
             <div className="flex items-center gap-4 ml-auto">
@@ -280,8 +280,8 @@ export default function DashboardLayout({
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 bg-gray-50">
-            <div className="max-w-7xl mx-auto w-full">
+          <main className="flex-1 min-h-0 overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 bg-gray-50">
+            <div className="max-w-7xl mx-auto w-full min-w-0">
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
@@ -311,7 +311,8 @@ export default function DashboardLayout({
 
   return (
     <DashboardAccessContext.Provider value={permissionData}>
-      <div className="flex h-screen bg-gray-50">
+      {/* Fixed viewport height: only main content scrolls, sidebar touches top and bottom */}
+      <div className="flex h-dvh h-screen w-full max-w-[100vw] overflow-hidden bg-gray-50">
         {/* Mobile backdrop */}
         {sidebarOpen && (
           <div
@@ -320,40 +321,38 @@ export default function DashboardLayout({
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar - full viewport height, only nav scrolls inside; bottom (logout) always visible */}
         <aside
-          className={`fixed z-35 h-full w-64 transform bg-gradient-to-b from-[#0872B3] to-[#065a8a] text-white transition-transform duration-300 md:relative md:translate-x-0 md:z-10 flex flex-col
+          className={`fixed z-40 top-0 bottom-0 left-0 h-dvh h-full w-[min(280px,85vw)] md:w-64 md:min-w-64 transform flex-shrink-0 bg-gradient-to-b from-[#0872B3] to-[#065a8a] text-white transition-transform duration-300 ease-out md:relative md:translate-x-0 md:z-10 flex flex-col overflow-hidden shadow-[4px_0_24px_-4px_rgba(0,0,0,0.15)]
       ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      overflow-y-auto custom-blue-scrollbar
     `}
         >
           {/* Custom scrollbar styles for blue sidebar */}
           <style jsx global>{`
             .custom-blue-scrollbar::-webkit-scrollbar {
-              width: 8px;
+              width: 6px;
             }
             .custom-blue-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(255,255,255,0.18);
-              border-radius: 8px;
+              background: rgba(255,255,255,0.2);
+              border-radius: 6px;
             }
             .custom-blue-scrollbar::-webkit-scrollbar-track {
               background: transparent;
             }
             .custom-blue-scrollbar {
-              scrollbar-color: rgba(255,255,255,0.18) transparent;
+              scrollbar-color: rgba(255,255,255,0.2) transparent;
               scrollbar-width: thin;
             }
           `}</style>
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/20 p-6">
-            <div className="flex items-center gap-3">
+          {/* Header - compact on small screens, text truncates */}
+          <div className="flex items-center justify-between gap-2 border-b border-white/20 p-3 sm:p-4 md:p-5 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Image
                 src={(() => {
                   const logo = user.organization?.organization_logo?.trim();
                   if (!logo) return "/logo/logo.png";
 
                   try {
-                    // Test if it's a valid URL or starts with / for local paths
                     if (
                       logo.startsWith("/") ||
                       logo.startsWith("./") ||
@@ -361,45 +360,45 @@ export default function DashboardLayout({
                     ) {
                       return logo;
                     }
-                    new URL(logo); // This will throw if invalid URL
+                    new URL(logo);
                     return logo;
                   } catch {
                     return "/logo/logo.png";
                   }
                 })()}
-                width={40}
-                height={40}
+                width={36}
+                height={36}
                 alt="Organization Logo"
-                className="rounded-full object-cover shadow-lg ring-2 ring-white/30"
+                className="rounded-full object-cover shadow-md ring-2 ring-white/30 flex-shrink-0 md:w-10 md:h-10"
               />
-              <span className="text-lg font-bold capitalize">
+              <span className="text-sm sm:text-base md:text-lg font-bold capitalize truncate" title={user.organization.organization_name}>
                 {user.organization.organization_name}
               </span>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="text-white/80 hover:text-white md:hidden p-1 cursor-pointer rounded-lg hover:bg-white/10 transition-colors"
+              className="text-white/80 hover:text-white md:hidden p-1.5 cursor-pointer rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
               aria-label="Close sidebar"
             >
               ✕
             </button>
           </div>
 
-          {/* Navigation - Flex-grow to take available space */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {/* Navigation - only this part scrolls inside sidebar; flex-1 + min-h-0 keeps logout at bottom */}
+          <nav className="flex-1 p-2 sm:p-3 md:p-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 custom-blue-scrollbar">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium group
+                className={`flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 text-sm font-medium group min-w-0
             ${
               pathname === item.href
-                ? "bg-white/20 text-white shadow-lg backdrop-blur-sm"
-                : "text-blue-100 hover:bg-white/10 hover:text-white hover:translate-x-1"
+                ? "bg-white/20 text-white shadow-md backdrop-blur-sm"
+                : "text-blue-100 hover:bg-white/10 hover:text-white"
             }
           `}
               >
-                <span className="w-5 text-center transition-transform group-hover:scale-110">
+                <span className="w-5 flex-shrink-0 text-center transition-transform group-hover:scale-105">
                   {item.icon}
                 </span>
                 <span className="truncate">{item.label}</span>
@@ -408,10 +407,10 @@ export default function DashboardLayout({
           </nav>
 
           {/* Logout button */}
-          <div className="p-4 border-t border-white/20">
+          <div className="p-2 sm:p-3 md:p-4 border-t border-white/20 flex-shrink-0">
             <button
               onClick={logout}
-              className="w-full py-3 px-4 cursor-pointer rounded-xl bg-white/10 hover:bg-red-500/80 text-white font-semibold text-sm transition-all duration-200 backdrop-blur-sm hover:shadow-lg flex items-center justify-center gap-2 group"
+              className="w-full py-2.5 sm:py-3 px-3 sm:px-4 cursor-pointer rounded-xl bg-white/10 hover:bg-red-500/80 text-white font-semibold text-sm transition-all duration-200 backdrop-blur-sm hover:shadow-md flex items-center justify-center gap-2 group"
             >
               <FontAwesomeIcon icon={faSignOutAlt} className="w-4 h-4 mr-2" />
               <span className="transition-transform group-hover:translate-x-1">
@@ -421,10 +420,10 @@ export default function DashboardLayout({
           </div>
         </aside>
 
-        {/* Main content area */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Topbar for mobile and desktop */}
-          <header className="sticky top-0 z-20 flex items-center justify-between bg-white/95 backdrop-blur-sm shadow-sm px-4 py-3 md:px-6 md:py-4 border-b border-gray-200/80">
+        {/* Main column: fixed height, only main scrolls; header and footer stay visible */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full overflow-hidden">
+          {/* Topbar - stays at top */}
+          <header className="flex-shrink-0 z-20 flex items-center justify-between bg-white/95 backdrop-blur-sm shadow-md px-4 py-3 md:px-6 md:py-4 border-b border-gray-200/80">
             <button
               onClick={() => setSidebarOpen(true)}
               className="text-[#0872B3] text-2xl cursor-pointer focus:outline-none md:hidden p-2 rounded-xl hover:bg-gray-100/80 transition-colors"
@@ -526,9 +525,9 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          {/* Main content scrollable area */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-br from-gray-50 to-blue-50/30">
-            <div className="max-w-7xl mx-auto w-full">
+          {/* Only this area scrolls; sidebar and header/footer stay fixed */}
+          <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-br from-gray-50 to-blue-50/30">
+            <div className="max-w-7xl mx-auto w-full min-w-0">
               {hasPageAccess ? (
                 <DashboardProvider>{children}</DashboardProvider>
               ) : (
@@ -537,8 +536,8 @@ export default function DashboardLayout({
             </div>
           </main>
 
-          {/* Dashboard Footer */}
-          <footer className="bg-white border-t border-indigo-200 px-4 py-4 md:px-6">
+          {/* Footer - stays at bottom of viewport, does not scroll */}
+          <footer className="flex-shrink-0 bg-white border-t border-gray-200 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.06)] px-4 py-4 md:px-6">
             <div className="max-w-7xl mx-auto">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 {/* Left - Copyright */}

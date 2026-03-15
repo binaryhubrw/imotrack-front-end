@@ -66,7 +66,9 @@ export default function ReservationDetailPage() {
   const completeReservation = useCompleteReservation();
   const assignMultipleVehicles = useAssignMultipleVehicles();
   const createVehicleIssue = useCreateVehicleIssue();
-  const { data: vehicles = [] } = useVehicles();
+  const canViewVehicles = !!user?.position?.position_access?.vehicles?.view;
+  const canAssignVehicle = !!user?.position?.position_access?.reservations?.assignVehicle;
+  const { data: vehicles = [] } = useVehicles(undefined, { enabled: canViewVehicles || canAssignVehicle });
 
   // Modal states - must be before early returns
   const [showAcceptRejectModal, setShowAcceptRejectModal] = useState(false);

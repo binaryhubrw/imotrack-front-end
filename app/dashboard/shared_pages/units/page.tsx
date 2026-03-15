@@ -13,6 +13,9 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Download, Plus, Search, Filter, ChevronDown, X } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { format } from "date-fns";
 import {
   Table,
   TableHeader,
@@ -382,6 +385,29 @@ export default function UnitsPage() {
     }
   };
 
+  const handleExportUnits = () => {
+    try {
+      const excelData = statusFilteredUnits.map((u) => ({
+        "Unit Name": u.unit_name,
+        "Status": u.status,
+        "Organization ID": u.organization_id,
+        "Created": u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Units");
+      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 22 }));
+      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `units_export_${timestamp}.xlsx`);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
+  };
+
   // Define columns before useReactTable
   const columns: ColumnDef<Unit>[] = [
     {
@@ -557,9 +583,13 @@ export default function UnitsPage() {
             </div>
             <div className="flex items-center gap-2">
               {canView && (
-                <button className="flex items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <button
+                  type="button"
+                  onClick={handleExportUnits}
+                  className="flex items-center gap-2 px-5 py-4 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <Download className="w-5 h-5" />
-                  Export
+                  Export Excel
                 </button>
               )}
               {canCreate && (

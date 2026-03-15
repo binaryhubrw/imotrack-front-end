@@ -25,7 +25,13 @@ import {
   ChevronDown,
   Eye,
   MapPin,
+  FileDown,
+  Calendar,
 } from "lucide-react";
+import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { format } from "date-fns";
 import {
   Table,
   TableHeader,
@@ -57,6 +63,29 @@ import { SkeletonVehiclesTable } from "@/components/ui/skeleton";
 import { TransmissionMode } from "@/types/enums";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0 },
+};
+
+/** Decorative circles overlay for gradient stat cards */
+const CardDecoration = () => (
+  <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none">
+    <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-white/10" />
+    <div className="absolute top-1/2 -left-8 w-24 h-24 rounded-full bg-white/10" />
+    <div className="absolute -bottom-4 right-1/3 w-20 h-20 rounded-full bg-white/5" />
+    <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-white/8" />
+  </div>
+);
 
 // Searchable Dropdown Component
 function SearchableDropdown({
@@ -336,6 +365,9 @@ function EditVehicleModal({
           </div>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <p className="text-xs text-amber-700 flex items-center gap-1 -mt-2">
+            <span className="text-red-500 font-semibold">*</span> Required field
+          </p>
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">
               Basic Information
@@ -343,7 +375,7 @@ function EditVehicleModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Plate Number *
+                  Plate Number <span className="text-red-500">*</span>
                 </label>
                 <Input
                   name="plate_number"
@@ -361,7 +393,7 @@ function EditVehicleModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Model *
+                  Vehicle Model <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="vehicle_model_id"
@@ -389,7 +421,7 @@ function EditVehicleModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Transmission Mode *
+                  Transmission Mode <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="transmission_mode"
@@ -413,7 +445,7 @@ function EditVehicleModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Manufactured Year *
+                  Manufactured Year <span className="text-red-500">*</span>
                 </label>
                 <Input
                   name="vehicle_year"
@@ -432,7 +464,7 @@ function EditVehicleModal({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Energy Type *
+                  Energy Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="energy_type"
@@ -620,6 +652,9 @@ function CreateVehicleModal({
           </h2>
           <p className="text-sm text-gray-600 mt-1">
             Fill in the details to add a new vehicle
+          </p>
+          <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+            <span className="text-red-500 font-semibold">*</span> Required field
           </p>
         </div>
         <div className="p-6">
@@ -827,9 +862,19 @@ export default function VehiclesPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
 
-  // Move all data fetching hooks to the top
-  const { data: vehicles = [], isLoading, isError } = useVehicles();
-  const { data: vehicleModels = [] } = useVehicleModels();
+  // Permission checks (before data hooks so we can skip API calls when no permission)
+  const canView = !!user?.position?.position_access?.vehicles?.view;
+  const canCreate = !!user?.position?.position_access?.vehicles?.create;
+
+  // Date range for availability filter (must be before useVehicles)
+  const [availabilityStartDate, setAvailabilityStartDate] = useState<string>("");
+  const [availabilityEndDate, setAvailabilityEndDate] = useState<string>("");
+
+  const availabilityFilter = availabilityStartDate && availabilityEndDate
+    ? { startDate: availabilityStartDate, endDate: availabilityEndDate }
+    : undefined;
+  const { data: vehicles = [], isLoading, isError } = useVehicles(availabilityFilter, { enabled: canView });
+  const { data: vehicleModels = [] } = useVehicleModels({ enabled: canView || canCreate });
   const updateVehicle = useUpdateVehicle();
   const createVehicle = useCreateVehicle();
 
@@ -845,10 +890,6 @@ export default function VehiclesPage() {
   const [modelFilter, setModelFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [energyTypeFilter, setEnergyTypeFilter] = useState<string>("");
-
-  // Permission checks
-  const canView = !!user?.position?.position_access?.vehicles?.view;
-  const canCreate = !!user?.position?.position_access?.vehicles?.create;
   const canUpdate = !!user?.position?.position_access?.vehicles?.update;
   const canDelete = !!user?.position?.position_access?.vehicles?.delete;
   const hasAnyPermission = canView || canCreate || canUpdate || canDelete;
@@ -1082,6 +1123,34 @@ export default function VehiclesPage() {
     return <NoPermissionUI resource="vehicles" />;
   }
 
+  const handleExportVehicles = () => {
+    try {
+      const excelData = filteredVehicles.map((v) => ({
+        "Plate Number": v.plate_number,
+        "Model": v.vehicle_model?.vehicle_model_name ?? "N/A",
+        "Manufacturer": v.vehicle_model?.manufacturer_name ?? "N/A",
+        "Type": v.vehicle_model?.vehicle_type ?? "N/A",
+        "Transmission": v.transmission_mode,
+        "Year": v.vehicle_year,
+        "Energy Type": v.energy_type,
+        "Status": v.vehicle_status,
+        "Organization ID": v.organization_id,
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicles");
+      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 18 }));
+      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `vehicles_export_${timestamp}.xlsx`);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
+  };
+
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {
     if (!canCreate) {
       // toast.error("You do not have permission to create vehicles");
@@ -1152,128 +1221,155 @@ export default function VehiclesPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Vehicles
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Manage your organization&apos;s vehicle fleet (
-                  {vehicles.length} vehicles)
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Only show Add Vehicle if user has create permission */}
-              {canCreate && (
+    <motion.div
+      className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/40 p-4 md:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
+      <div className="max-w-7xl mx-auto w-full min-w-0 space-y-6">
+        {/* Header - match dashboard */}
+        <motion.div
+          className="flex flex-wrap items-center justify-between gap-4"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              Vehicles
+            </h1>
+            <p className="text-gray-600 mt-1 text-sm sm:text-base">
+              Manage your organization&apos;s vehicle fleet • {vehicles.length} vehicles
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.div
+              className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-gray-100 shadow-md"
+              whileHover={{ scale: 1.02, boxShadow: "0 10px 40px -10px rgba(0,0,0,0.12)" }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            >
+              <Calendar className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-medium text-gray-700">
+                {new Date().toLocaleDateString()}
+              </span>
+            </motion.div>
+            {canView && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportVehicles}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm border-gray-200 rounded-xl bg-white/95 backdrop-blur-sm shadow-md hover:shadow-lg hover:border-gray-300"
+                >
+                  <FileDown className="w-4 h-4" /> Export Excel
+                </Button>
+              </motion.div>
+            )}
+            {canCreate && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-[#0872b3] rounded-xl shadow-md hover:shadow-lg hover:bg-[#066399] transition-colors"
                 >
                   <Plus className="w-4 h-4" /> Add Vehicle
                 </Button>
-              )}
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Stats Cards - gradient style + stagger (match dashboard) */}
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Total Vehicles */}
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Total Vehicles</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Car className="w-5 h-5 text-white" strokeWidth={2} />
+                </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">{stats.totalVehicles}</p>
             </div>
-          </div>
-        </div>
-        {/* Stats Cards */}
-        <div className="px-4 py-4 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total Vehicles */}
-            <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-              <CardHeader className="pb-3 pt-4 px-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">
-                      Total Vehicles
-                    </CardTitle>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {stats.totalVehicles}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-blue-100 p-3 flex items-center justify-center">
-                    <Car className="w-6 h-6 text-blue-600" />
-                  </div>
+          </motion.div>
+          {/* Active */}
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Active</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <CheckCircle className="w-5 h-5 text-white" strokeWidth={2} />
                 </div>
-              </CardHeader>
-            </Card>
-            
-            {/* Active Vehicles */}
-            <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-              <CardHeader className="pb-3 pt-4 px-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">
-                      Active Vehicles
-                    </CardTitle>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {stats.totalVehicles}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-emerald-100 p-3 flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-emerald-600" />
-                  </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">{stats.totalVehicles}</p>
+            </div>
+          </motion.div>
+          {/* Available */}
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Available</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <CheckCircle className="w-5 h-5 text-white" strokeWidth={2} />
                 </div>
-              </CardHeader>
-            </Card>
-            
-            {/* Available Vehicles */}
-            <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-              <CardHeader className="pb-3 pt-4 px-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">
-                      Available
-                    </CardTitle>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {stats.availableCount}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-green-100 p-3 flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  </div>
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">{stats.availableCount}</p>
+            </div>
+          </motion.div>
+          {/* Occupied */}
+          <motion.div
+            className="relative rounded-xl shadow-lg p-6 overflow-hidden bg-gradient-to-br from-rose-500 to-red-600 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99]"
+            variants={itemVariants}
+          >
+            <CardDecoration />
+            <div className="relative flex flex-col h-full min-h-[100px]">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-white/95 text-sm font-medium uppercase tracking-wider">Occupied</p>
+                <div className="flex-shrink-0 p-2 rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Car className="w-5 h-5 text-white" strokeWidth={2} />
                 </div>
-              </CardHeader>
-            </Card>
-            
-            {/* Occupied Vehicles */}
-            <Card className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300">
-              <CardHeader className="pb-3 pt-4 px-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wider mb-3">
-                      Occupied
-                    </CardTitle>
-                    <div className="text-3xl font-bold text-gray-900">
-                      {stats.occupiedCount}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-red-100 p-3 flex items-center justify-center">
-                    <Car className="w-6 h-6 text-red-600" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-        {/* Table Content */}
+              </div>
+              <p className="text-white text-2xl sm:text-3xl font-bold mt-3 tracking-tight">{stats.occupiedCount}</p>
+            </div>
+          </motion.div>
+        </motion.div>
+        {/* Table Content - card style match dashboard */}
         {canView ? (
-          <div className="flex-1 overflow-auto p-4">
-            <div className="bg-white rounded-lg border-2 border-indigo-200 shadow-sm">
+          <motion.div
+            className="min-w-0"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <div className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden">
               {/* Table Controls */}
-              <div className="px-4 py-3 border-b border-indigo-200 flex flex-wrap items-center gap-3 justify-between">
+              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3 justify-between bg-white/80">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search vehicles..."
                     value={globalFilter ?? ""}
                     onChange={(e) => setGlobalFilter(e.target.value)}
-                    className="pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                    className="pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-64 bg-white shadow-sm"
                   />
                 </div>
                 {/* Filters */}
@@ -1313,6 +1409,40 @@ export default function VehiclesPage() {
                     placeholder="All Energy Types"
                     className="w-44"
                   />
+                  <div className="flex items-center gap-1.5 border border-gray-200 rounded-xl px-2 py-1 bg-white shadow-sm">
+                    <span className="text-xs text-gray-500 whitespace-nowrap">Availability:</span>
+                    <Input
+                      type="date"
+                      value={availabilityStartDate}
+                      onChange={(e) => setAvailabilityStartDate(e.target.value)}
+                      className="w-36 h-8 text-sm border-0 py-0 focus-visible:ring-0"
+                      aria-label="Availability start date"
+                    />
+                    <span className="text-gray-400">–</span>
+                    <Input
+                      type="date"
+                      value={availabilityEndDate}
+                      onChange={(e) => setAvailabilityEndDate(e.target.value)}
+                      className="w-36 h-8 text-sm border-0 py-0 focus-visible:ring-0"
+                      aria-label="Availability end date"
+                    />
+                    {(availabilityStartDate || availabilityEndDate) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700"
+                        onClick={() => {
+                          setAvailabilityStartDate("");
+                          setAvailabilityEndDate("");
+                        }}
+                        title="Clear date range"
+                        aria-label="Clear availability date range"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                   <span className="text-sm text-gray-500">
                     {table.getFilteredRowModel().rows.length} of{" "}
                     {filteredVehicles.length} vehicles
@@ -1328,7 +1458,7 @@ export default function VehiclesPage() {
                         {headerGroup.headers.map((header) => (
                           <TableHead
                             key={header.id}
-                            className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-blue-50"
+                            className="px-4 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50/90"
                           >
                             {header.isPlaceholder
                               ? null
@@ -1346,7 +1476,7 @@ export default function VehiclesPage() {
                       table.getRowModel().rows.map((row) => (
                         <TableRow
                           key={row.id}
-                          className="hover:bg-blue-50 cursor-pointer border-b border-indigo-100 transition-colors group"
+                          className="hover:bg-indigo-50/70 cursor-pointer border-b border-gray-100 transition-colors group"
                           onClick={() =>
                             router.push(`/dashboard/shared_pages/vehicles/${row.original.vehicle_id}`)
                           }
@@ -1371,9 +1501,12 @@ export default function VehiclesPage() {
                           colSpan={columns.length}
                           className="h-24 text-center"
                         >
-                          <div className="flex flex-col items-center justify-center">
-                            <Car className="w-12 h-12 text-gray-400 mb-2" />
-                            <p className="text-gray-500">No vehicles found</p>
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <div className="p-4 rounded-2xl bg-gray-100/80 mb-3">
+                              <Car className="w-12 h-12 text-gray-400" />
+                            </div>
+                            <p className="text-gray-600 font-medium">No vehicles found</p>
+                            <p className="text-gray-500 text-sm mt-1">Try adjusting filters or search</p>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1382,11 +1515,12 @@ export default function VehiclesPage() {
                 </Table>
               </div>
               {/* Pagination */}
-              <div className="px-4 py-3 border-t border-indigo-200 flex flex-wrap items-center justify-between gap-2 bg-white">
+              <div className="px-4 py-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 bg-gray-50/50">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="rounded-lg border-gray-200"
                     onClick={() => table.setPageIndex(0)}
                     disabled={!table.getCanPreviousPage()}
                   >
@@ -1431,11 +1565,11 @@ export default function VehiclesPage() {
                       const page = e.target.value ? Number(e.target.value) - 1 : 0;
                       table.setPageIndex(Math.max(0, Math.min(page, table.getPageCount() - 1)));
                     }}
-                    className="w-16 border rounded px-2 py-1 text-xs"
+                    className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs"
                   />
                 </span>
                 <select
-                  className="border rounded px-2 py-1 text-xs"
+                  className="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white"
                   value={table.getState().pagination.pageSize}
                   onChange={e => {
                     table.setPageSize(Number(e.target.value));
@@ -1450,30 +1584,38 @@ export default function VehiclesPage() {
                 </select>
               </div>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          // Show create-only message if user can create but not view
-          <div className="flex-1 flex items-center justify-center p-8">
-            <div className="text-center">
-              <Car className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No View Access
-              </h3>
-              <p className="text-gray-500 mb-4">
-                You don&apos;t have permission to view vehicles, but you can
-                create new ones.
-              </p>
-              {canCreate && (
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  className="flex items-center gap-2 px-5 py-4 text-sm text-white bg-[#0872b3] rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> Create New Vehicle
-                </Button>
-              )}
-            </div>
-          </div>
+          <motion.div
+            className="min-w-0"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <Card className="p-8 text-center border border-gray-200 bg-white/80 backdrop-blur-sm shadow-lg rounded-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-4 rounded-2xl bg-gray-100/80">
+                  <Car className="w-16 h-16 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">No View Access</h3>
+                <p className="text-gray-600 text-sm max-w-md">
+                  You don&apos;t have permission to view vehicles, but you can create new ones.
+                </p>
+                {canCreate && (
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      onClick={() => setShowCreateModal(true)}
+                      className="flex items-center gap-2 px-5 py-2.5 text-sm text-white bg-[#0872b3] rounded-xl shadow-md hover:shadow-lg hover:bg-[#066399] transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> Create New Vehicle
+                    </Button>
+                  </motion.div>
+                )}
+              </div>
+            </Card>
+          </motion.div>
         )}
+
         {/* Create Vehicle Modal */}
         {canCreate && (
           <CreateVehicleModal
@@ -1508,6 +1650,6 @@ export default function VehiclesPage() {
           />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
