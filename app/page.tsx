@@ -3,7 +3,7 @@
 import {
   faChevronUp,
   faEnvelope,
-  faSignInAlt,
+  faRocket,
   faTimes,
   faCheckCircle,
   faChartLine,
@@ -116,13 +116,30 @@ export default function HomePage() {
           muted
           loop
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover scale-105"
         >
           <source src="/vroomo-car-rental-video.mp4" type="video/mp4" />
         </video>
+        {/* Layered background: depth, brand color, soft light */}
         <div
-          className="absolute inset-0 bg-black/65"
-          style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
+          className="absolute inset-0 bg-gradient-to-br from-[#00628B]/55 via-[#042f44]/70 to-black/85 pointer-events-none"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-10%,rgba(56,189,248,0.22),transparent_55%)] pointer-events-none"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-[radial-gradient(circle_at_80%_60%,rgba(0,98,139,0.35),transparent_45%)] pointer-events-none"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 opacity-[0.35] mix-blend-overlay pointer-events-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Cg fill=%22none%22 stroke=%22%23ffffff%22 stroke-opacity=%220.12%22%3E%3Cpath d=%22M0 24h48M24 0v48%22/%3E%3C/g%3E%3C/svg%3E')]"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none"
+          aria-hidden
         />
         <div className="relative z-10 max-w-4xl mx-auto px-4">
           <h1 className="text-4xl text-[#00628B] md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
@@ -135,11 +152,11 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Button
               type="button"
-              className="bg-transparent text-white hover:bg-white hover:text-black border-2 border-white flex items-center gap-2 text-lg px-8 py-6 rounded-lg transition-colors"
+              className="bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-[#00628B] border-2 border-white/90 shadow-lg shadow-black/20 flex items-center gap-2 text-lg px-8 py-6 rounded-xl transition-all duration-300"
               onClick={() => setIsAuthModalOpen(true)}
             >
-              <FontAwesomeIcon icon={faSignInAlt} className="mr-2" />
-              Login
+              <FontAwesomeIcon icon={faRocket} className="mr-2" />
+              Get Started
             </Button>
           </div>
         </div>
@@ -545,11 +562,11 @@ export default function HomePage() {
         <div className="flex flex-wrap justify-center gap-4">
           <Button
             type="button"
-            className="bg-white text-[#00628B] hover:bg-white/90 border-2 border-white text-lg px-8 py-6 rounded-lg transition-colors"
+            className="bg-white text-[#00628B] hover:bg-white/90 border-2 border-white text-lg px-8 py-6 rounded-xl shadow-lg shadow-black/20 transition-all duration-300"
             onClick={() => setIsAuthModalOpen(true)}
           >
-            <FontAwesomeIcon icon={faSignInAlt} className="mr-2" />
-            Login
+            <FontAwesomeIcon icon={faRocket} className="mr-2" />
+            Get Started
           </Button>
           <Button
             variant="outline"

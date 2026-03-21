@@ -4,15 +4,15 @@
 
 :root {
   --color-primary: #00628B;
-  /* Default system scale: 150% for readability and system adaptability (use 1 for 100%) */
-  --font-size-scale: 1.5;
+  /* 100% root font scale — matches typical browser default on all devices */
+  --font-size-scale: 1;
 }
 
 html {
   font-size: calc(1rem * var(--font-size-scale));
   scroll-behavior: smooth;
   overflow-x: hidden;
-  /* Use 100dvh when supported for correct height at 150% / mobile */
+  /* Use 100dvh when supported for correct mobile viewport height */
   min-height: 100vh;
   min-height: 100dvh;
 }
