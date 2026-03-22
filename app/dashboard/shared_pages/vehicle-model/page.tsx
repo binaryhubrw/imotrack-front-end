@@ -21,8 +21,7 @@ import {
   ChevronDown,
   FileDown,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
 import {
   Table,
@@ -588,27 +587,22 @@ export default function VehicleModelsPage() {
   };
 
   const handleExportVehicleModels = () => {
-    try {
-      const excelData = filteredVehicleModels.map((m) => ({
-        "Model Name": m.vehicle_model_name,
-        "Type": m.vehicle_type,
-        "Manufacturer": m.manufacturer_name,
-        "Capacity": m.vehicle_capacity,
-        "Created": m.created_at ? formatDate(m.created_at) : "N/A",
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Models");
-      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
-      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `vehicle_models_export_${timestamp}.xlsx`);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
+    const excelData = filteredVehicleModels.map((m) => ({
+      "Model Name": m.vehicle_model_name,
+      "Type": m.vehicle_type,
+      "Manufacturer": m.manufacturer_name,
+      "Capacity": m.vehicle_capacity,
+      "Created": m.created_at ? formatDate(m.created_at) : "N/A",
+    }));
+    const columns = ["Model Name", "Type", "Manufacturer", "Capacity", "Created"];
+    exportToStyledExcel({
+      title: "ImoTrak - Vehicle Models Export",
+      sheetName: "Vehicle Models",
+      columns,
+      data: excelData,
+      filename: "vehicle_models_export",
+      columnWidths: [22, 14, 18, 12, 16],
+    }).catch((err) => console.error("Export error:", err));
   };
 
   // Define columns after all functions are declared

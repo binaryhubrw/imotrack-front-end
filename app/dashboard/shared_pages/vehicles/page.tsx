@@ -29,8 +29,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
 import {
   Table,
@@ -1124,31 +1123,27 @@ export default function VehiclesPage() {
   }
 
   const handleExportVehicles = () => {
-    try {
-      const excelData = filteredVehicles.map((v) => ({
-        "Plate Number": v.plate_number,
-        "Model": v.vehicle_model?.vehicle_model_name ?? "N/A",
-        "Manufacturer": v.vehicle_model?.manufacturer_name ?? "N/A",
-        "Type": v.vehicle_model?.vehicle_type ?? "N/A",
-        "Transmission": v.transmission_mode,
-        "Year": v.vehicle_year,
-        "Energy Type": v.energy_type,
-        "Status": v.vehicle_status,
-        "Organization ID": v.organization_id,
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicles");
-      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 18 }));
-      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `vehicles_export_${timestamp}.xlsx`);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
+    const excelData = filteredVehicles.map((v) => ({
+      "Plate Number": v.plate_number,
+      "Model": v.vehicle_model?.vehicle_model_name ?? "N/A",
+      "Manufacturer": v.vehicle_model?.manufacturer_name ?? "N/A",
+      "Type": v.vehicle_model?.vehicle_type ?? "N/A",
+      "Transmission": v.transmission_mode,
+      "Year": v.vehicle_year,
+      "Energy Type": v.energy_type,
+      "Status": v.vehicle_status,
+      "Organization ID": v.organization_id,
+    }));
+    const columns = ["Plate Number", "Model", "Manufacturer", "Type", "Transmission", "Year", "Energy Type", "Status", "Organization ID"];
+    exportToStyledExcel({
+      title: "ImoTrak - Vehicles Export",
+      sheetName: "Vehicles",
+      columns,
+      data: excelData,
+      filename: "vehicles_export",
+      statusColumn: "Status",
+      columnWidths: [14, 18, 16, 14, 14, 8, 14, 14, 20],
+    }).catch((err) => console.error("Export error:", err));
   };
 
   const handleCreateVehicle = async (formData: CreateVehicleDto) => {

@@ -12,8 +12,7 @@ import {
   Ban,
   FileSpreadsheet,
 } from "lucide-react";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -326,46 +325,23 @@ export default function IssueDetailsPage() {
         }
       }
 
-      // Filter columns based on selection
-      const filteredData: Record<string, string>[] = [{}];
+      const filteredRow: Record<string, string> = {};
       selectedColumns.forEach(col => {
-        if (excelData[0][col]) {
-          filteredData[0][col] = excelData[0][col];
-        }
+        if (excelData[0][col] !== undefined) filteredRow[col] = excelData[0][col];
       });
+      const filteredData = [filteredRow];
+      const columns = selectedColumns.filter(col => filteredRow[col] !== undefined);
 
-      // Create workbook and worksheet
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(filteredData);
-
-      // Apply styling
-      const headerStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "2563EB" } },
-        alignment: { horizontal: "center" as const }
-      };
-
-      // Apply header styling
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-        worksheet[cellAddress].s = headerStyle;
-      }
-
-      // Set column widths
-      worksheet['!cols'] = Object.keys(filteredData[0] || {}).map(() => ({ wch: 25 }));
-
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Issue Report');
-
-      // Generate filename with timestamp
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-      const filename = `vehicle_issue_${issue.issue_id}_${timestamp}.xlsx`;
-
-      // Save file
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, filename);
+      await exportToStyledExcel({
+        title: "ImoTrak - Vehicle Issue Report",
+        sheetName: "Vehicle Issue Report",
+        columns,
+        data: filteredData,
+        filename: `vehicle_issue_${issue.issue_id}`,
+        statusColumn: "Issue Status",
+        statusColors: { OPEN: "FFFFEB9C", CLOSED: "FFC6EFCE" },
+        columnWidths: columns.map(() => 25),
+      });
 
       toast.success('Vehicle issue report exported successfully!', {
         style: toastStyles.success.style,

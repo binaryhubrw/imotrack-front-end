@@ -1,8 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { Plus, Info, UserPlus, Search, ChevronDown, X, FileDown } from "lucide-react";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
 import {
   useUnitPositions,
@@ -621,27 +620,23 @@ export default function PositionsPage() {
   );
 
   const handleExportPositions = () => {
-    try {
-      const excelData = filteredPositions.map((pos: Position) => ({
-        "Position Name": pos.position_name,
-        "Description": (pos as { position_description?: string }).position_description ?? "N/A",
-        "Status": pos.position_status ?? "N/A",
-        "Unit ID": pos.unit_id ?? "N/A",
-        "Created": pos.created_at ? new Date(pos.created_at).toLocaleDateString() : "N/A",
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Positions");
-      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 22 }));
-      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `positions_export_${timestamp}.xlsx`);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
+    const excelData = filteredPositions.map((pos: Position) => ({
+      "Position Name": pos.position_name,
+      "Description": (pos as { position_description?: string }).position_description ?? "N/A",
+      "Status": pos.position_status ?? "N/A",
+      "Unit ID": pos.unit_id ?? "N/A",
+      "Created": pos.created_at ? new Date(pos.created_at).toLocaleDateString() : "N/A",
+    }));
+    const columns = ["Position Name", "Description", "Status", "Unit ID", "Created"];
+    exportToStyledExcel({
+      title: "ImoTrak - Positions Export",
+      sheetName: "Positions",
+      columns,
+      data: excelData,
+      filename: "positions_export",
+      statusColumn: "Status",
+      columnWidths: [22, 30, 14, 20, 14],
+    }).catch((err) => console.error("Export error:", err));
   };
 
   return (

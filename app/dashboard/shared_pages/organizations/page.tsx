@@ -12,8 +12,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Download, Plus, Search, Filter, FileSpreadsheet, Calendar } from "lucide-react";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from 'date-fns';
 import {
   Table,
@@ -457,128 +456,75 @@ export default function OrganizationsPage() {
     await createOrg.mutateAsync(formData);
   };
 
-  // Excel Export Functions
+  const keyToLabel: Record<string, string> = {
+    organization_customId: "Custom ID",
+    organization_name: "Organization Name",
+    organization_email: "Email",
+    organization_phone: "Phone",
+    organization_status: "Status",
+    street_address: "Address",
+    created_at: "Created Date",
+    organization_logo: "Has Logo",
+  };
+
   const exportOrganizationsToExcel = async (filters: {
     searchTerm?: string;
     statusFilter?: string;
-    dateRange?: {
-      startDate?: Date;
-      endDate?: Date;
-    };
+    dateRange?: { startDate?: Date; endDate?: Date };
   }, selectedColumns: string[]) => {
-    try {
-      // Apply filters
-      let filteredData = organizations;
-      if (filters.searchTerm) {
-        filteredData = filteredData.filter(org =>
-          org.organization_name.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
-          org.organization_email.toLowerCase().includes(filters.searchTerm!.toLowerCase())
-        );
-      }
-      if (filters.statusFilter) {
-        filteredData = filteredData.filter(org => org.organization_status === filters.statusFilter);
-      }
-      if (filters.dateRange?.startDate || filters.dateRange?.endDate) {
-        filteredData = filteredData.filter(org => {
-          const createdDate = new Date(org.created_at);
-          if (filters.dateRange!.startDate && createdDate < filters.dateRange!.startDate) return false;
-          if (filters.dateRange!.endDate && createdDate > filters.dateRange!.endDate) return false;
-          return true;
-        });
-      }
-
-      // Transform data for Excel
-      const excelData = filteredData.map(org => {
-        const row: Record<string, string> = {};
-        selectedColumns.forEach(col => {
-          switch (col) {
-            case 'organization_customId':
-              row['Custom ID'] = org.organization_customId || 'N/A';
-              break;
-            case 'organization_name':
-              row['Organization Name'] = org.organization_name;
-              break;
-            case 'organization_email':
-              row['Email'] = org.organization_email;
-              break;
-            case 'organization_phone':
-              row['Phone'] = org.organization_phone;
-              break;
-            case 'organization_status':
-              row['Status'] = org.organization_status.charAt(0) + org.organization_status.slice(1).toLowerCase();
-              break;
-            case 'street_address':
-              row['Address'] = org.street_address || 'N/A';
-              break;
-            case 'created_at':
-              row['Created Date'] = format(new Date(org.created_at), 'yyyy-MM-dd HH:mm:ss');
-              break;
-            case 'organization_logo':
-              row['Has Logo'] = org.organization_logo ? 'Yes' : 'No';
-              break;
-          }
-        });
-        return row;
-      });
-
-      // Create workbook
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-      // Apply styling
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-      
-      // Style headers
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-        if (worksheet[cellAddress]) {
-          worksheet[cellAddress].s = {
-            font: { bold: true, color: { rgb: 'FFFFFF' } },
-            fill: { type: 'pattern', patternType: 'solid', fgColor: { rgb: '4472C4' } },
-            alignment: { horizontal: 'center', vertical: 'middle' }
-          };
-        }
-      }
-
-      // Set column widths
-      worksheet['!cols'] = selectedColumns.map(() => ({ wch: 20 }));
-
-      // Add auto filter
-      worksheet['!autofilter'] = {
-        ref: XLSX.utils.encode_range({
-          s: { r: 0, c: 0 },
-          e: { r: range.e.r, c: range.e.c }
-        })
-      };
-
-      // Freeze first row
-      worksheet['!views'] = [{
-        state: 'frozen',
-        xSplit: 0,
-        ySplit: 1
-      }];
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Organizations');
-
-      // Generate and download file
-      const excelBuffer = XLSX.write(workbook, { 
-        bookType: 'xlsx', 
-        type: 'array',
-        compression: true
-      });
-
-      const blob = new Blob([excelBuffer], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
-      
-      const filename = `Organizations_Report_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.xlsx`;
-      saveAs(blob, filename);
-
-      // toast.success(`Exported ${filteredData.length} organizations successfully!`);
-    } catch (error) {
-      console.error('Export error:', error);
-      // toast.error('Export failed. Please try again.');
+    let filteredData = organizations;
+    if (filters.searchTerm) {
+      filteredData = filteredData.filter(org =>
+        org.organization_name.toLowerCase().includes(filters.searchTerm!.toLowerCase()) ||
+        org.organization_email.toLowerCase().includes(filters.searchTerm!.toLowerCase())
+      );
     }
+    if (filters.statusFilter) {
+      filteredData = filteredData.filter(org => org.organization_status === filters.statusFilter);
+    }
+    if (filters.dateRange?.startDate || filters.dateRange?.endDate) {
+      filteredData = filteredData.filter(org => {
+        const createdDate = new Date(org.created_at);
+        if (filters.dateRange!.startDate && createdDate < filters.dateRange!.startDate) return false;
+        if (filters.dateRange!.endDate && createdDate > filters.dateRange!.endDate) return false;
+        return true;
+      });
+    }
+
+    const excelData = filteredData.map(org => {
+      const row: Record<string, string> = {};
+      selectedColumns.forEach(col => {
+        switch (col) {
+          case "organization_customId": row["Custom ID"] = org.organization_customId || "N/A"; break;
+          case "organization_name": row["Organization Name"] = org.organization_name; break;
+          case "organization_email": row["Email"] = org.organization_email; break;
+          case "organization_phone": row["Phone"] = org.organization_phone; break;
+          case "organization_status": row["Status"] = org.organization_status.charAt(0) + org.organization_status.slice(1).toLowerCase(); break;
+          case "street_address": row["Address"] = org.street_address || "N/A"; break;
+          case "created_at": row["Created Date"] = format(new Date(org.created_at), "yyyy-MM-dd HH:mm:ss"); break;
+          case "organization_logo": row["Has Logo"] = org.organization_logo ? "Yes" : "No"; break;
+        }
+      });
+      return row;
+    });
+
+    const filtersParts: string[] = [];
+    if (filters.searchTerm) filtersParts.push(`Search: ${filters.searchTerm}`);
+    if (filters.statusFilter) filtersParts.push(`Status: ${filters.statusFilter}`);
+    if (filters.dateRange?.startDate) filtersParts.push(`From: ${format(filters.dateRange.startDate, "dd/MM/yyyy")}`);
+    if (filters.dateRange?.endDate) filtersParts.push(`To: ${format(filters.dateRange.endDate, "dd/MM/yyyy")}`);
+
+    const columns = selectedColumns.map(k => keyToLabel[k]).filter(Boolean) as string[];
+    await exportToStyledExcel({
+      title: "ImoTrak - Organizations Export",
+      sheetName: "Organizations",
+      columns,
+      data: excelData,
+      filename: "Organizations_Report",
+      filters: filtersParts.join("; ") || "(none)",
+      statusColumn: "Status",
+      columnWidths: selectedColumns.map(() => 20),
+    });
   };
 
   const availableColumns = [

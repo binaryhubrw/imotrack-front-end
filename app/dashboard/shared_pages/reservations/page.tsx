@@ -3,8 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car, FileSpreadsheet, Filter, Calendar } from "lucide-react";
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from 'date-fns';
 import {
   useReservations,
@@ -883,43 +882,31 @@ export default function ReservationsPage() {
         return row;
       });
 
-      // Create workbook and worksheet
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const filtersParts: string[] = [];
+      if (filters.searchTerm) filtersParts.push(`Search: ${filters.searchTerm}`);
+      if (filters.statusFilter && filters.statusFilter !== "all") filtersParts.push(`Status: ${filters.statusFilter}`);
+      if (filters.dateRange?.startDate) filtersParts.push(`From: ${format(filters.dateRange.startDate, "dd/MM/yyyy")}`);
+      if (filters.dateRange?.endDate) filtersParts.push(`To: ${format(filters.dateRange.endDate, "dd/MM/yyyy")}`);
 
-      // Apply styling
-      const headerStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "2563EB" } },
-        alignment: { horizontal: "center" as const }
-      };
-
-      // Apply header styling
-      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-        worksheet[cellAddress].s = headerStyle;
-      }
-
-      // Set column widths
-      worksheet['!cols'] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
-
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reservations');
-
-      // Generate filename with timestamp
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-      const filename = `reservations_export_${timestamp}.xlsx`;
-
-      // Save file
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, filename);
-
-      // toast.success('Reservations exported successfully!');
+      const columns = Object.keys(excelData[0] || {});
+      await exportToStyledExcel({
+        title: "ImoTrak - Reservations Export",
+        sheetName: "Reservations",
+        columns,
+        data: excelData,
+        filename: "reservations_export",
+        filters: filtersParts.join("; ") || "(none)",
+        statusColumn: "Status",
+        statusColors: {
+          PAID: "FFC6EFCE", COMPLETED: "FFC6EFCE", APPROVED: "FFC6EFCE",
+          PENDING: "FFFFEB9C", REJECTED: "FFFFC7CE", CANCELLED: "FFFFC7CE",
+          Accepted: "FFC6EFCE", Approved: "FFC6EFCE", Completed: "FFC6EFCE",
+          Pending: "FFFFEB9C", Rejected: "FFFFC7CE", Cancelled: "FFFFC7CE",
+        },
+        columnWidths: columns.map(() => 20),
+      });
     } catch (error) {
-      console.error('Export error:', error);
-      // toast.error('Failed to export reservations');
+      console.error("Export error:", error);
     }
   };
 

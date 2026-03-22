@@ -19,8 +19,7 @@ import {
   AlertCircle,
   FileDown,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
 import {
   Table,
@@ -1067,29 +1066,24 @@ export default function UsersPage() {
   ]);
 
   const handleExportUsers = () => {
-    try {
-      const excelData = filteredUsers.map((u: UserRow) => ({
-        "First Name": u.first_name,
-        "Last Name": u.last_name,
-        "Email": u.email ?? "N/A",
-        "Phone": u.user_phone ?? "N/A",
-        "Position": u.position_name ?? "N/A",
-        "Unit": u.unit_name ?? "N/A",
-        "Organization": u.organization_name ?? "N/A",
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
-      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 20 }));
-      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `users_export_${timestamp}.xlsx`);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
+    const excelData = filteredUsers.map((u: UserRow) => ({
+      "First Name": u.first_name,
+      "Last Name": u.last_name,
+      "Email": u.email ?? "N/A",
+      "Phone": u.user_phone ?? "N/A",
+      "Position": u.position_name ?? "N/A",
+      "Unit": u.unit_name ?? "N/A",
+      "Organization": u.organization_name ?? "N/A",
+    }));
+    const columns = ["First Name", "Last Name", "Email", "Phone", "Position", "Unit", "Organization"];
+    exportToStyledExcel({
+      title: "ImoTrak - Users Export",
+      sheetName: "Users",
+      columns,
+      data: excelData,
+      filename: "users_export",
+      columnWidths: [18, 18, 24, 16, 20, 20, 22],
+    }).catch((err) => console.error("Export error:", err));
   };
 
   const columns: ColumnDef<UserRow>[] = useMemo(

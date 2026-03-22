@@ -13,8 +13,7 @@ import {
   VisibilityState,
 } from "@tanstack/react-table";
 import { Download, Plus, Search, Filter, ChevronDown, X } from "lucide-react";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
+import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
 import {
   Table,
@@ -386,26 +385,22 @@ export default function UnitsPage() {
   };
 
   const handleExportUnits = () => {
-    try {
-      const excelData = statusFilteredUnits.map((u) => ({
-        "Unit Name": u.unit_name,
-        "Status": u.status,
-        "Organization ID": u.organization_id,
-        "Created": u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A",
-      }));
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Units");
-      worksheet["!cols"] = Object.keys(excelData[0] || {}).map(() => ({ wch: 22 }));
-      const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-      const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([excelBuffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      saveAs(blob, `units_export_${timestamp}.xlsx`);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
+    const excelData = statusFilteredUnits.map((u) => ({
+      "Unit Name": u.unit_name,
+      "Status": u.status,
+      "Organization ID": u.organization_id,
+      "Created": u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A",
+    }));
+    const columns = ["Unit Name", "Status", "Organization ID", "Created"];
+    exportToStyledExcel({
+      title: "ImoTrak - Units Export",
+      sheetName: "Units",
+      columns,
+      data: excelData,
+      filename: "units_export",
+      statusColumn: "Status",
+      columnWidths: [24, 14, 22, 16],
+    }).catch((err) => console.error("Export error:", err));
   };
 
   // Define columns before useReactTable
