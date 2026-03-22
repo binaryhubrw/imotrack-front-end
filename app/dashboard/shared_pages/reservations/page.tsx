@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car, FileSpreadsheet, Filter, Calendar } from "lucide-react";
 import { exportToStyledExcel } from "@/lib/excel-export";
@@ -240,6 +240,109 @@ function SearchableDropdown({
             <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-200 bg-gray-50">
               {filteredOptions.length} of {options.length}{" "}
               {placeholder.toLowerCase()}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STATUS_OPTIONS = [
+  { id: "UNDER_REVIEW", label: "Under Review" },
+  { id: "ACCEPTED", label: "Accepted" },
+  { id: "APPROVED", label: "Approved" },
+  { id: "REJECTED", label: "Rejected" },
+  { id: "CANCELLED", label: "Cancelled" },
+  { id: "COMPLETED", label: "Completed" },
+];
+
+function StatusMultiSelect({
+  statusFilters,
+  setStatusFilters,
+}: {
+  statusFilters: Set<string>;
+  setStatusFilters: React.Dispatch<React.SetStateAction<Set<string>>>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const openDropdown = useCallback(() => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 99999,
+      });
+    }
+    setOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (
+        triggerRef.current?.contains(e.target as Node) ||
+        dropdownRef.current?.contains(e.target as Node)
+      ) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const toggle = (id: string) =>
+    setStatusFilters((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  return (
+    <div className="relative w-full sm:w-56">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => (open ? setOpen(false) : openDropdown())}
+        className="flex items-center justify-between w-full h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer text-gray-700 select-none hover:border-gray-300 transition-colors"
+      >
+        <span>{statusFilters.size === 0 ? "All Statuses" : `${statusFilters.size} selected`}</span>
+        <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
+      </button>
+
+      {open && (
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="bg-white border border-gray-200 rounded-xl shadow-2xl py-1"
+        >
+          {STATUS_OPTIONS.map(({ id, label }) => (
+            <label
+              key={id}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={statusFilters.has(id)}
+                onChange={() => toggle(id)}
+                className="accent-indigo-600 w-4 h-4"
+              />
+              {label}
+            </label>
+          ))}
+          {statusFilters.size > 0 && (
+            <div className="border-t border-gray-100 px-3 py-2">
+              <button
+                onClick={() => { setStatusFilters(new Set()); setOpen(false); }}
+                className="text-xs text-indigo-600 hover:underline"
+              >
+                Clear all
+              </button>
             </div>
           )}
         </div>
@@ -1082,45 +1185,7 @@ export default function ReservationsPage() {
                 className="pl-10 h-10 text-sm border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm"
               />
             </div>
-            <div className="relative w-full sm:w-56">
-              <details className="group">
-                <summary className="flex items-center justify-between h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer list-none text-gray-700 select-none">
-                  <span>{statusFilters.size === 0 ? "All Statuses" : `${statusFilters.size} selected`}</span>
-                  <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
-                </summary>
-                <div className="absolute z-[9999] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl py-1">
-                  {[
-                    { id: "UNDER_REVIEW", label: "Under Review" },
-                    { id: "ACCEPTED", label: "Accepted" },
-                    { id: "APPROVED", label: "Approved" },
-                    { id: "REJECTED", label: "Rejected" },
-                    { id: "CANCELLED", label: "Cancelled" },
-                    { id: "COMPLETED", label: "Completed" },
-                  ].map(({ id, label }) => (
-                    <label key={id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={statusFilters.has(id)}
-                        onChange={() => setStatusFilters((prev) => {
-                          const next = new Set(prev);
-                          next.has(id) ? next.delete(id) : next.add(id);
-                          return next;
-                        })}
-                        className="accent-indigo-600 w-4 h-4"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                  {statusFilters.size > 0 && (
-                    <div className="border-t border-gray-100 px-3 py-2">
-                      <button onClick={() => setStatusFilters(new Set())} className="text-xs text-indigo-600 hover:underline">
-                        Clear
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </details>
-            </div>
+            <StatusMultiSelect statusFilters={statusFilters} setStatusFilters={setStatusFilters} />
             <div className="flex items-center gap-2">
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-0.5">From</label>
@@ -1232,7 +1297,9 @@ export default function ReservationsPage() {
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Departure</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Return</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Map</th>
+                    {canAssignVehicle && (
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Map</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1345,27 +1412,36 @@ export default function ReservationsPage() {
                         </span>
                       </td>
 
-                      {/* Map */}
-                      <td className="py-3 px-4">
-                        {reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0 ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const vehicleId = (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle_id
-                                ?? (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle?.vehicle_id;
-                              if (vehicleId) {
-                                router.push(`/dashboard/shared_pages/vehicles/${vehicleId}/locations`);
-                              }
-                            }}
-                            title="View vehicle on map"
-                            className="p-2 rounded-lg text-[#0872b3] hover:bg-[#0872b3]/10 transition-colors"
-                          >
-                            <MapPin className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-xs px-2">—</span>
-                        )}
-                      </td>
+                      {/* Map — fleet manager only */}
+                      {canAssignVehicle && (
+                        <td className="py-3 px-4">
+                          {reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0 ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const vehicleId = (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle_id
+                                  ?? (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle?.vehicle_id;
+                                if (vehicleId) {
+                                  const from = reservation.departure_date
+                                    ? new Date(reservation.departure_date).toISOString()
+                                    : '';
+                                  const to = reservation.expected_returning_date
+                                    ? new Date(reservation.expected_returning_date).toISOString()
+                                    : '';
+                                  const qs = from && to ? `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : '';
+                                  router.push(`/dashboard/shared_pages/vehicles/${vehicleId}/locations${qs}`);
+                                }
+                              }}
+                              title="View vehicle trip on map"
+                              className="p-2 rounded-lg text-[#0872b3] hover:bg-[#0872b3]/10 transition-colors"
+                            >
+                              <MapPin className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <span className="text-gray-300 text-xs px-2">—</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

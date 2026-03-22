@@ -1761,26 +1761,20 @@ export const useUpdateVehicleLocation = () => {
  * @param vehicleId - UUID of the vehicle
  * @returns Query result with historical location data
  */
-export const useVehicleLocationHistory = (vehicleId: string) => {
+export const useVehicleLocationHistory = (vehicleId: string, from?: string, to?: string) => {
   return useQuery<LocationUpdate[], Error>({
-    queryKey: ['vehicle-location-history', vehicleId],
+    queryKey: ['vehicle-location-history', vehicleId, from, to],
     queryFn: async () => {
-      console.log('Fetching location history for vehicle:', vehicleId);
-      const { data } = await api.get<{ data: LocationUpdate[] }>(`/v2/vehicles/${vehicleId}/locations`);
+      const params = new URLSearchParams();
+      if (from) params.set('from', from);
+      if (to)   params.set('to', to);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const { data } = await api.get<{ data: LocationUpdate[] }>(`/v2/vehicles/${vehicleId}/locations${qs}`);
       
-      // Handle the case where the API might return coordinates as a string in the 'coords' field
-      // or if they are already parsed. The example from the user shows 'coords' as a string.
       const processedData = (data.data || []).map(item => {
         if (typeof item.coords === 'string') {
-          try {
-            return {
-              ...item,
-              coords: JSON.parse(item.coords)
-            };
-          } catch (e) {
-            console.error('Failed to parse historical coordinates:', e);
-            return item;
-          }
+          try { return { ...item, coords: JSON.parse(item.coords) }; }
+          catch { return item; }
         }
         return item;
       });
@@ -1788,7 +1782,7 @@ export const useVehicleLocationHistory = (vehicleId: string) => {
       return processedData;
     },
     enabled: !!vehicleId,
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 60000,
   });
 };
 
