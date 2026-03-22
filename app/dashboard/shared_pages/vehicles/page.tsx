@@ -1132,9 +1132,8 @@ export default function VehiclesPage() {
       "Year": v.vehicle_year,
       "Energy Type": v.energy_type,
       "Status": v.vehicle_status,
-      "Organization ID": v.organization_id,
     }));
-    const columns = ["Plate Number", "Model", "Manufacturer", "Type", "Transmission", "Year", "Energy Type", "Status", "Organization ID"];
+    const columns = ["Plate Number", "Model", "Manufacturer", "Type", "Transmission", "Year", "Energy Type", "Status"];
     exportToStyledExcel({
       title: "ImoTrak - Vehicles Export",
       sheetName: "Vehicles",
@@ -1142,7 +1141,7 @@ export default function VehiclesPage() {
       data: excelData,
       filename: "vehicles_export",
       statusColumn: "Status",
-      columnWidths: [14, 18, 16, 14, 14, 8, 14, 14, 20],
+      columnWidths: [14, 18, 16, 14, 14, 8, 14, 14],
     }).catch((err) => console.error("Export error:", err));
   };
 
