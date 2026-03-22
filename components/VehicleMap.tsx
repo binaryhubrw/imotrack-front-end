@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import type { DivIconOptions } from "leaflet"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { MapPin, Navigation, Zap, RefreshCw, Activity, Settings } from "lucide-react"
+import { MapPin, Navigation, Zap, RefreshCw, Activity, Settings, Clock } from "lucide-react"
 import { useVehicleLocationStream } from "@/lib/queries"
 
 interface Coords {
@@ -40,9 +40,23 @@ interface VehicleMapProps {
   vehicleId?: string
   vehicleIds?: string[]
   vehicles?: TrackingData[]
+  historicalPoints?: [number, number][]
+  initialTrail?: [number, number][]
+  showHistory?: boolean
+  onHistoryToggle?: () => void
+  isHistoryLoading?: boolean
 }
 
-export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVehicles = [] }: VehicleMapProps) {
+export default function VehicleMap({ 
+  vehicleId, 
+  vehicleIds, 
+  vehicles: initialVehicles = [], 
+  historicalPoints = [],
+  initialTrail = [],
+  showHistory = false,
+  onHistoryToggle,
+  isHistoryLoading = false
+}: VehicleMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersRef = useRef<Map<string, any>>(new Map())
@@ -62,7 +76,7 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
     showTrails: true,
     showInactive: true,
     autoCenter: false,
-    maxTrailPoints: 50,
+    maxTrailPoints: 10000, // Very high limit to prevent "cutting"
     refreshInterval: 30000
   })
 
@@ -170,10 +184,24 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
           attributionControl: true
         })
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        // Base layers
+        const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           attribution: "© OpenStreetMap contributors",
           maxZoom: 19
-        }).addTo(map)
+        })
+
+        const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          attribution: "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+        })
+
+        osm.addTo(map)
+
+        const baseMaps = {
+          "Street Map": osm,
+          "Satellite View": satellite
+        }
+
+        L.control.layers(baseMaps, undefined, { position: 'topleft' }).addTo(map)
 
         if (!mountedRef.current) {
           map.remove()
@@ -225,12 +253,24 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
     if (!vehicleId || !singleVehicleStream.location || !mapLoaded || !mountedRef.current) return
 
     const location = singleVehicleStream.location
+    if (!location) return
     const updatedVehicle = convertLocationToTrackingData(vehicleId, location)
-
+    
     // Update trail
-    const trail = vehicleTrailsRef.current.get(vehicleId) || []
+    let trail = vehicleTrailsRef.current.get(vehicleId) || []
+    
+    // Pre-populate with initial trail if this is the first update
+    if (trail.length === 0 && initialTrail.length > 0) {
+      trail = [...initialTrail]
+    }
+
     const newPoint: [number, number] = [updatedVehicle.lat, updatedVehicle.lng]
-    trail.push(newPoint)
+    
+    // Avoid duplicate adjacent points
+    const lastPoint = trail[trail.length - 1]
+    if (!lastPoint || lastPoint[0] !== newPoint[0] || lastPoint[1] !== newPoint[1]) {
+      trail.push(newPoint)
+    }
 
     if (trail.length > mapSettings.maxTrailPoints) {
       trail.shift()
@@ -303,10 +343,128 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
       }).addTo(mapInstanceRef.current)
 
       trailLayersRef.current.set(vehicleId, polyline)
+
+      // Add A/B markers for the live trail
+      const existingMarkers = trailLayersRef.current.get(`${vehicleId}-markers`)
+      if (existingMarkers) {
+        mapInstanceRef.current.removeLayer(existingMarkers)
+      }
+
+      if (trailPoints.length >= 1) {
+        const startPoint = trailPoints[0]
+        const endPoint = trailPoints[trailPoints.length - 1]
+
+        const startMarker = (L as any).marker(startPoint, {
+          icon: (L as any).divIcon({
+            html: `<div style="background-color: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-size: 12px;">A</div>`,
+            className: '',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          }),
+          zIndexOffset: 1000
+        })
+
+        const endMarker = (L as any).marker(endPoint, {
+          icon: (L as any).divIcon({
+            html: `<div style="background-color: #22c55e; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-size: 12px;">B</div>`,
+            className: '',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          }),
+          zIndexOffset: 1001
+        })
+
+        const markersGroup = (L as any).layerGroup([startMarker, endMarker]).addTo(mapInstanceRef.current)
+        trailLayersRef.current.set(`${vehicleId}-markers`, markersGroup)
+      }
     } catch (error) {
       console.error('Error updating trail:', error)
     }
   }, [activeStreams, mapSettings.showTrails])
+
+  // Handle historical points
+  useEffect(() => {
+    if (!mapLoaded || historicalPoints.length < 2 || !mapInstanceRef.current) return
+
+    const renderHistory = async () => {
+      try {
+        const L = (await import("leaflet")).default
+        
+        // Remove existing history layer
+        const existingLayer = trailLayersRef.current.get('historical-path')
+        if (existingLayer) {
+          mapInstanceRef.current.removeLayer(existingLayer)
+        }
+
+        const existingMarkerLayer = trailLayersRef.current.get('historical-markers')
+        if (existingMarkerLayer) {
+          mapInstanceRef.current.removeLayer(existingMarkerLayer)
+        }
+
+        const polyline = (L.polyline as any)(historicalPoints, {
+          color: '#1e40af', // Royal Blue
+          weight: 6,
+          opacity: 0.8,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(mapInstanceRef.current)
+
+        trailLayersRef.current.set('historical-path', polyline)
+
+        // Add markers for intermediate points (subtle dots)
+        const intermediateMarkers: any[] = []
+        historicalPoints.forEach((point, index) => {
+          // Skip first and last as they get A/B markers
+          if (index === 0 || index === historicalPoints.length - 1) return
+
+          const circle = (L as any).circleMarker(point, {
+            radius: 3,
+            fillColor: '#3b82f6',
+            color: '#fff',
+            weight: 1,
+            opacity: 0.8,
+            fillOpacity: 0.6
+          }).addTo(mapInstanceRef.current)
+          intermediateMarkers.push(circle)
+        })
+        
+        // Add A and B markers
+        const startPoint = historicalPoints[0]
+        const endPoint = historicalPoints[historicalPoints.length - 1]
+
+        const startMarker = (L as any).marker(startPoint, {
+          icon: (L as any).divIcon({
+            html: `<div style="background-color: #ef4444; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); font-size: 14px;">A</div>`,
+            className: '',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          })
+        }).bindPopup("Start Point").addTo(mapInstanceRef.current)
+
+        const endMarker = (L as any).marker(endPoint, {
+          icon: (L as any).divIcon({
+            html: `<div style="background-color: #22c55e; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); font-size: 14px;">B</div>`,
+            className: '',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+          })
+        }).bindPopup("End Point").addTo(mapInstanceRef.current)
+        
+        const historyMarkersLayer = (L as any).layerGroup([...intermediateMarkers, startMarker, endMarker]).addTo(mapInstanceRef.current)
+        trailLayersRef.current.set('historical-markers', historyMarkersLayer)
+
+        // Fit bounds to history
+        if (historicalPoints.length > 0) {
+          const bounds = (L as any).latLngBounds(historicalPoints)
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] })
+        }
+      } catch (error) {
+        console.error('Error rendering history:', error)
+      }
+    }
+
+    renderHistory()
+  }, [historicalPoints, mapLoaded])
 
   const updateSingleVehicleMarker = useCallback(async (vehicle: TrackingData) => {
     if (!mapInstanceRef.current) return
@@ -448,7 +606,7 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
 
       {mapLoaded && !initError && (
         <>
-          <div className="absolute top-4 right-4 space-y-2 z-[1000]">
+          <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
             <Button
               size="sm"
               onClick={handleFitAllVehicles}
@@ -467,6 +625,19 @@ export default function VehicleMap({ vehicleId, vehicleIds, vehicles: initialVeh
               {isRefreshing ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
               Refresh
             </Button>
+            {onHistoryToggle && (
+              <Button
+                size="sm"
+                variant={showHistory ? "default" : "secondary"}
+                onClick={onHistoryToggle}
+                disabled={isHistoryLoading}
+                className="bg-background text-foreground border shadow-sm hover:bg-muted"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                {showHistory ? "Hide History" : "View History"}
+                {isHistoryLoading && <RefreshCw className="w-3 h-3 ml-2 animate-spin" />}
+              </Button>
+            )}
           </div>
 
           <div className="absolute top-4 left-4 z-[1000]">

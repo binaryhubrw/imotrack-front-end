@@ -1271,6 +1271,8 @@ export const useVehicles = (
   });
 };
 
+
+
 // --- Get a vehicle by ID (with nested vehicle_model and organization) ---
 export const useVehicle = (id: string) => {
   return useQuery<Vehicle, Error>({
@@ -1755,6 +1757,41 @@ export const useUpdateVehicleLocation = () => {
   });
 };
 
+/**
+ * Hook to fetch historical location data for a vehicle
+ * @param vehicleId - UUID of the vehicle
+ * @returns Query result with historical location data
+ */
+export const useVehicleLocationHistory = (vehicleId: string) => {
+  return useQuery<LocationUpdate[], Error>({
+    queryKey: ['vehicle-location-history', vehicleId],
+    queryFn: async () => {
+      console.log('Fetching location history for vehicle:', vehicleId);
+      const { data } = await api.get<{ data: LocationUpdate[] }>(`/v2/vehicles/${vehicleId}/locations`);
+      
+      // Handle the case where the API might return coordinates as a string in the 'coords' field
+      // or if they are already parsed. The example from the user shows 'coords' as a string.
+      const processedData = (data.data || []).map(item => {
+        if (typeof item.coords === 'string') {
+          try {
+            return {
+              ...item,
+              coords: JSON.parse(item.coords)
+            };
+          } catch (e) {
+            console.error('Failed to parse historical coordinates:', e);
+            return item;
+          }
+        }
+        return item;
+      });
+
+      return processedData;
+    },
+    enabled: !!vehicleId,
+    staleTime: 60000, // Cache for 1 minute
+  });
+};
 
 // reservation
 

@@ -4,11 +4,12 @@ import { useParams } from 'next/navigation'
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Navigation, ArrowLeft, Activity, Clock, User, Gauge, Fuel, Navigation2, Zap } from "lucide-react"
+import { MapPin, Navigation, ArrowLeft, Activity, Clock, User, Gauge, Fuel, Navigation2, Zap, RefreshCw } from "lucide-react"
 import Link from 'next/link'
 import VehicleMap from '@/components/VehicleMap'
-import { useVehicle, useVehicleLocationStream } from '@/lib/queries'
-import { useState, useEffect } from 'react'
+import { useVehicle, useVehicleLocationStream, useVehicleLocationHistory } from '@/lib/queries'
+import { useState, useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 
 
 export default function VehicleLocationPage() {
@@ -28,6 +29,57 @@ export default function VehicleLocationPage() {
     locationName: "Loading location..."
   })
   const [locationLoading, setLocationLoading] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+
+  // Fetch location history
+  const { data: historyData, isLoading: historyLoading } = useVehicleLocationHistory(vehicleId)
+
+  // Format historical points for the map - Sample every 10 seconds as requested
+  const historicalPoints = useMemo(() => {
+    if (!historyData || historyData.length === 0) return []
+    
+    // Sort by timestamp first
+    const sorted = [...historyData].sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp
+      return timeA - timeB
+    })
+
+    const sampled: [number, number][] = []
+    let lastTimestamp = 0
+
+    sorted.forEach(point => {
+      const currentTimestamp = typeof point.timestamp === 'string' ? new Date(point.timestamp).getTime() : point.timestamp
+      
+      // If it's the first point or at least 10 seconds (10000ms) since the last one
+      if (sampled.length === 0 || (currentTimestamp - lastTimestamp >= 10000)) {
+        if (point.coords?.latitude && point.coords?.longitude) {
+          sampled.push([point.coords.latitude, point.coords.longitude])
+          lastTimestamp = currentTimestamp
+        }
+      }
+    })
+
+    return sampled
+  }, [historyData])
+
+  // Initial trail for live tracking (more detailed than history view)
+  const initialTrail = useMemo(() => {
+    if (!historyData || historyData.length === 0) return []
+    
+    // Sort and filter for recent points (e.g., last 30 minutes or last 100 points)
+    const sorted = [...historyData].sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp
+      return timeA - timeB
+    })
+
+    // For the live trail, we want more detail than the 10s sampled history
+    return sorted
+      .filter(h => h.coords?.latitude && h.coords?.longitude)
+      .slice(-200) // Keep the last 200 points for a nice starting trail
+      .map(h => [h.coords.latitude, h.coords.longitude] as [number, number])
+  }, [historyData])
 
   // Reverse geocode coordinates to get location name
   const reverseGeocode = async (lat: number, lng: number) => {
@@ -343,20 +395,25 @@ export default function VehicleLocationPage() {
         </div>
 
         {/* Map Container */}
-        <Card className="lg:col-span-3 p-0 overflow-hidden flex flex-col">
+        <Card className="lg:col-span-3 p-0 overflow-hidden flex flex-col relative">
           <div className="h-[600px] w-full flex-1">
             <VehicleMap 
               vehicleId={vehicleId}
+              historicalPoints={showHistory ? historicalPoints : []}
+              initialTrail={initialTrail}
+              showHistory={showHistory}
+              onHistoryToggle={() => setShowHistory(!showHistory)}
+              isHistoryLoading={historyLoading}
               vehicles={[{
                 id: vehicleId,
                 name: vehicle.vehicle_model?.vehicle_model_name || 'Unknown Vehicle',
-                lat: 40.7128, // Default coordinates - will be updated by stream
-                lng: -74.006,
-                speed: 0,
+                lat: sampleData.coordinates.lat,
+                lng: sampleData.coordinates.lng,
+                speed: sampleData.speed,
                 heading: 0,
-                status: "inactive",
-                fuel: 100,
-                driver: 'Unknown Driver', // Add driver info when available
+                status: "active",
+                fuel: sampleData.fuel,
+                driver: 'Unknown Driver',
                 lastUpdate: new Date().toISOString()
               }]}
             />

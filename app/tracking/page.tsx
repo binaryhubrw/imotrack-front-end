@@ -117,6 +117,12 @@ export default function VehicleTracking() {
       setLastLocation(currentLocation)
       setLocationCount(prev => prev + 1)
       setGpsAccuracy(coords.accuracy)
+      
+      // Persist to localStorage for session continuity
+      const savedTrip = JSON.parse(localStorage.getItem(`trip_${vehicleId}`) || '[]')
+      savedTrip.push(currentLocation)
+      localStorage.setItem(`trip_${vehicleId}`, JSON.stringify(savedTrip.slice(-1000))) // Keep last 1000 points
+
       setLastStatus(`Location ${locationCount + 1} sent successfully at ${new Date().toLocaleTimeString()}`)
       lastUpdateTimeRef.current = Date.now()
       
@@ -160,6 +166,9 @@ export default function VehicleTracking() {
       setLastStatus("Please enter a vehicle ID")
       return
     }
+
+    // Clear old trip data for new session
+    localStorage.removeItem(`trip_${vehicleId}`)
 
     // Validate vehicle ID format (assuming UUID format)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
