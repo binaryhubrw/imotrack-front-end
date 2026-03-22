@@ -21,12 +21,12 @@ export default function AssignCarPage() {
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Only ACCEPTED reservations that don't already have this vehicle
+  // UNDER_REVIEW or ACCEPTED reservations that don't already have this vehicle
   const eligible = useMemo(() => {
     if (!allReservations) return [];
     return (allReservations as Reservation[]).filter(
       (r) =>
-        r.reservation_status === "ACCEPTED" &&
+        (r.reservation_status === "UNDER_REVIEW" || r.reservation_status === "ACCEPTED") &&
         !r.reserved_vehicles?.some((rv: any) => rv.vehicle_id === id || rv.vehicle?.vehicle_id === id)
     );
   }, [allReservations, id]);
@@ -98,7 +98,7 @@ export default function AssignCarPage() {
           {/* Left — reservation list */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Accepted Reservations</h2>
+              <h2 className="font-semibold text-gray-800">Pending Reservations</h2>
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
                 {eligible.length} available
               </span>
@@ -119,7 +119,7 @@ export default function AssignCarPage() {
               <div className="p-12 text-center text-gray-400 text-sm">Loading reservations...</div>
             ) : filtered.length === 0 ? (
               <div className="p-12 text-center text-gray-400 text-sm">
-                No accepted reservations available to assign this vehicle to.
+                No pending reservations available to assign this vehicle to.
               </div>
             ) : (
               <div className="divide-y divide-gray-50 max-h-[520px] overflow-y-auto">
@@ -145,8 +145,12 @@ export default function AssignCarPage() {
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="font-semibold text-gray-800 truncate">{res.reservation_purpose}</span>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">
-                              ACCEPTED
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              res.reservation_status === "ACCEPTED"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {res.reservation_status === "ACCEPTED" ? "Accepted" : "Under Review"}
                             </span>
                             {/* Map view button */}
                             <button
