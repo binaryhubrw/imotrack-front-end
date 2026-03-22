@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search, X, ChevronDown, MapPin, CheckCircle, Clock, Car, FileSpreadsheet, Filter, Calendar } from "lucide-react";
 import { exportToStyledExcel } from "@/lib/excel-export";
@@ -265,31 +265,12 @@ function StatusMultiSelect({
   setStatusFilters: React.Dispatch<React.SetStateAction<Set<string>>>;
 }) {
   const [open, setOpen] = useState(false);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const openDropdown = useCallback(() => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownStyle({
-        position: "fixed",
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 99999,
-      });
-    }
-    setOpen(true);
-  }, []);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (
-        triggerRef.current?.contains(e.target as Node) ||
-        dropdownRef.current?.contains(e.target as Node)
-      ) return;
+      if (containerRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
@@ -304,11 +285,10 @@ function StatusMultiSelect({
     });
 
   return (
-    <div className="relative w-full sm:w-56">
+    <div ref={containerRef} className="relative w-full sm:w-56" style={{ zIndex: 50 }}>
       <button
-        ref={triggerRef}
         type="button"
-        onClick={() => (open ? setOpen(false) : openDropdown())}
+        onClick={() => setOpen(o => !o)}
         className="flex items-center justify-between w-full h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer text-gray-700 select-none hover:border-gray-300 transition-colors"
       >
         <span>{statusFilters.size === 0 ? "All Statuses" : `${statusFilters.size} selected`}</span>
@@ -316,11 +296,7 @@ function StatusMultiSelect({
       </button>
 
       {open && (
-        <div
-          ref={dropdownRef}
-          style={dropdownStyle}
-          className="bg-white border border-gray-200 rounded-xl shadow-2xl py-1"
-        >
+        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-2xl py-1" style={{ zIndex: 9999 }}>
           {STATUS_OPTIONS.map(({ id, label }) => (
             <label
               key={id}
@@ -1169,7 +1145,7 @@ export default function ReservationsPage() {
 
         {/* Filters card */}
         <motion.div
-          className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl relative z-20"
+          className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl relative z-30 overflow-visible"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
@@ -1419,20 +1395,15 @@ export default function ReservationsPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const vehicleId = (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle_id
-                                  ?? (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle?.vehicle_id;
+                                const rv = (reservation.reserved_vehicles as ReservedVehicle[])[0];
+                                const vehicleId = rv?.vehicle_id ?? rv?.vehicle?.vehicle_id;
+                                const tripId = rv?.reserved_vehicle_id;
                                 if (vehicleId) {
-                                  const from = reservation.departure_date
-                                    ? new Date(reservation.departure_date).toISOString()
-                                    : '';
-                                  const to = reservation.expected_returning_date
-                                    ? new Date(reservation.expected_returning_date).toISOString()
-                                    : '';
-                                  const qs = from && to ? `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : '';
+                                  const qs = tripId ? `?trip=${encodeURIComponent(tripId)}` : '';
                                   router.push(`/dashboard/shared_pages/vehicles/${vehicleId}/locations${qs}`);
                                 }
                               }}
-                              title="View vehicle trip on map"
+                              title="View trip on map"
                               className="p-2 rounded-lg text-[#0872b3] hover:bg-[#0872b3]/10 transition-colors"
                             >
                               <MapPin className="w-4 h-4" />

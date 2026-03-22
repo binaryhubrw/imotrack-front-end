@@ -1761,28 +1761,40 @@ export const useUpdateVehicleLocation = () => {
  * @param vehicleId - UUID of the vehicle
  * @returns Query result with historical location data
  */
-export const useVehicleLocationHistory = (vehicleId: string, from?: string, to?: string) => {
+export const useVehicleLocationHistory = (vehicleId: string, trip?: string) => {
   return useQuery<LocationUpdate[], Error>({
-    queryKey: ['vehicle-location-history', vehicleId, from, to],
+    queryKey: ['vehicle-location-history', vehicleId, trip],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (from) params.set('from', from);
-      if (to)   params.set('to', to);
-      const qs = params.toString() ? `?${params.toString()}` : '';
+      const qs = trip ? `?trip=${encodeURIComponent(trip)}` : '';
       const { data } = await api.get<{ data: LocationUpdate[] }>(`/v2/vehicles/${vehicleId}/locations${qs}`);
-      
-      const processedData = (data.data || []).map(item => {
+      return (data.data || []).map(item => {
         if (typeof item.coords === 'string') {
           try { return { ...item, coords: JSON.parse(item.coords) }; }
           catch { return item; }
         }
         return item;
       });
-
-      return processedData;
     },
     enabled: !!vehicleId,
     staleTime: 60000,
+  });
+};
+
+export const useTripLocationHistory = (reservedVehicleId: string | undefined) => {
+  return useQuery<LocationUpdate[], Error>({
+    queryKey: ['trip-location-history', reservedVehicleId],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: LocationUpdate[] }>(`/v2/trips/${reservedVehicleId}/locations`);
+      return (data.data || []).map(item => {
+        if (typeof item.coords === 'string') {
+          try { return { ...item, coords: JSON.parse(item.coords) }; }
+          catch { return item; }
+        }
+        return item;
+      });
+    },
+    enabled: !!reservedVehicleId,
+    staleTime: 30000,
   });
 };
 

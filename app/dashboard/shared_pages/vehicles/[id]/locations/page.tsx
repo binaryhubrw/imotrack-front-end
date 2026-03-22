@@ -17,9 +17,8 @@ export default function VehicleLocationPage() {
   const searchParams = useSearchParams()
   const vehicleId = params.id as string
   
-  // Optional trip date range passed as query params (e.g. from reservation detail)
-  const tripFrom = searchParams.get('from') ?? undefined
-  const tripTo   = searchParams.get('to')   ?? undefined
+  // Optional trip ID passed as query param (e.g. ?trip=<reserved_vehicle_id>)
+  const reservedVehicleId = searchParams.get('trip') ?? undefined
   
   // Fetch vehicle data using the API hook
   const { data: vehicle, isLoading: loading, isError } = useVehicle(vehicleId)
@@ -36,8 +35,8 @@ export default function VehicleLocationPage() {
   const [locationLoading, setLocationLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
-  // Fetch location history — scoped to trip dates if provided
-  const { data: historyData, isLoading: historyLoading } = useVehicleLocationHistory(vehicleId, tripFrom, tripTo)
+  // Fetch location history — scoped to trip if reservedVehicleId provided, otherwise full vehicle history
+  const { data: historyData, isLoading: historyLoading } = useVehicleLocationHistory(vehicleId, reservedVehicleId)
 
   // Format historical points for the map - Sample every 10 seconds as requested
   const historicalPoints = useMemo(() => {
