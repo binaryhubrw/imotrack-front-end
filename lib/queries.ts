@@ -1348,23 +1348,22 @@ export const useUpdateVehicle = () => {
     vehicle_photo?: File;
   } }>({
     mutationFn: async ({ id, updates }) => {
-      // Only send allowed fields
-      const allowed: Record<string, unknown> = {};
-      if (updates.plate_number) allowed.plate_number = updates.plate_number;
-      if (updates.transmission_mode) allowed.transmission_mode = updates.transmission_mode;
-      if (updates.vehicle_model_id) allowed.vehicle_model_id = updates.vehicle_model_id;
-      if (updates.vehicle_year) allowed.vehicle_year = updates.vehicle_year;
-      if (updates.energy_type) allowed.energy_type = updates.energy_type;
-      if (updates.organization_id) allowed.organization_id = updates.organization_id;
-      // For photo, you may need to use FormData if updating image
-      const { data } = await api.put<{ data: Vehicle }>(`/v2/vehicles/${id}`, allowed, {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const formData = new FormData();
+      if (updates.plate_number) formData.append('plate_number', updates.plate_number);
+      if (updates.transmission_mode) formData.append('transmission_mode', updates.transmission_mode);
+      if (updates.vehicle_model_id) formData.append('vehicle_model_id', updates.vehicle_model_id);
+      if (updates.vehicle_year) formData.append('vehicle_year', String(updates.vehicle_year));
+      if (updates.energy_type) formData.append('energy_type', updates.energy_type);
+      if (updates.organization_id) formData.append('organization_id', updates.organization_id);
+      if (updates.vehicle_photo) formData.append('vehicle_photo', updates.vehicle_photo);
+
+      const { data } = await api.put<{ data: Vehicle }>(`/v2/vehicles/${id}`, formData);
       if (!data.data) throw new Error('No data');
       return data.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle', id] });
       toast.success('Vehicle updated successfully!', {
         style: toastStyles.success.style,
         duration: toastStyles.success.duration,

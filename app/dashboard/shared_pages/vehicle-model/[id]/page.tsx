@@ -188,7 +188,7 @@ export default function VehicleModelDetailPage() {
   // Main return
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Button variant="ghost" className="text-[#0872b3] hover:text-[#065d8f]" onClick={() => router.back()}>
@@ -220,7 +220,6 @@ export default function VehicleModelDetailPage() {
             >
               <h2 className="text-xl font-bold mb-2">Edit Vehicle Model</h2>
 
-              
               <label className="text-sm font-medium">Model Name
                 <input
                   className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
@@ -288,74 +287,82 @@ export default function VehicleModelDetailPage() {
         )}
 
         {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-[#0872b3] text-white p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+          {/* Blue header */}
+          <div className="bg-[#0872b3] text-white px-8 py-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 rounded-xl p-3">
                 <FontAwesomeIcon icon={faCar} className="text-2xl" />
-                <h1 className="text-2xl font-bold">Vehicle Model Details</h1>
               </div>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-full">
-                {getModelTypeLabel(model.vehicle_type)}
+              <div>
+                <p className="text-white/70 text-sm uppercase tracking-widest">Vehicle Model</p>
+                <h1 className="text-2xl font-bold">{model.vehicle_model_name}</h1>
               </div>
             </div>
+            <span className="bg-white text-[#0872b3] text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">
+              {getModelTypeLabel(model.vehicle_type)}
+            </span>
           </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Model Name</div>
-                <div className="font-medium text-gray-900">{model.vehicle_model_name}</div>
+
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100 border-b border-gray-100">
+            {[
+              { label: "Model Name", value: model.vehicle_model_name },
+              { label: "Manufacturer", value: model.manufacturer_name },
+              { label: "Capacity", value: `${model.vehicle_capacity} passengers` },
+              { label: "Created", value: model.created_at ? new Date(model.created_at).toLocaleDateString() : "N/A" },
+            ].map((item) => (
+              <div key={item.label} className="px-6 py-5">
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{item.label}</p>
+                <p className="font-semibold text-gray-800 text-sm">{item.value}</p>
               </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Type</div>
-                <div className="font-medium text-gray-900">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            ))}
+          </div>
+
+          {/* Detail cards */}
+          <div className="p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex flex-col gap-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Model Name</span>
+                <span className="text-lg font-bold text-gray-800">{model.vehicle_model_name}</span>
+              </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex flex-col gap-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Vehicle Type</span>
+                <span className="inline-flex mt-1">
+                  <span className="bg-blue-100 text-blue-700 text-sm font-semibold px-3 py-1 rounded-full">
                     {getModelTypeLabel(model.vehicle_type)}
                   </span>
-                </div>
+                </span>
               </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Manufacturer</div>
-                <div className="font-medium text-gray-900">{model.manufacturer_name}</div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex flex-col gap-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Manufacturer</span>
+                <span className="text-lg font-bold text-gray-800">{model.manufacturer_name}</span>
               </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Vehicle Capacity</div>
-                <div className="font-medium text-gray-900">{model.vehicle_capacity} passengers</div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex flex-col gap-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Seating Capacity</span>
+                <span className="text-lg font-bold text-gray-800">{model.vehicle_capacity}
+                  <span className="text-sm font-normal text-gray-500 ml-1">passengers</span>
+                </span>
               </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">Created At</div>
-                <div className="font-medium text-gray-900">
-                  {model.created_at ? new Date(model.created_at).toLocaleString() : 'N/A'}
-                </div>
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 flex flex-col gap-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Date Added</span>
+                <span className="text-lg font-bold text-gray-800">
+                  {model.created_at ? new Date(model.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "N/A"}
+                </span>
               </div>
-            </div>
-
-            {/* Additional Information Section */}
-            <div className="mt-8">
-              <h2 className="text-lg font-bold mb-4 text-gray-900">Model Information</h2>
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                <div className="flex items-start gap-3">
-                  <Ban className="text-blue-600 mt-1" />
-                  <div>
-                    <div className="font-semibold text-blue-900">
-                      {model.manufacturer_name} {model.vehicle_model_name}
-                    </div>
-                    <div className="text-blue-700 text-sm">
-                      This is a {getModelTypeLabel(model.vehicle_type).toLowerCase()} model manufactured by {model.manufacturer_name}.
-                    </div>
-                  </div>
-                </div>
+              {/* Summary card */}
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 flex flex-col gap-2 sm:col-span-2 lg:col-span-1">
+                <span className="text-xs text-blue-400 uppercase tracking-wide">Summary</span>
+                <p className="text-sm text-blue-800 leading-relaxed">
+                  <span className="font-semibold">{model.manufacturer_name} {model.vehicle_model_name}</span> is a{" "}
+                  {getModelTypeLabel(model.vehicle_type).toLowerCase()} with a seating capacity of{" "}
+                  {model.vehicle_capacity} passengers.
+                </p>
               </div>
             </div>
           </div>
         </div>
-
-        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && canDelete && (

@@ -15,6 +15,7 @@ import {
   useUpdateVehicle,
   useDeleteVehicle,
   useVehicleModel,
+  useVehicleModels,
   useReservations,
 } from "@/lib/queries";
 import {
@@ -32,9 +33,10 @@ import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import NoPermissionUI from "@/components/NoPermissionUI";
 import ErrorUI from "@/components/ErrorUI";
-import { Ban } from "lucide-react";
+import { Ban, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { exportToStyledExcel } from "@/lib/excel-export";
 
 export default function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +52,7 @@ export default function VehicleDetailPage() {
   const { data: vehicleModel } = useVehicleModel(
     vehicle?.vehicle_model_id || ""
   );
+  const { data: vehicleModels } = useVehicleModels();
 
   const reservedDates = React.useMemo(() => {
     if (!allReservations || !id) return [];
@@ -162,9 +165,7 @@ export default function VehicleDetailPage() {
           transmission_mode: editForm.transmission_mode as TransmissionMode,
         },
       });
-      // toast.success("Vehicle updated!");
       setShowEdit(false);
-      refetch();
     } catch {
       // Error handled by mutation
     } finally {
@@ -320,14 +321,20 @@ export default function VehicleDetailPage() {
 
               <label className="text-sm font-medium">
                 Manufacturer
-                <input
-                  className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent"
-                  value={vehicleModel?.vehicle_model_name}
+                <select
+                  className="w-full border rounded px-3 py-2 mt-1 focus:ring-2 focus:ring-[#0872b3] focus:border-transparent bg-white"
+                  value={editForm.vehicle_model_id}
                   onChange={(e) =>
-                    setEditForm((f) => ({ ...f, plate_number: e.target.value }))
+                    setEditForm((f) => ({ ...f, vehicle_model_id: e.target.value }))
                   }
-                  required
-                />
+                >
+                  <option value="">Select manufacturer / model</option>
+                  {vehicleModels?.map((m) => (
+                    <option key={m.vehicle_model_id} value={m.vehicle_model_id}>
+                      {m.manufacturer_name} {m.vehicle_model_name}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               {/* Vehicle Photo Upload */}
@@ -535,13 +542,25 @@ export default function VehicleDetailPage() {
                   )}
                 </div>
 
-                {/* Locate button */}
-                <div className="mt-auto pt-2">
+                {/* Action buttons */}
+                <div className="mt-auto pt-2 flex flex-wrap gap-3">
                   <button
                     onClick={() => router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/locations`)}
-                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-green-700 transition-colors duration-300"
+                    className="px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-green-700 transition-colors duration-300 text-sm"
                   >
                     Locate The Car
+                  </button>
+                  <button
+                    onClick={() => router.push(`/dashboard/shared_pages/reservations?vehicle_id=${vehicle.vehicle_id}`)}
+                    className="px-5 py-2 bg-gradient-to-r from-[#0872b3] to-[#065d8f] text-white font-semibold rounded-lg shadow-md hover:from-[#065d8f] hover:to-[#054a72] transition-colors duration-300 text-sm"
+                  >
+                    Assign Car
+                  </button>
+                  <button
+                    onClick={() => router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/trip-history`)}
+                    className="px-5 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white font-semibold rounded-lg shadow-md hover:from-gray-700 hover:to-gray-800 transition-colors duration-300 text-sm"
+                  >
+                    Trip History
                   </button>
                 </div>
               </div>
@@ -609,6 +628,105 @@ export default function VehicleDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Trip History Section */}
+            {canViewReservations && (() => {
+              const tripReservations = (allReservations ?? []).filter((res: any) =>
+                res.reserved_vehicles?.some((rv: any) => rv.vehicle_id === id) &&
+                (res.reservation_status === "COMPLETED" || res.reservation_status === "IN_PROGRESS")
+              );
+
+              const handleExport = async () => {
+                await exportToStyledExcel({
+                  title: `Trip History — ${vehicle.plate_number}`,
+                  sheetName: "Trip History",
+                  filename: `trip-history-${vehicle.plate_number}`,
+                  columns: ["#", "Purpose", "From", "To", "Departure", "Expected Return", "Status", "Passengers"],
+                  statusColumn: "Status",
+                  data: tripReservations.map((res: any, i: number) => ({
+                    "#": i + 1,
+                    "Purpose": res.reservation_purpose,
+                    "From": res.start_location,
+                    "To": res.reservation_destination,
+                    "Departure": new Date(res.departure_date).toLocaleDateString(),
+                    "Expected Return": new Date(res.expected_returning_date).toLocaleDateString(),
+                    "Status": res.reservation_status,
+                    "Passengers": res.passengers,
+                  })),
+                });
+              };
+
+              return (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <FontAwesomeIcon icon={faCalendarAlt} className="text-[#0872b3]" />
+                      Trip History
+                    </h2>
+                    {tripReservations.length > 0 && (
+                      <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export
+                      </button>
+                    )}
+                  </div>
+
+                  {tripReservations.length === 0 ? (
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-8 text-center text-gray-400 text-sm">
+                      No trip history found for this vehicle.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-[#0872b3] text-white">
+                            <th className="px-4 py-3 text-left font-semibold">#</th>
+                            <th className="px-4 py-3 text-left font-semibold">Purpose</th>
+                            <th className="px-4 py-3 text-left font-semibold">From</th>
+                            <th className="px-4 py-3 text-left font-semibold">To</th>
+                            <th className="px-4 py-3 text-left font-semibold">Departure</th>
+                            <th className="px-4 py-3 text-left font-semibold">Return</th>
+                            <th className="px-4 py-3 text-left font-semibold">Passengers</th>
+                            <th className="px-4 py-3 text-left font-semibold">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tripReservations.map((res: any, i: number) => (
+                            <tr
+                              key={res.reservation_id}
+                              className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => router.push(`/dashboard/shared_pages/reservations/${res.reservation_id}`)}
+                            >
+                              <td className="px-4 py-3 text-gray-500">{i + 1}</td>
+                              <td className="px-4 py-3 font-medium text-gray-800">{res.reservation_purpose}</td>
+                              <td className="px-4 py-3 text-gray-600">{res.start_location}</td>
+                              <td className="px-4 py-3 text-gray-600">{res.reservation_destination}</td>
+                              <td className="px-4 py-3 text-gray-600">{new Date(res.departure_date).toLocaleDateString()}</td>
+                              <td className="px-4 py-3 text-gray-600">{new Date(res.expected_returning_date).toLocaleDateString()}</td>
+                              <td className="px-4 py-3 text-gray-600">{res.passengers}</td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                  res.reservation_status === "COMPLETED"
+                                    ? "bg-green-100 text-green-700"
+                                    : res.reservation_status === "IN_PROGRESS"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}>
+                                  {res.reservation_status === "IN_PROGRESS" ? "Ongoing" : res.reservation_status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
