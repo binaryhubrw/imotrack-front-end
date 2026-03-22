@@ -35,15 +35,95 @@ export default function VehicleLocationPage() {
   const [locationLoading, setLocationLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
-  // Fetch location history — scoped to trip if reservedVehicleId provided, otherwise full vehicle history
-  const { data: historyData, isLoading: historyLoading } = useVehicleLocationHistory(vehicleId, reservedVehicleId)
+  // Use integrated locations from vehicle response as history data
+  const historyData = useMemo(() => {
+    if (!vehicle?.locations) return []
+    
+    return vehicle.locations.map((item: any) => {
+      let parsedCoords = item.coords
+      if (typeof item.coords === 'string') {
+        try {
+          parsedCoords = JSON.parse(item.coords)
+        } catch (e) {
+          console.error("Failed to parse coords for location:", item.location_id)
+        }
+      }
+      return { ...item, coords: parsedCoords }
+    })
+  }, [vehicle?.locations])
+
+  const historyLoading = loading // Since history is nested in vehicle
+
+  const [selectedJourneyId, setSelectedJourneyId] = useState<string | null>(null)
+
+  // Interface for a journey (Trip segment)
+  interface Journey {
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    points: any[];
+  }
+
+  // Group locations into distinct journeys based on time gaps (e.g. 15 mins)
+  const journeys = useMemo(() => {
+    if (!historyData || historyData.length === 0) return []
+    
+    const sorted = [...historyData].sort((a, b) => {
+      const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp
+      const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp
+      return timeA - timeB
+    })
+
+    const result: Journey[] = []
+    let currentJourneyPoints: any[] = []
+    
+    sorted.forEach((point, index) => {
+      if (currentJourneyPoints.length === 0) {
+        currentJourneyPoints.push(point)
+      } else {
+        const lastPoint = currentJourneyPoints[currentJourneyPoints.length - 1]
+        const lastTime = typeof lastPoint.timestamp === 'string' ? new Date(lastPoint.timestamp).getTime() : lastPoint.timestamp
+        const currentTime = typeof point.timestamp === 'string' ? new Date(point.timestamp).getTime() : point.timestamp
+        
+        // 15 minute gap signals a new journey
+        if (currentTime - lastTime > 15 * 60 * 1000) {
+          result.push({
+            id: `trip-${result.length + 1}`,
+            startTime: new Date(typeof currentJourneyPoints[0].timestamp === 'string' ? currentJourneyPoints[0].timestamp : currentJourneyPoints[0].timestamp),
+            endTime: new Date(typeof lastPoint.timestamp === 'string' ? lastPoint.timestamp : lastPoint.timestamp),
+            points: [...currentJourneyPoints]
+          })
+          currentJourneyPoints = [point]
+        } else {
+          currentJourneyPoints.push(point)
+        }
+      }
+
+      // Handle the final segment
+      if (index === sorted.length - 1 && currentJourneyPoints.length > 0) {
+        const lastPoint = currentJourneyPoints[currentJourneyPoints.length - 1]
+        result.push({
+          id: `trip-${result.length + 1}`,
+          startTime: new Date(typeof currentJourneyPoints[0].timestamp === 'string' ? currentJourneyPoints[0].timestamp : currentJourneyPoints[0].timestamp),
+          endTime: new Date(typeof lastPoint.timestamp === 'string' ? lastPoint.timestamp : lastPoint.timestamp),
+          points: [...currentJourneyPoints]
+        })
+      }
+    })
+
+    return result.reverse() // Show most recent trips first
+  }, [historyData])
 
   // Format historical points for the map - Sample every 10 seconds as requested
   const historicalPoints = useMemo(() => {
-    if (!historyData || historyData.length === 0) return []
+    const sourceData = selectedJourneyId 
+      ? journeys.find(j => j.id === selectedJourneyId)?.points || []
+      : historyData || []
+
+    if (sourceData.length === 0) return []
     
     // Sort by timestamp first
-    const sorted = [...historyData].sort((a, b) => {
+    const sorted = [...sourceData].sort((a, b) => {
       const timeA = typeof a.timestamp === 'string' ? new Date(a.timestamp).getTime() : a.timestamp
       const timeB = typeof b.timestamp === 'string' ? new Date(b.timestamp).getTime() : b.timestamp
       return timeA - timeB
@@ -126,6 +206,13 @@ export default function VehicleLocationPage() {
       reverseGeocode(locationStream.coords.latitude, locationStream.coords.longitude)
     }
   }, [locationStream])
+
+  // Automatically show history when a journey is selected
+  useEffect(() => {
+    if (selectedJourneyId) {
+      setShowHistory(true)
+    }
+  }, [selectedJourneyId])
 
   if (loading) {
     return (
@@ -395,6 +482,69 @@ export default function VehicleLocationPage() {
                 <span className="font-semibold text-lg">0</span>
               </div>
             </div>
+          </Card>
+          
+          {/* Journeys / Trips List */}
+          <Card className="p-4 space-y-4 shadow-sm">
+            <h3 className="font-semibold text-sm flex items-center gap-2 border-b pb-2">
+              <Navigation className="w-4 h-4 text-blue-600" />
+              Recent Journeys
+            </h3>
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : journeys.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted-foreground">No recorded journeys found.</p>
+                </div>
+              ) : (
+                journeys.map((journey) => (
+                  <button
+                    key={journey.id}
+                    onClick={() => setSelectedJourneyId(journey.id === selectedJourneyId ? null : journey.id)}
+                    className={`w-full text-left p-3 rounded-lg text-xs transition-all border ${
+                      selectedJourneyId === journey.id 
+                        ? 'bg-blue-600/10 border-blue-600 text-blue-700 shadow-sm' 
+                        : 'bg-slate-50 border-slate-100 hover:bg-slate-100 hover:border-slate-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 rounded-full ${selectedJourneyId === journey.id ? 'bg-blue-600' : 'bg-slate-300'}`} />
+                        <span className="font-bold uppercase tracking-wider">{journey.id}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] font-medium px-1.5 py-0 h-4 bg-slate-200 text-slate-700 border-0">
+                        {Math.round((journey.endTime.getTime() - journey.startTime.getTime()) / (60 * 1000))} min
+                      </Badge>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        <span>{journey.startTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {journey.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <MapPin className="w-3 h-3" />
+                        <span className="truncate">Route segment ({journey.points.length} pts)</span>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+            {selectedJourneyId && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full text-xs border-dashed"
+                onClick={() => setSelectedJourneyId(null)}
+              >
+                View Full History
+              </Button>
+            )}
           </Card>
         </div>
 

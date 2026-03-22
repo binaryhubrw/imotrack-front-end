@@ -502,6 +502,20 @@ export type Vehicle = {
     organization_customId: string;
     organization_status: string;
   };
+  locations?: Array<{
+    location_id: string;
+    vehicle_id: string;
+    coords: string | {
+      latitude: number;
+      longitude: number;
+      altitude: number | null;
+      accuracy: number;
+      altitudeAccuracy: number | null;
+      heading: number | null;
+      speed: number | null;
+    };
+    timestamp: string;
+  }>;
 };
 
 export type CreateVehicleDto = {

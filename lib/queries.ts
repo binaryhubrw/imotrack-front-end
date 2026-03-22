@@ -1587,16 +1587,22 @@ export const useVehicleLocationStream = (vehicleId: string, enabled: boolean = t
           if (!mounted) return;
           
           try {
+            // Log raw message for debugging if it's potentially empty or malformed
+            if (!event.data || event.data === '{}') {
+              // Ignore empty pulses from server if they occur every second
+              return;
+            }
+
             const locationData: LocationUpdate = JSON.parse(event.data);
             
             // Validate location data
             if (!locationData.vehicle_id || !locationData.coords) {
-              console.warn('Invalid location data received:', locationData);
+              console.warn('Invalid location structure received:', locationData);
               return;
             }
 
             if (!locationData.coords.latitude || !locationData.coords.longitude) {
-              console.warn('Missing coordinates in location data:', locationData);
+              console.warn('Missing coordinates in location update');
               return;
             }
 
