@@ -233,7 +233,7 @@ export default function VehicleDetailPage() {
   // Main return
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Button
@@ -330,6 +330,50 @@ export default function VehicleDetailPage() {
                 />
               </label>
 
+              {/* Vehicle Photo Upload */}
+              <label className="text-sm font-medium">
+                Vehicle Photo
+                <div className="mt-1 flex flex-col gap-2">
+                  {/* Preview: new file or existing photo */}
+                  {editForm.vehicle_photo ? (
+                    <div className="relative w-full h-36 rounded overflow-hidden border">
+                      <Image
+                        src={URL.createObjectURL(editForm.vehicle_photo)}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditForm((f) => ({ ...f, vehicle_photo: undefined }))}
+                        className="absolute top-1 right-1 bg-white/80 hover:bg-white text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : vehicle?.vehicle_photo ? (
+                    <div className="relative w-full h-36 rounded overflow-hidden border">
+                      <Image
+                        src={vehicle.vehicle_photo.startsWith("http") ? vehicle.vehicle_photo : `/uploads/${vehicle.vehicle_photo}`}
+                        alt="Current photo"
+                        fill
+                        className="object-cover"
+                      />
+                      <span className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">Current</span>
+                    </div>
+                  ) : null}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-[#0872b3] file:text-white hover:file:bg-[#065d8f] cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setEditForm((f) => ({ ...f, vehicle_photo: file }));
+                    }}
+                  />
+                </div>
+              </label>
+
               {/* Show vehicle_status as a badge or text */}
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-sm font-medium">Status:</span>
@@ -374,14 +418,14 @@ export default function VehicleDetailPage() {
                 <FontAwesomeIcon icon={faCar} className="text-2xl" />
                 <h1 className="text-2xl font-bold">Vehicle Details</h1>
               </div>
-              {/* Show vehicle_status as a badge or text */}
               <div
-                className={`text-sm px-3 py-1 rounded-full ${vehicle.vehicle_status === "AVAILABLE"
+                className={`text-sm px-3 py-1 rounded-full font-semibold ${
+                  vehicle.vehicle_status === "AVAILABLE"
                     ? "bg-green-100 text-green-700"
                     : vehicle.vehicle_status === "OCCUPIED"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-gray-100 text-gray-700"
-                  }`}
+                    ? "bg-red-100 text-red-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
               >
                 {vehicle.vehicle_status}
               </div>
@@ -389,174 +433,117 @@ export default function VehicleDetailPage() {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Plate Number */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Plate Number
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.plate_number}
-                </div>
-              </div>
-              {/* Transmission Mode */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Transmission Mode
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.transmission_mode}
-                </div>
-              </div>
-              {/* Vehicle Year */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Year
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.vehicle_year}
+            {/* Two-column layout: photo left, details right */}
+            <div className="flex flex-col lg:flex-row gap-6">
+
+              {/* Left — Vehicle Photo */}
+              <div className="lg:w-72 shrink-0">
+                <div className="bg-gray-50 rounded-xl border overflow-hidden h-64 lg:h-full min-h-[16rem] flex flex-col">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide px-4 pt-4 pb-2 font-medium">
+                    Photo
+                  </div>
+                  <div className="flex-1 relative">
+                    {vehicle.vehicle_photo &&
+                    typeof vehicle.vehicle_photo === "string" &&
+                    vehicle.vehicle_photo.trim() !== "" ? (
+                      (() => {
+                        try {
+                          const src = vehicle.vehicle_photo.startsWith("http")
+                            ? vehicle.vehicle_photo
+                            : `/uploads/${vehicle.vehicle_photo}`;
+                          new URL(src, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+                          return (
+                            <Image
+                              src={src}
+                              alt="Vehicle"
+                              fill
+                              className="object-cover"
+                            />
+                          );
+                        } catch {
+                          return <div className="flex items-center justify-center h-full text-gray-400 text-xs">Invalid image</div>;
+                        }
+                      })()
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-300">
+                        <FontAwesomeIcon icon={faCar} className="text-5xl" />
+                        <span className="text-xs text-gray-400">No photo available</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Energy Type */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Energy Type
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.energy_type}
-                </div>
-              </div>
-              {/* Last Service Date */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Last Service Date
-                </div>
-                <div className="font-medium text-gray-900">
-                  {vehicle.last_service_date
-                    ? new Date(vehicle.last_service_date).toLocaleString()
-                    : "N/A"}
-                </div>
-              </div>
-              {/* Vehicle Photo */}
-              {vehicle.vehicle_photo &&
-                typeof vehicle.vehicle_photo === "string" &&
-                vehicle.vehicle_photo.trim() !== "" ? (
-                <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                    Photo
+              {/* Right — Details grid */}
+              <div className="flex-1 flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Plate Number</div>
+                    <div className="font-semibold text-gray-900 mt-1">{vehicle.plate_number}</div>
                   </div>
-                  {/* Only render Image if src is a valid URL or path */}
-                  {(() => {
-                    try {
-                      // Try to construct a URL to check validity
-                      // Accepts both absolute and relative URLs
-                      const src = vehicle.vehicle_photo.startsWith("http")
-                        ? vehicle.vehicle_photo
-                        : `/uploads/${vehicle.vehicle_photo}`;
-                      // Throws if invalid
-                      new URL(
-                        src,
-                        typeof window !== "undefined"
-                          ? window.location.origin
-                          : "http://localhost"
-                      );
-                      return (
-                        <Image
-                          width={500}
-                          height={500}
-                          src={src}
-                          alt="Vehicle"
-                          className="rounded shadow object-cover border"
-                        />
-                      );
-                    } catch {
-                      return (
-                        <div className="text-gray-400 text-xs">
-                          Invalid image URL
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">
-                    Photo
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Transmission</div>
+                    <div className="font-semibold text-gray-900 mt-1">{vehicle.transmission_mode}</div>
                   </div>
-                  <div className="text-gray-400 text-xs">
-                    No photo available
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Year</div>
+                    <div className="font-semibold text-gray-900 mt-1">{vehicle.vehicle_year}</div>
                   </div>
-                </div>
-              )}
-              {/* Organization Name */}
-              {vehicle.organization && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
-                    Organization
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Energy Type</div>
+                    <div className="font-semibold text-gray-900 mt-1">{vehicle.energy_type}</div>
                   </div>
-                  <div className="font-medium text-gray-900">
-                    {vehicle.organization.organization_name}
-                  </div>
-                </div>
-              )}
-              {/* Capacity Name */}
-              {vehicle.vehicle_model?.vehicle_capacity && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
-                    Capacity
-                  </div>
-                  <div className="font-medium text-gray-900">
-                    {vehicle.vehicle_model.vehicle_capacity}
-                  </div>
-                </div>
-              )}
-              {/* Model Name and Manufacturer */}
-              {vehicle.vehicle_model && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
-                    Model
-                  </div>
-                  <div className="font-medium text-gray-900">
-                    {vehicle.vehicle_model.manufacturer_name}{" "}
-                    {vehicle.vehicle_model.vehicle_model_name}
-                  </div>
-                </div>
-              )}
-              {/* Status (already shown above, but keep for completeness) */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-xs text-gray-500 uppercase tracking-wide">
-                  Status
-                </div>
-                <div
-                  className={`font-medium text-gray-900 inline-block px-2 py-1 rounded-full text-xs ${vehicle.vehicle_status === "AVAILABLE"
-                      ? "bg-green-100 text-green-700"
-                      : vehicle.vehicle_status === "OCCUPIED"
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Status</div>
+                    <div className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      vehicle.vehicle_status === "AVAILABLE"
+                        ? "bg-green-100 text-green-700"
+                        : vehicle.vehicle_status === "OCCUPIED"
                         ? "bg-red-100 text-red-700"
                         : "bg-gray-100 text-gray-700"
-                    }`}
-                >
-                  {vehicle.vehicle_status}
+                    }`}>
+                      {vehicle.vehicle_status}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide">Last Service</div>
+                    <div className="font-semibold text-gray-900 mt-1">
+                      {vehicle.last_service_date
+                        ? new Date(vehicle.last_service_date).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+                  </div>
+                  {vehicle.vehicle_model && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Model</div>
+                      <div className="font-semibold text-gray-900 mt-1">
+                        {vehicle.vehicle_model.manufacturer_name} {vehicle.vehicle_model.vehicle_model_name}
+                      </div>
+                    </div>
+                  )}
+                  {vehicle.vehicle_model?.vehicle_capacity && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Capacity</div>
+                      <div className="font-semibold text-gray-900 mt-1">{vehicle.vehicle_model.vehicle_capacity}</div>
+                    </div>
+                  )}
+                  {vehicle.organization && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">Organization</div>
+                      <div className="font-semibold text-gray-900 mt-1">{vehicle.organization.organization_name}</div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 mt-4">
-                {/* <button
-                  onClick={() =>
-                    router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/tracking`)
-                  }
-                  className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-600 hover:to-blue-700 transition-colors duration-300"
-                >
-                  Track The Car
-                </button> */}
 
-                <button
-                  onClick={() =>
-                    router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/locations`)
-                  }
-                  className="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-green-700 transition-colors duration-300"
-                >
-                  Locate The Car
-                </button>
+                {/* Locate button */}
+                <div className="mt-auto pt-2">
+                  <button
+                    onClick={() => router.push(`/dashboard/shared_pages/vehicles/${vehicle.vehicle_id}/locations`)}
+                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-green-700 transition-colors duration-300"
+                  >
+                    Locate The Car
+                  </button>
+                </div>
               </div>
             </div>
 
