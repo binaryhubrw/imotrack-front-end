@@ -1209,6 +1209,7 @@ export default function ReservationsPage() {
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Departure</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Return</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Status</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm uppercase tracking-wider">Map</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -1319,6 +1320,28 @@ export default function ReservationsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(reservation.reservation_status)}`}>
                           {RESERVATION_STATUSES[reservation.reservation_status as ReservationStatus] || reservation.reservation_status}
                         </span>
+                      </td>
+
+                      {/* Map */}
+                      <td className="py-3 px-4">
+                        {reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const vehicleId = (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle_id
+                                ?? (reservation.reserved_vehicles as ReservedVehicle[])[0]?.vehicle?.vehicle_id;
+                              if (vehicleId) {
+                                router.push(`/dashboard/shared_pages/vehicles/${vehicleId}/locations`);
+                              }
+                            }}
+                            title="View vehicle on map"
+                            className="p-2 rounded-lg text-[#0872b3] hover:bg-[#0872b3]/10 transition-colors"
+                          >
+                            <MapPin className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span className="text-gray-300 text-xs px-2">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
