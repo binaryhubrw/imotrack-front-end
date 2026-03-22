@@ -587,11 +587,10 @@ export default function ReservationsPage() {
 
   // Always call hooks
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilters, setStatusFilters] = useState<Set<string>>(new Set());
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-
   const [showCreate, setShowCreate] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
@@ -655,7 +654,7 @@ export default function ReservationsPage() {
           .includes(searchTerm.toLowerCase());
 
       // Status filter
-      const matchesStatus = statusFilter === "all" || reservation.reservation_status === statusFilter;
+      const matchesStatus = statusFilters.size === 0 || statusFilters.has(reservation.reservation_status);
 
       // Date filter
       let matchesDate = true;
@@ -693,7 +692,7 @@ export default function ReservationsPage() {
 
       return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [reservations, searchTerm, statusFilter, dateFilter, startDate, endDate]);
+  }, [reservations, searchTerm, statusFilters, dateFilter, startDate, endDate]);
 
   const [pageIndex, setPageIndex] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -1067,7 +1066,7 @@ export default function ReservationsPage() {
 
         {/* Filters card */}
         <motion.div
-          className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden"
+          className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl relative z-20"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
@@ -1083,54 +1082,77 @@ export default function ReservationsPage() {
                 className="pl-10 h-10 text-sm border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm"
               />
             </div>
-            <div className="w-full sm:w-48">
-              <SearchableDropdown
-                options={statusOptions}
-                value={statusFilter}
-                onChange={setStatusFilter}
-                placeholder="Filter by status"
-                className="h-10"
-              />
+            <div className="relative w-full sm:w-56">
+              <details className="group">
+                <summary className="flex items-center justify-between h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm cursor-pointer list-none text-gray-700 select-none">
+                  <span>{statusFilters.size === 0 ? "All Statuses" : `${statusFilters.size} selected`}</span>
+                  <Filter className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
+                </summary>
+                <div className="absolute z-[9999] mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl py-1">
+                  {[
+                    { id: "UNDER_REVIEW", label: "Under Review" },
+                    { id: "ACCEPTED", label: "Accepted" },
+                    { id: "APPROVED", label: "Approved" },
+                    { id: "REJECTED", label: "Rejected" },
+                    { id: "CANCELLED", label: "Cancelled" },
+                    { id: "COMPLETED", label: "Completed" },
+                  ].map(({ id, label }) => (
+                    <label key={id} className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={statusFilters.has(id)}
+                        onChange={() => setStatusFilters((prev) => {
+                          const next = new Set(prev);
+                          next.has(id) ? next.delete(id) : next.add(id);
+                          return next;
+                        })}
+                        className="accent-indigo-600 w-4 h-4"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                  {statusFilters.size > 0 && (
+                    <div className="border-t border-gray-100 px-3 py-2">
+                      <button onClick={() => setStatusFilters(new Set())} className="text-xs text-indigo-600 hover:underline">
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </details>
             </div>
-            <div className="w-full sm:w-48">
-              <SearchableDropdown
-                options={[
-                  { id: "all", name: "All Dates" },
-                  { id: "today", name: "Today" },
-                  { id: "week", name: "This Week" },
-                  { id: "month", name: "This Month" },
-                  { id: "custom", name: "Custom Range" },
-                ]}
-                value={dateFilter}
-                onChange={setDateFilter}
-                placeholder="Filter by date"
-                className="h-10"
-              />
-            </div>
-          </div>
-          {dateFilter === "custom" && (
-            <div className="flex flex-wrap gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-              <div className="flex-1 min-w-[140px] max-w-xs">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
-                <Input
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-0.5">From</label>
+                <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="h-9 text-sm border-gray-200 rounded-xl"
+                  onChange={(e) => { setStartDate(e.target.value); setDateFilter("custom"); }}
+                  className="h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
                 />
               </div>
-              <div className="flex-1 min-w-[140px] max-w-xs">
-                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
-                <Input
+              <div className="flex flex-col">
+                <label className="text-xs text-gray-500 mb-0.5">To</label>
+                <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="h-9 text-sm border-gray-200 rounded-xl"
+                  onChange={(e) => { setEndDate(e.target.value); setDateFilter("custom"); }}
+                  className="h-10 px-3 text-sm border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
                 />
               </div>
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => { setStartDate(""); setEndDate(""); setDateFilter("all"); }}
+                  className="mt-4 p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Clear dates"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-          )}
-          {(searchTerm || statusFilter !== "all" || dateFilter !== "all") && (
+          </div>
+
+          {(searchTerm || statusFilters.size > 0 || startDate || endDate) && (
             <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-t border-gray-100 text-sm text-gray-600 bg-gray-50/30">
               <span>Active filters:</span>
               {searchTerm && (
@@ -1138,20 +1160,21 @@ export default function ReservationsPage() {
                   Search: &ldquo;{searchTerm}&rdquo;
                 </span>
               )}
-              {statusFilter !== "all" && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-lg text-xs font-medium">
-                  Status: {statusOptions.find(s => s.id === statusFilter)?.name}
+              {statusFilters.size > 0 && [...statusFilters].map((s) => (
+                <span key={s} className="bg-green-100 text-green-800 px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1">
+                  {statusOptions.find((o) => o.id === s)?.name ?? s}
+                  <button onClick={() => setStatusFilters((prev) => { const n = new Set(prev); n.delete(s); return n; })} className="hover:text-red-600">×</button>
                 </span>
-              )}
-              {dateFilter !== "all" && (
+              ))}
+              {(startDate || endDate) && (
                 <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-lg text-xs font-medium">
-                  Date: {dateFilter === "custom" ? "Custom Range" : dateFilter}
+                  Date: {startDate || "…"} → {endDate || "…"}
                 </span>
               )}
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setStatusFilter("all");
+                  setStatusFilters(new Set());
                   setDateFilter("all");
                   setStartDate("");
                   setEndDate("");
@@ -1193,7 +1216,7 @@ export default function ReservationsPage() {
           </motion.div>
         ) : (
           <motion.div
-            className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden min-w-0"
+            className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden min-w-0 relative z-10"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
