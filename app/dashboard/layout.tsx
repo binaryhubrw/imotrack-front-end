@@ -527,7 +527,7 @@ export default function DashboardLayout({
 
           {/* Only this area scrolls; sidebar and header/footer stay fixed */}
           <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 lg:p-10 bg-gradient-to-br from-gray-50 to-blue-50/30">
-            <div className="max-w-7xl mx-auto w-full min-w-0">
+            <div className="max-w-screen-2xl mx-auto w-full min-w-0">
               {hasPageAccess ? (
                 <DashboardProvider>{children}</DashboardProvider>
               ) : (

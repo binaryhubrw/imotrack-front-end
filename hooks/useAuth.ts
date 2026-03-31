@@ -268,8 +268,8 @@ export const useAuth = () => {
           isLoading: false,
         }));
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Redirect to dashboard — hard navigate to avoid race with React state
+        window.location.href = '/dashboard';
         
         toast.success('Position selected successfully!', {
           style: toastStyles.success.style,
