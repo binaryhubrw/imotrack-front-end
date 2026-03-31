@@ -1,7 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useVehicle, useReservations, useAddVehicleToReservation } from "@/lib/queries";
+import { useVehicle, useReservations, useAddVehicleToReservation, useUpdateReservation } from "@/lib/queries";
 import { useAuth } from "@/hooks/useAuth";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faCar, faMapMarkerAlt, faCalendarAlt, faUsers, faMap } from "@fortawesome/free-solid-svg-icons";
@@ -16,6 +16,7 @@ export default function AssignCarPage() {
   const canViewReservations = !!user?.position?.position_access?.reservations?.view;
   const { data: allReservations, isLoading: resLoading } = useReservations({ enabled: canViewReservations });
   const addVehicle = useAddVehicleToReservation();
+  const updateStatus = useUpdateReservation();
 
   const [selectedId, setSelectedId] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -50,10 +51,21 @@ export default function AssignCarPage() {
     if (!selectedId) return;
     setSubmitting(true);
     try {
+      const reservation = eligible.find(r => r.reservation_id === selectedId);
+
+      // If still under review, accept it first
+      if (reservation?.reservation_status === "UNDER_REVIEW") {
+        await updateStatus.mutateAsync({
+          id: selectedId,
+          dto: { status: "ACCEPTED" },
+        });
+      }
+
+      // Then assign the vehicle
       await addVehicle.mutateAsync({ id: selectedId, dto: { vehicle_id: id } });
       router.push(`/dashboard/shared_pages/reservations/${selectedId}`);
     } catch {
-      // error handled by mutation
+      // error handled by mutations
     } finally {
       setSubmitting(false);
     }
@@ -63,7 +75,7 @@ export default function AssignCarPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="max-w-screen-xl mx-auto px-4">
 
         {/* Back */}
         <button
@@ -245,7 +257,7 @@ export default function AssignCarPage() {
               disabled={!selectedId || submitting}
               className="w-full py-3 bg-[#0872b3] hover:bg-[#065d8f] text-white font-semibold rounded-xl shadow transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {submitting ? "Assigning..." : "Confirm Assignment"}
+            {submitting ? "Processing..." : selected?.reservation_status === "UNDER_REVIEW" ? "Accept & Assign Vehicle" : "Assign Vehicle"}
             </button>
           </div>
         </div>

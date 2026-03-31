@@ -2527,11 +2527,17 @@ export const useNotifications = () => {
 };
 
 export const useMarkNotificationAsRead = () => {
-  return useMutation<Notification, Error, { notification_id: string }>({
+  return useMutation<void, Error, { notification_id: string }>({
     mutationFn: async ({ notification_id }) => {
-      const { data } = await api.delete<ApiResponse<Notification>>(`/v2/notifications/${notification_id}`);
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      await api.patch(`/v2/notifications/${notification_id}/read`);
+    },
+  });
+};
+
+export const useDeleteNotification = () => {
+  return useMutation<void, Error, { notification_id: string }>({
+    mutationFn: async ({ notification_id }) => {
+      await api.delete(`/v2/notifications/${notification_id}`);
     },
   });
 };

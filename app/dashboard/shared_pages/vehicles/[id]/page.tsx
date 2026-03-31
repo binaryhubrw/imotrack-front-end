@@ -600,14 +600,15 @@ export default function VehicleDetailPage() {
                 <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
                   <div className="border rounded-md p-2 bg-gray-50">
                     <DayPicker
-                      mode="multiple"
-                      selected={reservedDates}
+                      mode="single"
+                      disabled={[
+                        { before: startOfDay(new Date()) },
+                        ...reservedDates,
+                      ]}
                       modifiers={{ reserved: reservedDates }}
                       modifiersClassNames={{
-                        reserved: "bg-red-500 text-white font-bold rounded-full hover:bg-red-600 focus:bg-red-600"
-                      }}
-                      styles={{
-                        selected: { backgroundColor: '#ef4444', color: 'white', borderRadius: '50%' }
+                        reserved: "!bg-red-500 !text-white font-bold rounded-full",
+                        disabled: "opacity-40 cursor-not-allowed line-through",
                       }}
                     />
                   </div>
@@ -620,8 +621,12 @@ export default function VehicleDetailPage() {
                       <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
                       <span className="text-sm text-gray-700 font-medium">Available</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-200 rounded opacity-50"></div>
+                      <span className="text-sm text-gray-400 font-medium">Past / Unavailable</span>
+                    </div>
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg text-xs text-blue-800 leading-relaxed border border-blue-100">
-                      <strong>How it works:</strong> The red dots indicate days where this vehicle has approved or active reservations. This helps you track when the car is busy or out of the station.
+                      <strong>How it works:</strong> Red dates have active reservations. Past dates and reserved dates are disabled and cannot be selected.
                     </div>
                   </div>
                 </div>

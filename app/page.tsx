@@ -61,14 +61,16 @@ export default function HomePage() {
           <p className="text-lg md:text-xl text-white/95 mb-10 max-w-2xl mx-auto">
             Monitor, analyze, and manage your vehicles in real time using IoT and GPS tracking technology.
           </p>
-          <Button
-            type="button"
-            className="bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-[#00628B] border-2 border-white/90 shadow-lg flex items-center gap-2 text-lg px-8 py-6 rounded-xl transition-all duration-300"
-            onClick={() => setIsAuthModalOpen(true)}
-          >
-            <FontAwesomeIcon icon={faRocket} className="mr-2" />
-            Get Started
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              className="bg-white/10 backdrop-blur-md text-white hover:bg-white hover:text-[#00628B] border-2 border-white/90 shadow-lg flex items-center gap-2 text-lg px-8 py-6 rounded-xl transition-all duration-300"
+              onClick={() => setIsAuthModalOpen(true)}
+            >
+              <FontAwesomeIcon icon={faRocket} className="mr-2" />
+              Get Started
+            </Button>
+          </div>
         </div>
         <div className="absolute bottom-0 left-0 right-0 w-full overflow-hidden leading-[0] pointer-events-none">
           <svg className="relative block w-full h-16 md:h-24" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden>

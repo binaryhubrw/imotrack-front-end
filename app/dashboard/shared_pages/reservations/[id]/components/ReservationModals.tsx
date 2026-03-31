@@ -171,11 +171,11 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
   
   const [vehicleSearch, setVehicleSearch] = useState("");
 
-  // Get available vehicles for the reservation date range
+  // Get available vehicles — only fetch when a relevant modal is open
   const { data: availableVehiclesData, isLoading: isLoadingAvailableVehicles, refetch: refetchAvailableVehicles } =
     useGetAvailableVehicles(
-      reservation?.departure_date || "",
-      reservation?.expected_returning_date || ""
+      (showAcceptRejectModal || showAssignVehiclesModal || showAddVehicleModal) ? (reservation?.departure_date || "") : "",
+      (showAcceptRejectModal || showAssignVehiclesModal || showAddVehicleModal) ? (reservation?.expected_returning_date || "") : ""
     );
 
   const availableVehicles = availableVehiclesData?.data || [];

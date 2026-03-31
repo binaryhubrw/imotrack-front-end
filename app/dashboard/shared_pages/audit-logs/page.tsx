@@ -223,7 +223,7 @@ export default function SystemLogsDashboard() {
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-900">{log.user?.first_name} {log.user?.last_name}</div>
-                              <div className="text-xs text-gray-500">{log.user?.email}</div>
+                              <div className="text-xs text-gray-500">{(log.user as any)?.auth?.email ?? log.user?.email}</div>
                             </div>
                           </div>
                         </td>
