@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Activity, User, Clock, Globe, Trash2, Eye, Plus, LogIn, LogOut, Monitor, X, FileSpreadsheet } from 'lucide-react';
+import { Search, Activity, User, Clock, Globe, Trash2, Eye, Plus, LogIn, LogOut, Monitor, X, ChevronDown, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import { useAuditLogs } from '@/lib/queries';
+import { exportToStyledExcel } from '@/lib/excel-export';
 import ErrorUI from '@/components/ErrorUI';
 import NoPermissionUI from '@/components/NoPermissionUI';
 import { useRouter } from 'next/navigation';
@@ -40,6 +41,75 @@ const formatTimeAgo = (dateString: string) => {
   return `${Math.floor(diff / 1440)}d ago`;
 };
 
+// Converts action + resource into a readable sentence
+const buildSentence = (action: string, resource: string): string => {
+  const a = action.toUpperCase();
+  const r = resource || 'a record';
+  const map: Record<string, string> = {
+    LOGOUT:                          'logged out of the system',
+    LOGIN:                           'logged into the system',
+    CREATE_VEHICLE:                  `added a new vehicle`,
+    UPDATE_VEHICLE:                  `updated a vehicle`,
+    DELETE_VEHICLE:                  `deleted a vehicle`,
+    CREATE_VEHICLE_MODEL:            `created a vehicle model`,
+    UPDATE_VEHICLE_MODEL:            `updated a vehicle model`,
+    DELETE_VEHICLE_MODEL:            `deleted a vehicle model`,
+    CREATE_RESERVATION:              `submitted a new reservation request`,
+    UPDATE_RESERVATION:              `updated a reservation`,
+    DELETE_RESERVATION:              `deleted a reservation`,
+    ACCEPT_RESERVATION:              `accepted a reservation`,
+    APPROVE_RESERVATION:             `approved a reservation`,
+    REJECT_RESERVATION:              `rejected a reservation`,
+    CANCEL_RESERVATION:              `cancelled a reservation`,
+    START_RESERVATION:               `started a reservation trip`,
+    COMPLETE_RESERVATION:            `completed a reservation`,
+    ASSIGN_VEHICLE_TO_RESERVATION:   `assigned a vehicle to a reservation`,
+    CREATE_USER:                     `created a new user`,
+    UPDATE_USER:                     `updated a user profile`,
+    DELETE_USER:                     `deleted a user`,
+    CREATE_ORGANIZATION:             `created a new organization`,
+    UPDATE_ORGANIZATION:             `updated an organization`,
+    DELETE_ORGANIZATION:             `deleted an organization`,
+    CREATE_UNIT:                     `created a new unit`,
+    UPDATE_UNIT:                     `updated a unit`,
+    DELETE_UNIT:                     `deleted a unit`,
+    CREATE_POSITION:                 `created a new position`,
+    UPDATE_POSITION:                 `updated a position`,
+    DELETE_POSITION:                 `deleted a position`,
+    ASSIGN_USER_TO_POSITION:         `assigned a user to a position`,
+    REPORT_VEHICLE_ISSUE:            `reported a vehicle issue`,
+    UPDATE_VEHICLE_ISSUE:            `updated a vehicle issue`,
+    DELETE_VEHICLE_ISSUE:            `deleted a vehicle issue`,
+  };
+  return map[a] ?? `performed action on ${r}`;
+};
+
+const exportLogsToExcel = async (logs: any[]) => {
+  try {
+    const data = logs.map(log => ({
+      'User': `${log.user?.first_name ?? ''} ${log.user?.last_name ?? ''}`.trim() || 'Unknown',
+      'Email': (log.user as any)?.auth?.email ?? log.user?.email ?? 'N/A',
+      'Action': log.action,
+      'Description': buildSentence(log.action, (log.table_name ?? '').replace('tbl_', '').replace(/_/g, ' ')),
+      'Table': log.table_name ?? 'N/A',
+      'IP Address': log.ip_address ?? 'N/A',
+      'Record ID': log.record_id ?? 'N/A',
+      'Timestamp': new Date(log.timestamp).toLocaleString(),
+    }));
+    const columns = Object.keys(data[0] || {});
+    await exportToStyledExcel({
+      title: 'ImoTrak - System Logs Export',
+      sheetName: 'System Logs',
+      columns,
+      data,
+      filename: 'system_logs_export',
+      columnWidths: [20, 28, 22, 40, 20, 16, 28, 22],
+    });
+  } catch (err) {
+    console.error('Export error:', err);
+  }
+};
+
 export default function SystemLogsDashboard() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
@@ -52,6 +122,7 @@ export default function SystemLogsDashboard() {
   const [endDate, setEndDate]         = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [pageIndex, setPageIndex]     = useState(0);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const pageSize = 15;
 
   const { data: logs = [], isLoading, isError } = useAuditLogs({
@@ -100,9 +171,18 @@ export default function SystemLogsDashboard() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">System Logs</h1>
             <p className="text-gray-600 mt-1 text-sm">{filteredLogs.length} activity records found</p>
           </div>
-          <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-gray-100 shadow-md">
-            <Activity className="w-4 h-4 text-indigo-500" />
-            <span className="text-sm font-medium text-gray-700">{new Date().toLocaleDateString()}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportLogsToExcel(filteredLogs)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-white/95 shadow-md hover:shadow-lg hover:border-gray-300 transition-all font-medium text-gray-700"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Export Excel
+            </button>
+            <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-gray-100 shadow-md">
+              <Activity className="w-4 h-4 text-indigo-500" />
+              <span className="text-sm font-medium text-gray-700">{new Date().toLocaleDateString()}</span>
+            </div>
           </div>
         </motion.div>
 
@@ -191,72 +271,92 @@ export default function SystemLogsDashboard() {
         ) : (
           <motion.div className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg rounded-2xl overflow-hidden"
             initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50/90 border-b border-gray-100">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">#</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Action</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">User</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Table</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">IP Address</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Record ID</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Time</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {paginated.map((log, idx) => {
-                    const style = getActionStyle(log.action);
-                    return (
-                      <tr key={log.id} className="hover:bg-indigo-50/50 transition-colors duration-150">
-                        <td className="py-3 px-4 font-mono text-gray-400 text-xs">{pageIndex * pageSize + idx + 1}</td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${style.bg}`}>
-                            {style.icon}
-                            {log.action}
+            <div className="divide-y divide-gray-100">
+              {paginated.map((log, idx) => {
+                const style = getActionStyle(log.action);
+                const isExpanded = expandedRow === log.id;
+                const hasChanges = !!(log.old_value || log.new_value);
+                const userName = `${log.user?.first_name ?? ''} ${log.user?.last_name ?? ''}`.trim() || 'Unknown user';
+                const userEmail = (log.user as any)?.auth?.email ?? log.user?.email ?? '';
+                const resource = (log.table_name ?? '').replace('tbl_', '').replace(/_/g, ' ');
+                const sentence = buildSentence(log.action, resource);
+
+                return (
+                  <React.Fragment key={log.id}>
+                    <div
+                      className={`flex items-start gap-4 px-5 py-4 transition-colors ${hasChanges ? 'cursor-pointer hover:bg-gray-50' : 'hover:bg-gray-50/50'} ${isExpanded ? 'bg-indigo-50/40' : ''}`}
+                      onClick={() => hasChanges && setExpandedRow(isExpanded ? null : log.id)}
+                    >
+                      {/* Avatar */}
+                      <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
+                        <User className="w-4 h-4 text-indigo-600" />
+                      </div>
+
+                      {/* Main content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Sentence */}
+                        <p className="text-sm text-gray-900">
+                          <span className="font-semibold">{userName}</span>
+                          {' '}
+                          <span className="text-gray-600">{sentence}</span>
+                        </p>
+                        {/* Sub-line: email · IP · record */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs text-gray-400">
+                          {userEmail && <span>{userEmail}</span>}
+                          <span className="flex items-center gap-1"><Globe className="w-3 h-3" />{log.ip_address}</span>
+                          {log.record_id && (
+                            <span className="font-mono" title={log.record_id}>ID: {log.record_id.slice(0, 8)}…</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right side: badge + time + expand */}
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${style.bg}`}>
+                          {style.icon}
+                          {log.action}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <Clock className="w-3 h-3" />
+                          <span title={new Date(log.timestamp).toLocaleString()}>{formatTimeAgo(log.timestamp)}</span>
+                          <span className="text-gray-300">·</span>
+                          <span>{new Date(log.timestamp).toLocaleDateString()}</span>
+                        </div>
+                        {hasChanges && (
+                          <span className="text-xs text-indigo-500 flex items-center gap-0.5">
+                            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                            {isExpanded ? 'hide diff' : 'view diff'}
                           </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                              <User className="w-3.5 h-3.5 text-indigo-600" />
-                            </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expandable diff */}
+                    {isExpanded && hasChanges && (
+                      <div className="bg-slate-50 px-6 py-4 border-t border-slate-100">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                          {!!log.old_value && (
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{log.user?.first_name} {log.user?.last_name}</div>
-                              <div className="text-xs text-gray-500">{(log.user as any)?.auth?.email ?? log.user?.email}</div>
+                              <p className="font-semibold text-red-600 mb-1.5 uppercase tracking-wide">Before</p>
+                              <pre className="bg-red-50 border border-red-100 rounded-lg p-3 text-gray-700 overflow-auto max-h-48 whitespace-pre-wrap break-all">
+                                {JSON.stringify(log.old_value as object, null, 2)}
+                              </pre>
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded font-mono">
-                            {log.table_name || '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <Globe className="w-3 h-3" />
-                            {log.ip_address}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-xs text-gray-400 font-mono truncate max-w-[120px] block" title={log.record_id || ''}>
-                            {log.record_id ? `${log.record_id.slice(0, 8)}…` : '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1 text-xs text-gray-600">
-                            <Clock className="w-3 h-3 text-gray-400" />
+                          )}
+                          {!!log.new_value && (
                             <div>
-                              <div className="font-medium">{formatTimeAgo(log.timestamp)}</div>
-                              <div className="text-gray-400">{new Date(log.timestamp).toLocaleString()}</div>
+                              <p className="font-semibold text-green-600 mb-1.5 uppercase tracking-wide">After</p>
+                              <pre className="bg-green-50 border border-green-100 rounded-lg p-3 text-gray-700 overflow-auto max-h-48 whitespace-pre-wrap break-all">
+                                {JSON.stringify(log.new_value as object, null, 2)}
+                              </pre>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
 
             {/* Pagination */}
