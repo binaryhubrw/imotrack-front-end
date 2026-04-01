@@ -24,4 +24,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/imotrak-frontend:prod
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/imotrak-frontend:production
