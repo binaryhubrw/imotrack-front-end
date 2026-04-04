@@ -45,9 +45,7 @@ import { toast } from 'sonner';
 import { toastStyles } from '@/lib/toast-config';
 import { TransmissionMode } from '@/types/enums';
 import { useEffect, useRef, useState } from 'react';
-
-// API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://imoteack.onrender.com';
+import { API_BASE_URL } from './api-base-url';
 
 // 1. AUTH
 export const useLogin = () => {
@@ -1567,8 +1565,7 @@ export const useVehicleLocationStream = (vehicleId: string, enabled: boolean = t
         }
 
         // Construct SSE URL - FIXED to use correct env var
-        const apiBaseURL = process.env.NEXT_API_URL || 'https://imoteack.onrender.com';
-        const url = `${apiBaseURL}/v2/vehicles/${vehicleId}/locations/stream?token=${encodeURIComponent(token)}`;
+        const url = `${API_BASE_URL}/v2/vehicles/${vehicleId}/locations/stream?token=${encodeURIComponent(token)}`;
 
         console.log('Connecting to SSE stream:', url.replace(token, 'TOKEN_HIDDEN'));
 
