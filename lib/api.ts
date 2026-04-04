@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_BASE_URL } from './api-base-url';
 
 // Make sure this matches your backend URL exactly
 // const baseURL = process.env.NEXT_API_URL || 'https://imotrak-api.urbinaryhub.rw';  
-const baseURL = process.env.NEXT_API_URL || 'https://imoteack.onrender.com';
+const baseURL = API_BASE_URL;
 // const baseURL = process.env.NEXT_API_URL || 'http://localhost:4000'
 
 // Debug: Log the base URL being used
