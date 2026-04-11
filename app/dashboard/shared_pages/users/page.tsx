@@ -873,6 +873,7 @@ export default function UsersPage() {
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [organizationFilter, setOrganizationFilter] = useState<string>("");
   const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [lastCreatedUserId, setLastCreatedUserId] = useState<string | null>(null);
   const { user, isLoading: authLoading } = useAuth();
   const canViewAll = !!user?.position?.position_access?.organizations?.view;
 
@@ -1054,6 +1055,12 @@ export default function UsersPage() {
           .includes(search)
       );
     }
+    // Bubble the most recently created user to the top
+    if (lastCreatedUserId) {
+      const created = filtered.filter((u: UserRow) => u.user_id === lastCreatedUserId);
+      const rest = filtered.filter((u: UserRow) => u.user_id !== lastCreatedUserId);
+      return [...created, ...rest];
+    }
     return filtered;
   }, [
     users,
@@ -1063,6 +1070,7 @@ export default function UsersPage() {
     unitFilter,
     positionFilter,
     globalFilter,
+    lastCreatedUserId,
   ]);
 
   const handleExportUsers = () => {
@@ -1254,7 +1262,8 @@ export default function UsersPage() {
 
   const handleCreateUser = async (formData: CreateUserDto) => {
     try {
-      await createUser.mutateAsync(formData);
+      const newUser = await createUser.mutateAsync(formData);
+      setLastCreatedUserId(newUser?.user_id ?? null);
       setShowCreate(false);
     } catch {
       // handled by mutation
