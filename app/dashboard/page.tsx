@@ -431,77 +431,8 @@ export default function MainDashboard() {
             animate="visible"
             variants={containerVariants}
           >
-            {/* Quick Actions - slide in from left */}
-            <motion.div className="lg:col-span-1 min-w-0" variants={slideInLeft}>
-              <Card className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg h-full rounded-2xl overflow-hidden">
-                <CardHeader className="pb-3 border-b border-gray-100/80">
-                  <CardTitle className="flex items-center gap-2 text-gray-900">
-                    <span className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
-                      <Clock className="w-5 h-5" />
-                    </span>
-                    Quick Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-4">
-                  {quickActions.length > 0 ? (
-                    quickActions.map((action) => {
-                      const IconComponent =
-                        iconMap[action.icon as keyof typeof iconMap] ||
-                        Activity;
-                      return (
-                        <motion.button
-                          key={action.id}
-                          onClick={() => router.push(action.href)}
-                          className="block w-full text-left p-3.5 rounded-xl border border-gray-100 bg-white shadow-sm min-w-0 cursor-pointer group"
-                          whileHover={{
-                            scale: 1.01,
-                            boxShadow: "0 8px 24px -8px rgba(99, 102, 241, 0.35)",
-                            borderColor: "rgb(224 231 255)",
-                            backgroundColor: "rgb(238 242 255 / 0.8)",
-                          }}
-                          whileTap={{ scale: 0.99 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <motion.div
-                              className={`p-2.5 rounded-lg shadow-sm flex-shrink-0 ${action.color}`}
-                              whileHover={{ scale: 1.08 }}
-                              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                            >
-                              <IconComponent className="w-4 h-4 text-white" />
-                            </motion.div>
-                            <div className="min-w-0">
-                              <h4 className="font-medium text-gray-900 truncate group-hover:text-indigo-700 transition-colors">
-                                {action.title}
-                              </h4>
-                              <p className="text-sm text-gray-500 truncate">
-                                {action.description}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.button>
-                      );
-                    })
-                  ) : (
-                    <motion.div
-                      className="text-center py-8 text-gray-500"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <div className="p-3 rounded-2xl bg-gray-100/80 inline-flex mb-4">
-                        <Shield className="w-12 h-12 text-gray-400" />
-                      </div>
-                      <p className="font-medium text-gray-700">No quick actions available</p>
-                      <p className="text-sm mt-1">Check your position permissions</p>
-                    </motion.div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Recent Activity - slide in from right */}
-            <motion.div className="lg:col-span-1 min-w-0 flex flex-col min-h-0" variants={slideInRight}>
+            {/* Recent Activity - slide in from left (now first) */}
+            <motion.div className="lg:col-span-1 min-w-0 flex flex-col min-h-0" variants={slideInLeft}>
               <Card className="flex flex-col border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg h-full min-h-0 rounded-2xl overflow-hidden">
                 <CardHeader className="pb-3 flex-shrink-0 border-b border-gray-100/80">
                   <CardTitle className="flex items-center gap-2 text-gray-900">
@@ -639,6 +570,75 @@ export default function MainDashboard() {
                       <p className="text-sm mt-1">
                         Activity will appear here as changes are made
                       </p>
+                    </motion.div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Quick Actions - slide in from right (now second) */}
+            <motion.div className="lg:col-span-1 min-w-0" variants={slideInRight}>
+              <Card className="border border-gray-200 bg-white/95 backdrop-blur-sm shadow-lg h-full rounded-2xl overflow-hidden">
+                <CardHeader className="pb-3 border-b border-gray-100/80">
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <span className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                      <Clock className="w-5 h-5" />
+                    </span>
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-4">
+                  {quickActions.length > 0 ? (
+                    quickActions.map((action) => {
+                      const IconComponent =
+                        iconMap[action.icon as keyof typeof iconMap] ||
+                        Activity;
+                      return (
+                        <motion.button
+                          key={action.id}
+                          onClick={() => router.push(action.href)}
+                          className="block w-full text-left p-3.5 rounded-xl border border-gray-100 bg-white shadow-sm min-w-0 cursor-pointer group"
+                          whileHover={{
+                            scale: 1.01,
+                            boxShadow: "0 8px 24px -8px rgba(99, 102, 241, 0.35)",
+                            borderColor: "rgb(224 231 255)",
+                            backgroundColor: "rgb(238 242 255 / 0.8)",
+                          }}
+                          whileTap={{ scale: 0.99 }}
+                          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <motion.div
+                              className={`p-2.5 rounded-lg shadow-sm flex-shrink-0 ${action.color}`}
+                              whileHover={{ scale: 1.08 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                            >
+                              <IconComponent className="w-4 h-4 text-white" />
+                            </motion.div>
+                            <div className="min-w-0">
+                              <h4 className="font-medium text-gray-900 truncate group-hover:text-indigo-700 transition-colors">
+                                {action.title}
+                              </h4>
+                              <p className="text-sm text-gray-500 truncate">
+                                {action.description}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      );
+                    })
+                  ) : (
+                    <motion.div
+                      className="text-center py-8 text-gray-500"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <div className="p-3 rounded-2xl bg-gray-100/80 inline-flex mb-4">
+                        <Shield className="w-12 h-12 text-gray-400" />
+                      </div>
+                      <p className="font-medium text-gray-700">No quick actions available</p>
+                      <p className="text-sm mt-1">Check your position permissions</p>
                     </motion.div>
                   )}
                 </CardContent>

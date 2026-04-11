@@ -34,14 +34,17 @@ export default function NotificationsPage() {
   const router = useRouter();
 
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(n => {
-      const matchesSearch =
-        n.notification_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        n.notification_message.toLowerCase().includes(searchTerm.toLowerCase());
-      const isRead = readNotifications.has(n.notification_id);
-      const matchesFilter = filter === 'all' || (filter === 'unread' && !isRead) || (filter === 'read' && isRead);
-      return matchesSearch && matchesFilter;
-    });
+    return notifications
+      .filter(n => {
+        const matchesSearch =
+          n.notification_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          n.notification_message.toLowerCase().includes(searchTerm.toLowerCase());
+        const isRead = readNotifications.has(n.notification_id);
+        const matchesFilter = filter === 'all' || (filter === 'unread' && !isRead) || (filter === 'read' && isRead);
+        return matchesSearch && matchesFilter;
+      })
+      // Sort newest first
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [notifications, searchTerm, filter, readNotifications]);
 
   const unreadCount = notifications.length - readNotifications.size;
