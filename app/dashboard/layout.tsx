@@ -170,6 +170,15 @@ export default function DashboardLayout({
   const { user, logout, isLoading } = useAuth();
   const { data: notifications = [] } = useNotifications();
 
+  // If auth state resolves to "not logged in", never render a blank screen.
+  // Redirect to login and show a lightweight loading UI instead.
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [isLoading, user, router]);
+
   // Permission logic
   const permissionData = useMemo(() => {
     if (!user?.position?.position_access) {
@@ -304,7 +313,26 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    return null;
+    return (
+      <div className="flex h-dvh h-screen w-full max-w-[100vw] overflow-hidden bg-gray-50">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full overflow-hidden">
+          <header className="flex-shrink-0 z-20 flex items-center justify-between bg-white shadow px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-10 w-32" />
+          </header>
+          <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 bg-gray-50">
+            <div className="max-w-7xl mx-auto w-full min-w-0 space-y-4">
+              <Skeleton className="h-8 w-72" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <Skeleton key={index} className="h-32 rounded-xl" />
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
   const navItems = getNavItems();

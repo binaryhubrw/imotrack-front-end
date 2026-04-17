@@ -6,9 +6,6 @@ import { API_BASE_URL } from './api-base-url';
 const baseURL = API_BASE_URL;
 // const baseURL = process.env.NEXT_API_URL || 'http://localhost:4000'
 
-// Debug: Log the base URL being used
-console.log('API Base URL:', baseURL);
-
 export const api = axios.create({
   baseURL,
   headers: {

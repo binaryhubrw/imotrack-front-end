@@ -39,7 +39,6 @@ import {
   RemoveVehicleFromReservationDto,
   VehicleOperationApiResponse,
   AddVehicleToReservationDto,
-  TrackingData,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { toastStyles } from '@/lib/toast-config';
@@ -1709,15 +1708,6 @@ export const useVehicleLocationStream = (vehicleId: string, enabled: boolean = t
   };
 };
 
-// Helper function to get auth token
-async function getAuthToken(): Promise<string | null> {
-  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-  if (token) return token;
-  
-  console.warn('getAuthToken: No token found in localStorage');
-  return null;
-}
-
 // Update vehicle location mutation
 export const useUpdateVehicleLocation = () => {
   const queryClient = useQueryClient();
@@ -2515,6 +2505,7 @@ export const useDeleteVehicleIssue = () => {
 export const useNotifications = () => {
   return useQuery<Notification[], Error>({
     queryKey: ['notifications'],
+    enabled: typeof window !== 'undefined' && !!localStorage.getItem('token'),
     queryFn: async () => {
       const { data } = await api.get<ApiResponse<Notification[]>>('/v2/notifications');
       if (!data.data) throw new Error('No data');
@@ -2539,6 +2530,40 @@ export const useDeleteNotification = () => {
   });
 };
 
+export const useUpdateMyProfile = () => {
+  return useMutation<
+    ApiResponse<{
+      user_id: string;
+      first_name: string;
+      last_name: string;
+      email?: string | null;
+      user_nid: string;
+      user_phone: string;
+      user_gender: string;
+      user_dob: string | Date;
+      user_photo?: string | null;
+      street_address?: string | null;
+    }>,
+    Error,
+    {
+      first_name?: string;
+      last_name?: string;
+      user_phone?: string;
+      user_gender?: 'MALE' | 'FEMALE';
+      user_dob?: string | Date;
+      street_address?: string | null;
+      user_nid?: string;
+      user_photo?: string | null;
+    }
+  >({
+    mutationFn: async (payload) => {
+      const { data } = await api.patch('/v2/users/me', payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+  });
+};
 
 
 

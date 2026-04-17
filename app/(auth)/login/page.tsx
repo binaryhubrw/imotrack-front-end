@@ -62,6 +62,8 @@ function PositionSelectionModal({
             onClick={onCancel}
             className="text-gray-400 cursor-pointer hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
             disabled={isLoading}
+            aria-label="Close"
+            title="Close"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
@@ -243,26 +245,51 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0872b3] to-white py-8 px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center py-10 px-4 overflow-hidden bg-gradient-to-br from-slate-950 via-[#062b42] to-[#0872b3]">
+      {/* Decorative background */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* soft “landing page” blobs */}
+        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full bg-cyan-400 blur-3xl opacity-30" />
+        <div className="absolute top-1/3 -right-24 h-96 w-96 rounded-full bg-indigo-500 blur-3xl opacity-30" />
+        <div className="absolute -bottom-24 left-1/4 h-80 w-80 rounded-full bg-sky-300 blur-3xl opacity-25" />
+        {/* subtle grid + vignette */}
+        <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:48px_48px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.55)_100%)]" />
+      </div>
+      <div className="w-full max-w-lg relative">
+        {/* Back to home */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white transition-colors"
+          >
+            <span className="text-base leading-none">←</span>
+            Back to home
+          </Link>
+        </div>
+
+        <div className="bg-slate-950/35 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 ring-1 ring-white/10 shadow-black/40">
         {/* Header */}
-        <div className="text-center px-8 pt-8 pb-4 bg-white">
+        <div className="text-center px-9 sm:px-10 pt-12 pb-7">
           <Image
             src="/logo/logo.png"
             alt="Imotrak Logo"
             width={80}
             height={80}
-            className="mx-auto mb-4"
+            className="mx-auto mb-4 rounded-2xl bg-white/10 p-2 ring-1 ring-white/15 shadow-lg shadow-black/20"
             priority
           />
-          <h1 className="text-2xl font-bold text-[#0872b3] mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tight">
             Imotrak System
           </h1>
+          <p className="text-sm text-white/70">
+            Sign in to manage fleet activity and reservations
+          </p>
         </div>
 
         {/* Login Form */}
-        <div className="px-8 py-8 bg-white">
-          <h2 className="text-xl font-semibold text-[#0872b3] mb-6 text-center flex items-center justify-center gap-2">
+        <div className="px-9 sm:px-10 pb-12">
+          <h2 className="text-lg font-semibold text-white mb-8 text-center flex items-center justify-center gap-2">
             <FontAwesomeIcon icon={faUserLock} /> Login
           </h2>
 
@@ -270,7 +297,7 @@ function LoginForm() {
             {/* Email */}
             <div className="mb-6">
               <label
-                className="block mb-2 text-[#0872b3] font-medium"
+                className="block mb-2 text-white/80 font-medium"
                 htmlFor="email"
               >
                 <FontAwesomeIcon icon={faUser} className="mr-2" />
@@ -279,7 +306,7 @@ function LoginForm() {
               <input
                 id="email"
                 type="email"
-                className="w-full px-4 py-3 border border-[#0872b3]/30 rounded-md text-base transition focus:outline-none focus:border-[#0872b3] focus:ring-2 focus:ring-[#0872b3]/20"
+                className="w-full px-4 py-3.5 border border-white/10 rounded-xl text-base transition bg-white/7.5 text-white placeholder:text-white/40 shadow-inner shadow-black/20 focus:outline-none focus:border-cyan-300/50 focus:ring-4 focus:ring-cyan-400/15"
                 placeholder="Enter your email"
                 autoComplete="email"
                 value={email}
@@ -292,7 +319,7 @@ function LoginForm() {
             {/* Password */}
             <div className="mb-6 relative">
               <label
-                className="block mb-2 text-[#0872b3] font-medium"
+                className="block mb-2 text-white/80 font-medium"
                 htmlFor="password"
               >
                 <FontAwesomeIcon icon={faLock} className="mr-2" />
@@ -301,7 +328,7 @@ function LoginForm() {
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                className="w-full px-4 py-3 border border-[#0872b3]/30 rounded-md text-base transition focus:outline-none focus:border-[#0872b3] focus:ring-2 focus:ring-[#0872b3]/20"
+                className="w-full px-4 py-3.5 border border-white/10 rounded-xl text-base transition bg-white/7.5 text-white placeholder:text-white/40 shadow-inner shadow-black/20 focus:outline-none focus:border-cyan-300/50 focus:ring-4 focus:ring-cyan-400/15"
                 placeholder="Enter your password"
                 autoComplete="current-password"
                 value={password}
@@ -311,7 +338,7 @@ function LoginForm() {
               />
               <button
                 type="button"
-                className="absolute right-4 top-[3.5rem] -translate-y-1/2 text-[#0872b3] text-lg cursor-pointer"
+                className="absolute right-4 top-[3.7rem] -translate-y-1/2 text-white/70 hover:text-white text-lg cursor-pointer transition-colors"
                 tabIndex={-1}
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
@@ -325,7 +352,7 @@ function LoginForm() {
             <div className="mb-6 text-right">
               <Link
                 href="/forgot-password"
-                className="text-[#0872b3] hover:text-[#065d8f] transition-colors text-sm font-medium hover:underline"
+                className="text-cyan-200/90 hover:text-cyan-100 transition-colors text-sm font-medium"
               >
                 Forgot your password?
               </Link>
@@ -333,7 +360,7 @@ function LoginForm() {
 
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-center">
+              <div className="mb-6 p-3 bg-red-500/10 border border-red-400/30 rounded-xl text-red-200 text-center">
                 {error}
               </div>
             )}
@@ -341,7 +368,7 @@ function LoginForm() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full py-3 cursor-pointer bg-[#0872b3] text-white rounded-md font-medium text-base flex items-center justify-center gap-2 transition hover:bg-[#065d8f] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 cursor-pointer bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 rounded-xl font-semibold text-base flex items-center justify-center gap-2 transition hover:brightness-105 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_12px_30px_-12px_rgba(34,211,238,0.55)]"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -356,13 +383,13 @@ function LoginForm() {
             </button>
           </form>
 
-          <div className="text-center mt-4">
-            <p className="text-gray-600 text-sm mb-2">
+          <div className="text-center mt-6">
+            <p className="text-white/65 text-sm mb-2">
               Haven&apos;t received your verification email?
             </p>
             <Link
               href="/resend-verification"
-              className="text-[#0872b3] hover:text-[#065d8f] transition-colors text-sm font-medium"
+              className="text-cyan-200 hover:text-cyan-100 transition-colors text-sm font-semibold"
             >
               Resend Verification Email
             </Link>
@@ -370,10 +397,11 @@ function LoginForm() {
         </div>
 
         {/* Footer */}
-        <div className="text-center py-4 bg-[#f8f9fa] border-t border-[#0872b3]/20">
-          <p className="text-[#0872b3] text-sm m-0">
+        <div className="text-center py-4 bg-white/5 border-t border-white/5">
+          <p className="text-white/55 text-xs m-0">
             &copy; {new Date().getFullYear()} Imotrak - Imotrak System
           </p>
+        </div>
         </div>
       </div>
 

@@ -358,11 +358,31 @@ export const useAuth = () => {
     }
   }, [logoutMutation, router]);
 
+  const updateLocalUserProfile = useCallback((updates: Partial<AuthenticatedUserWithPosition['user']>) => {
+    const current = authStateRef.current.user;
+    if (!current) return;
+
+    const nextUser = { ...current.user, ...updates };
+    localStorage.setItem('user', JSON.stringify(nextUser));
+
+    setAuthState(prev => {
+      if (!prev.user) return prev;
+      return {
+        ...prev,
+        user: {
+          ...prev.user,
+          user: nextUser,
+        },
+      };
+    });
+  }, []);
+
   return {
     ...authState,
     login,
     selectPosition,
     cancelPositionSelection,
     logout,
+    updateLocalUserProfile,
   };
 };
