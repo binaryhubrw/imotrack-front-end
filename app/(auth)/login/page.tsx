@@ -165,12 +165,15 @@ function LoginForm() {
         });
         // router.push('/dashboard'); // selectPosition already redirects
       } else if (positionsResult && positionsResult.length === 0) {
-        // No positions, redirect to dashboard (or handle as needed)
-        toast.success(`Login successful! Redirecting to your dashboard...`, {
-          style: toastStyles.success.style,
-          duration: toastStyles.success.duration,
+        const msg =
+          "Your account has no position assigned. Please contact your administrator.";
+        toast.error("Login blocked", {
+          description: msg,
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
         });
-        router.push("/dashboard");
+        setError(msg);
+        return;
       } else {
         console.log("positionsResult", positionsResult);
       }

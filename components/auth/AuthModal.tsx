@@ -72,12 +72,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         onClose();
         router.push("/dashboard");
       } else if (positionsResult && positionsResult.length === 0) {
-        toast.success(`Login successful! Redirecting...`, {
-          style: toastStyles.success.style,
-          duration: toastStyles.success.duration,
+        const msg =
+          "Your account has no position assigned. Please contact your administrator.";
+        setError(msg);
+        toast.error("Login blocked", {
+          description: msg,
+          style: toastStyles.error.style,
+          duration: toastStyles.error.duration,
         });
-        onClose();
-        router.push("/dashboard");
+        return;
       }
     } catch (err: unknown) {
       console.error("Login error:", err);
