@@ -1,13 +1,11 @@
 import axios from 'axios';
 import { API_BASE_URL } from './api-base-url';
 
-// Make sure this matches your backend URL exactly
-// const baseURL = process.env.NEXT_API_URL || 'https://imotrak-api.urbinaryhub.rw';  
 const baseURL = API_BASE_URL;
-// const baseURL = process.env.NEXT_API_URL || 'http://localhost:4000'
 
-// Debug: Log the base URL being used
-console.log('API Base URL:', baseURL);
+if (process.env.NODE_ENV === 'development') {
+  console.info('[api] Base URL:', baseURL);
+}
 
 export const api = axios.create({
   baseURL,
@@ -25,7 +23,9 @@ api.interceptors.request.use((config) => {
                             config.url?.includes('/v2/auth/set-password-and-verify') ||
                             config.url?.includes('/v2/auth/resend-invitation');
   
-  console.log('API Request:', config.url, 'isVerificationCall:', isVerificationCall);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('API Request:', config.url, 'isVerificationCall:', isVerificationCall);
+  }
   
   if (!isVerificationCall) {
     const token = localStorage.getItem('token');
@@ -65,7 +65,13 @@ api.interceptors.response.use(
       (status === 401 && (isVerificationCall || isLogoutCall));
 
     if (!shouldSuppressFullLog) {
-      console.error(summary, payload);
+      if (!error.response && axios.isAxiosError(error)) {
+        const hint =
+          'No response from server. Check that the API is running, NEXT_PUBLIC_API_URL matches your backend (often …/api), and CORS allows this origin.';
+        console.error(summary, payload, hint, error.message);
+      } else {
+        console.error(summary, payload);
+      }
     }
     
     if (error.response?.status === 401 && !isVerificationCall && !isLogoutCall) {

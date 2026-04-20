@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import api from './api';
 import {
   LoginCredentials,
@@ -88,7 +89,15 @@ export const useLogin = () => {
         toast.error(errorMessage);
         throw new Error(errorMessage);
       } catch (error: unknown) {
-        
+        if (axios.isAxiosError(error) && !error.response) {
+          const msg = `Cannot reach the API (${API_BASE_URL}). Start the backend, confirm /api vs no-/api, or set NEXT_PUBLIC_USE_API_PROXY=true + API_PROXY_TARGET in .env (see next.config rewrites).`;
+          toast.error(msg, {
+            style: toastStyles.error.style,
+            duration: toastStyles.error.duration,
+          });
+          throw error;
+        }
+
         if (typeof error === 'object' && error !== null && 'response' in error && typeof error.response === 'object' && error.response !== null) {
           const axiosError = error as { response?: { data?: { message?: string; data?: LoginResponse }; status?: number } };
           
