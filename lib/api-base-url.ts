@@ -5,7 +5,8 @@
  * In development, `NEXT_PUBLIC_USE_API_PROXY=true` + `API_PROXY_TARGET` makes the browser
  * call same-origin `/_imotrak_proxy/...` so Next can forward to the API — avoids CORS.
  */
-const PRODUCTION_DEFAULT = 'https://imotrak.ur.ac.rw/api';
+// const PRODUCTION_DEFAULT = 'https://imotrak.ur.ac.rw/api';
+const PRODUCTION_DEFAULT = 'https://imoteack.onrender.com/api';
 
 function defaultBaseUrl(): string {
   if (process.env.NODE_ENV !== 'development') {

@@ -7,6 +7,8 @@ if (process.env.NODE_ENV === 'development') {
   console.info('[api] Base URL:', baseURL);
 }
 
+
+
 export const api = axios.create({
   baseURL,
   headers: {
