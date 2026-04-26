@@ -6,7 +6,7 @@
  * call same-origin `/_imotrak_proxy/...` so Next can forward to the API — avoids CORS.
  */
 // const PRODUCTION_DEFAULT = 'https://imotrak.ur.ac.rw/api';
-const PRODUCTION_DEFAULT = 'https://imoteack.onrender.com/api';
+const PRODUCTION_DEFAULT = 'https://imoteack.onrender.com/';
 
 function defaultBaseUrl(): string {
   if (process.env.NODE_ENV !== 'development') {
