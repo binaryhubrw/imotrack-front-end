@@ -217,9 +217,13 @@ export default function VehicleDetailPage() {
     );
   }
   if (isError || !vehicle) {
+    const vehicleLabel =
+      vehicle?.plate_number?.trim() || (typeof id === "string" ? id : "");
     return (
       <ErrorUI
-        resource={`vehicle ${vehicle?.plate_number}`}
+        resource={
+          vehicleLabel ? `vehicle ${vehicleLabel}` : "this vehicle"
+        }
         onRetry={() => {
           // re-fetch your data
           router.refresh();
