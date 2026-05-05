@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Info, UserPlus, Search, ChevronDown, X, FileDown } from "lucide-react";
 import { exportToStyledExcel } from "@/lib/excel-export";
 import { format } from "date-fns";
@@ -612,22 +612,32 @@ export default function PositionsPage() {
     );
   }
 
+  const sortedFilteredPositions = useMemo(
+    () =>
+      [...filteredPositions].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
+    [filteredPositions]
+  );
+
   // Pagination state
-  const pageCount = Math.ceil(filteredPositions.length / pageSize);
-  const paginatedPositions = filteredPositions.slice(
+  const pageCount = Math.ceil(sortedFilteredPositions.length / pageSize);
+  const paginatedPositions = sortedFilteredPositions.slice(
     pageIndex * pageSize,
     pageIndex * pageSize + pageSize
   );
 
   const handleExportPositions = () => {
-    const excelData = filteredPositions.map((pos: Position) => ({
+    const excelData = sortedFilteredPositions.map((pos: Position) => ({
       "Position Name": pos.position_name,
       "Description": (pos as { position_description?: string }).position_description ?? "N/A",
       "Status": pos.position_status ?? "N/A",
-      "Unit ID": pos.unit_id ?? "N/A",
+      "Unit": pos.unit?.unit_name ?? "N/A",
+      "Organization": pos.unit?.organization?.organization_name ?? "N/A",
       "Created": pos.created_at ? new Date(pos.created_at).toLocaleDateString() : "N/A",
     }));
-    const columns = ["Position Name", "Description", "Status", "Unit ID", "Created"];
+    const columns = ["Position Name", "Description", "Status", "Unit", "Organization", "Created"];
     exportToStyledExcel({
       title: "ImoTrak - Positions Export",
       sheetName: "Positions",
@@ -635,7 +645,7 @@ export default function PositionsPage() {
       data: excelData,
       filename: "positions_export",
       statusColumn: "Status",
-      columnWidths: [22, 30, 14, 20, 14],
+      columnWidths: [22, 30, 14, 20, 22, 14],
     }).catch((err) => console.error("Export error:", err));
   };
 
@@ -722,7 +732,7 @@ export default function PositionsPage() {
             <div className="p-8 text-center text-red-500">
               Failed to load positions. Please try again.
             </div>
-          ) : filteredPositions.length === 0 ? (
+          ) : sortedFilteredPositions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 bg-white rounded-xl border border-gray-100 shadow-md">
               <svg
                 className="w-16 h-16 text-blue-200 mb-4"
@@ -863,7 +873,7 @@ export default function PositionsPage() {
                 </TableBody>
               </Table>
               {/* Pagination Controls */}
-              {filteredPositions.length > pageSize && (
+              {sortedFilteredPositions.length > pageSize && (
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-gray-200 bg-white">
                   <div className="flex items-center gap-2">
                     <Button

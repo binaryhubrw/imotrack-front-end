@@ -2521,29 +2521,42 @@ export const useDeleteVehicleIssue = () => {
 
 // Notifications
 
-export const useNotifications = () => {
+export const useNotifications = (options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled !== false;
   return useQuery<Notification[], Error>({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<Notification[]>>('/v2/notifications');
-      if (!data.data) throw new Error('No data');
-      return data.data;
+      const { data: body } = await api.get<
+        ApiResponse<Notification[]> & { notifications?: Notification[] }
+      >('/v2/notifications');
+      const list = body?.data ?? body?.notifications;
+      if (!Array.isArray(list)) return [];
+      return list;
     },
+    enabled,
   });
 };
 
 export const useMarkNotificationAsRead = () => {
+  const queryClient = useQueryClient();
   return useMutation<void, Error, { notification_id: string }>({
     mutationFn: async ({ notification_id }) => {
       await api.patch(`/v2/notifications/${notification_id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };
 
 export const useDeleteNotification = () => {
+  const queryClient = useQueryClient();
   return useMutation<void, Error, { notification_id: string }>({
     mutationFn: async ({ notification_id }) => {
       await api.delete(`/v2/notifications/${notification_id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 };

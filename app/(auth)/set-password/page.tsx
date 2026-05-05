@@ -97,18 +97,35 @@ function SetPasswordForm() {
     };
   }, [isSubmitted]);
 
-  const validatePassword = (password: string) => {
-    return password.length >= 8;
+  const getPasswordRuleErrors = (value: string): string[] => {
+    const errors: string[] = [];
+    if (value.length < 8) errors.push("At least 8 characters");
+    if (!/[A-Z]/.test(value)) errors.push("One uppercase letter");
+    if (!/[a-z]/.test(value)) errors.push("One lowercase letter");
+    if (!/[0-9]/.test(value)) errors.push("One number");
+    if (!/[^A-Za-z0-9]/.test(value)) errors.push("One special character");
+    return errors;
   };
+
+  const validatePassword = (value: string) => getPasswordRuleErrors(value).length === 0;
+
+  const passwordRuleChecks = [
+    { label: "At least 8 characters", ok: password.length >= 8 },
+    { label: "One uppercase letter", ok: /[A-Z]/.test(password) },
+    { label: "One lowercase letter", ok: /[a-z]/.test(password) },
+    { label: "One number", ok: /[0-9]/.test(password) },
+    { label: "One special character", ok: /[^A-Za-z0-9]/.test(password) },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validation
     if (!validatePassword(password)) {
-      toast.error("Password too short", {
-        description: "Password must be at least 8 characters long",
-        duration: 4000,
+      const missing = getPasswordRuleErrors(password);
+      toast.error("Password is not strong enough", {
+        description: `Still needed: ${missing.join(", ")}`,
+        duration: 5000,
       });
       return;
     }
@@ -349,9 +366,22 @@ function SetPasswordForm() {
                       />
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Must be at least 8 characters long
-                  </p>
+                  <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                    {passwordRuleChecks.map((rule) => (
+                      <li
+                        key={rule.label}
+                        className={`flex items-center gap-2 ${
+                          rule.ok ? "text-green-700" : "text-gray-500"
+                        }`}
+                      >
+                        <FontAwesomeIcon
+                          icon={rule.ok ? faCheck : faExclamationTriangle}
+                          className={rule.ok ? "text-green-600" : "text-amber-500"}
+                        />
+                        {rule.label}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 {/* Confirm Password Input */}

@@ -6,6 +6,7 @@ import { useNotifications, useMarkNotificationAsRead, useDeleteNotification } fr
 import ErrorUI from '@/components/ErrorUI';
 import { useRouter } from 'next/navigation';
 import { SkeletonNotificationsPage } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/useAuth';
 
 const formatTimeAgo = (dateString: string) => {
   const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 60000);
@@ -25,7 +26,10 @@ const getTypeStyle = (title: string) => {
 };
 
 export default function NotificationsPage() {
-  const { data: notifications = [], isLoading, isError, refetch } = useNotifications();
+  const { user, isLoading: authLoading } = useAuth();
+  const { data: notifications = [], isLoading, isError, refetch } = useNotifications({
+    enabled: !!user && !authLoading,
+  });
   const markAsRead = useMarkNotificationAsRead();
   const deleteNotif = useDeleteNotification();
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +77,7 @@ export default function NotificationsPage() {
     refetch();
   };
 
-  if (isLoading) return <SkeletonNotificationsPage />;
+  if (authLoading || isLoading) return <SkeletonNotificationsPage />;
   if (isError)   return <ErrorUI resource="notifications" onBack={() => router.back()} onRetry={() => window.location.reload()} />;
 
   return (

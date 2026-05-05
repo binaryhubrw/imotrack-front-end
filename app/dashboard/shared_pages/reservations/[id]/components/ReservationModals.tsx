@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Vehicle, ReservedVehicle, Reservation } from "@/types/next-auth";
 import { useGetAvailableVehicles } from "@/lib/queries";
 import { toast } from "sonner";
-import { TruckIcon } from "lucide-react";
+import { TruckIcon, X } from "lucide-react";
 
 interface AvailableVehicle {
   vehicle_id: string;
@@ -988,10 +988,12 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                 Approve with Odometer
               </h2>
               <button
+                type="button"
                 onClick={onCloseApproveWithOdometer}
-                className="text-gray-400 hover:text-gray-600 p-1"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                aria-label="Close"
               >
-                ×
+                <X className="h-6 w-6" strokeWidth={2.25} />
               </button>
             </div>
             <div className="p-4">
@@ -1007,9 +1009,9 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                       className="border border-gray-200 rounded-lg p-4 bg-gray-50"
                     >
                       <h3 className="text-sm font-medium text-gray-700 mb-3">
-                        {vehicle?.vehicle.vehicle_model.vehicle_model_name ||
+                        {vehicle?.vehicle?.vehicle_model?.vehicle_model_name ||
                           `Vehicle ${index + 1}`}{" "}
-                        - {vehicle?.vehicle.plate_number}
+                        - {vehicle?.vehicle?.plate_number ?? ""}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
@@ -1348,7 +1350,8 @@ const [selectedVehicleToAdd, setSelectedVehicleToAdd] = useState("");  // ADD TH
                 <div className="text-sm text-gray-700 space-y-1">
                   <p>
                     <span className="font-medium">Vehicle:</span>{" "}
-                    {selectedVehicle.vehicle.vehicle_model.vehicle_model_name}
+                    {selectedVehicle.vehicle?.vehicle_model?.vehicle_model_name ??
+                      "Unknown model"}
                   </p>
                   <p>
                     <span className="font-medium">Plate Number:</span>{" "}

@@ -168,7 +168,9 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout, isLoading } = useAuth();
-  const { data: notifications = [] } = useNotifications();
+  const { data: notifications = [] } = useNotifications({
+    enabled: !!user && !isLoading,
+  });
 
   // Permission logic
   const permissionData = useMemo(() => {

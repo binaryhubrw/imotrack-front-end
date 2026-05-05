@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -310,7 +310,9 @@ function SearchableDropdown({
 }
 
 export default function UnitsPage() {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "created_at", desc: true },
+  ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
@@ -367,6 +369,15 @@ export default function UnitsPage() {
     ? filteredUnits.filter((u) => u.status === statusFilter)
     : filteredUnits;
 
+  const sortedUnitsForTable = useMemo(
+    () =>
+      [...statusFilteredUnits].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
+    [statusFilteredUnits]
+  );
+
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUnit) return;
@@ -388,10 +399,12 @@ export default function UnitsPage() {
     const excelData = statusFilteredUnits.map((u) => ({
       "Unit Name": u.unit_name,
       "Status": u.status,
-      "Organization ID": u.organization_id,
+      Organization:
+        organizations.find((o) => o.organization_id === u.organization_id)
+          ?.organization_name ?? "N/A",
       "Created": u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A",
     }));
-    const columns = ["Unit Name", "Status", "Organization ID", "Created"];
+    const columns = ["Unit Name", "Status", "Organization", "Created"];
     exportToStyledExcel({
       title: "ImoTrak - Units Export",
       sheetName: "Units",
@@ -399,7 +412,7 @@ export default function UnitsPage() {
       data: excelData,
       filename: "units_export",
       statusColumn: "Status",
-      columnWidths: [24, 14, 22, 16],
+      columnWidths: [24, 14, 28, 16],
     }).catch((err) => console.error("Export error:", err));
   };
 
@@ -514,7 +527,7 @@ export default function UnitsPage() {
 
   // Call useReactTable unconditionally
   const table = useReactTable<Unit>({
-    data: units,
+    data: sortedUnitsForTable,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -647,7 +660,7 @@ export default function UnitsPage() {
                   {globalFilter && (
                     <span className="text-sm text-gray-500">
                       {table.getFilteredRowModel().rows.length} of{" "}
-                      {units.length} units
+                      {sortedUnitsForTable.length} units
                     </span>
                   )}
                 </div>
@@ -655,7 +668,7 @@ export default function UnitsPage() {
 
               {/* Table */}
               <div className="overflow-x-auto">
-                {units.length === 0 ? (
+                {sortedUnitsForTable.length === 0 ? (
                   <div className="p-8 text-center text-gray-500">
                     <div className="mb-4">
                       <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">

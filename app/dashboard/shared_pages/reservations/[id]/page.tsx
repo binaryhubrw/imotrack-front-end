@@ -329,20 +329,20 @@ export default function ReservationDetailPage() {
               {reservation.reserved_vehicles && reservation.reserved_vehicles.length > 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {reservation.reserved_vehicles.map((rv: ReservedVehicle) => {
-                    const isOccupied = rv.vehicle.vehicle_status === "OCCUPIED";
+                    const isOccupied = rv.vehicle?.vehicle_status === "OCCUPIED";
                     const isReturned = !!rv.returned_odometer;
                     return (
                       <div key={rv.reserved_vehicle_id}
                         className={`rounded-xl border p-4 ${isOccupied ? "bg-orange-50 border-orange-200" : "bg-green-50 border-green-200"}`}>
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-bold text-gray-900 text-sm">{rv.vehicle.vehicle_model.vehicle_model_name}</h4>
+                          <h4 className="font-bold text-gray-900 text-sm">{rv.vehicle?.vehicle_model?.vehicle_model_name ?? "Unknown model"}</h4>
                           <Badge className={`text-xs ${isOccupied ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"}`}>
-                            {rv.vehicle.vehicle_status}
+                            {rv.vehicle?.vehicle_status ?? "N/A"}
                           </Badge>
                         </div>
                         <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between"><span className="text-gray-500">Plate:</span><span className="font-medium">{rv.vehicle.plate_number}</span></div>
-                          <div className="flex justify-between"><span className="text-gray-500">Capacity:</span><span className="font-medium">{rv.vehicle.vehicle_model.vehicle_capacity}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500">Plate:</span><span className="font-medium">{rv.vehicle?.plate_number ?? "N/A"}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500">Capacity:</span><span className="font-medium">{rv.vehicle?.vehicle_model?.vehicle_capacity ?? "—"}</span></div>
                           {rv.fuel_provided ? <div className="flex justify-between"><span className="text-gray-500">Fuel:</span><span className="font-medium">{rv.fuel_provided} L</span></div> : null}
                           {rv.returned_odometer ? <div className="flex justify-between"><span className="text-gray-500">Return Odometer:</span><span className="font-medium">{rv.returned_odometer} km</span></div> : null}
                           {rv.returned_date ? <div className="flex justify-between"><span className="text-gray-500">Returned:</span><span className="font-medium text-xs">{formatDate(rv.returned_date)}</span></div> : null}
@@ -350,7 +350,7 @@ export default function ReservationDetailPage() {
                         <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col gap-2">
                           {reservation?.reservation_status === "ACCEPTED" && isFleetManager && (
                             <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50 text-xs"
-                              onClick={() => handleRemoveVehicle(rv.vehicle.vehicle_id)} disabled={removeVehicleFromReservation.isPending}>
+                              onClick={() => rv.vehicle?.vehicle_id && handleRemoveVehicle(rv.vehicle.vehicle_id)} disabled={removeVehicleFromReservation.isPending}>
                               <Minus className="w-3 h-3 mr-1" />{removeVehicleFromReservation.isPending ? "Removing..." : "Remove"}
                             </Button>
                           )}

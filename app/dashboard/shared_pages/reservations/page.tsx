@@ -932,7 +932,7 @@ export default function ReservationsPage() {
         }
         if (selectedColumns.includes('vehicle_details')) {
           const vehicleDetails = reservation.reserved_vehicles?.map((v: ReservedVehicle) => 
-            `${v.vehicle.plate_number} (${v.vehicle.vehicle_model.vehicle_model_name})`
+            `${v.vehicle?.plate_number ?? "N/A"} (${v.vehicle?.vehicle_model?.vehicle_model_name ?? "Unknown"})`
           ).join(', ') || 'No vehicles';
           row['Vehicle Details'] = vehicleDetails;
         }
