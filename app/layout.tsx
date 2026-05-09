@@ -37,16 +37,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <head>
         <link rel="icon" href="/favicon.ico" />
-        {/* Load Leaflet CSS globally - ONLY ONCE */}
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
-          integrity="sha512-o9N1jHQtJt0h4xHgj1N1H5xQj7GEx1ENtzY3vMbqj4JqvM9K3oP0msqHyt1E1vOEq6CGiAt+rWS+3Dd5wUu5wQ=="
-          crossOrigin=""
-        />
       </head>
       <body className={`${josefinSans.variable} ${marcellus.variable} antialiased min-h-screen overflow-x-hidden`}>
         <QueryProvider>

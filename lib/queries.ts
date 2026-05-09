@@ -40,7 +40,6 @@ import {
   RemoveVehicleFromReservationDto,
   VehicleOperationApiResponse,
   AddVehicleToReservationDto,
-  TrackingData,
 } from '@/types/next-auth';
 import { toast } from 'sonner';
 import { toastStyles } from '@/lib/toast-config';
@@ -1508,6 +1507,10 @@ interface LocationUpdate {
   timestamp: string | number;
 }
 
+type UpdateVehicleLocationResult =
+  | LocationUpdate
+  | { message: string; [key: string]: unknown };
+
 /**
  * Hook to stream vehicle location updates via SSE
  * @param vehicleId - UUID of the vehicle to track
@@ -1718,20 +1721,11 @@ export const useVehicleLocationStream = (vehicleId: string, enabled: boolean = t
   };
 };
 
-// Helper function to get auth token
-async function getAuthToken(): Promise<string | null> {
-  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-  if (token) return token;
-  
-  console.warn('getAuthToken: No token found in localStorage');
-  return null;
-}
-
 // Update vehicle location mutation
 export const useUpdateVehicleLocation = () => {
   const queryClient = useQueryClient();
   
-  return useMutation<any, Error, LocationUpdateRequest>({
+  return useMutation<UpdateVehicleLocationResult, Error, LocationUpdateRequest>({
     mutationFn: async ({ vehicleId, coords, timestamp }: LocationUpdateRequest) => {
       console.log('Updating vehicle location for:', vehicleId);
       try {
@@ -1743,14 +1737,14 @@ export const useUpdateVehicleLocation = () => {
         
         const response = await api.post(`/v2/vehicles/${vehicleId}/locations`, payload);
         console.log('Location update full response:', response);
-        const { data } = response;
+        const data: { data?: LocationUpdate; message?: unknown; [key: string]: unknown } = response.data;
         console.log('Location update data:', data);
         
         // Handle different response formats
         if (data.data) {
           return data.data;
-        } else if (data && data.message) {
-          return data;
+        } else if (typeof data.message === 'string' && data.message.trim().length > 0) {
+          return data as { message: string; [key: string]: unknown };
         } else {
           return { message: 'Location updated successfully' };
         }
@@ -2525,6 +2519,7 @@ export const useNotifications = (options?: { enabled?: boolean }) => {
   const enabled = options?.enabled !== false;
   return useQuery<Notification[], Error>({
     queryKey: ['notifications'],
+    enabled: enabled && typeof window !== 'undefined' && !!localStorage.getItem('token'),
     queryFn: async () => {
       const { data: body } = await api.get<
         ApiResponse<Notification[]> & { notifications?: Notification[] }
@@ -2533,7 +2528,6 @@ export const useNotifications = (options?: { enabled?: boolean }) => {
       if (!Array.isArray(list)) return [];
       return list;
     },
-    enabled,
   });
 };
 
@@ -2561,6 +2555,40 @@ export const useDeleteNotification = () => {
   });
 };
 
+export const useUpdateMyProfile = () => {
+  return useMutation<
+    ApiResponse<{
+      user_id: string;
+      first_name: string;
+      last_name: string;
+      email?: string | null;
+      user_nid: string;
+      user_phone: string;
+      user_gender: string;
+      user_dob: string | Date;
+      user_photo?: string | null;
+      street_address?: string | null;
+    }>,
+    Error,
+    {
+      first_name?: string;
+      last_name?: string;
+      user_phone?: string;
+      user_gender?: 'MALE' | 'FEMALE';
+      user_dob?: string | Date;
+      street_address?: string | null;
+      user_nid?: string;
+      user_photo?: string | null;
+    }
+  >({
+    mutationFn: async (payload) => {
+      const { data } = await api.patch('/v2/users/me', payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    },
+  });
+};
 
 
 
