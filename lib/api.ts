@@ -2,12 +2,7 @@ import axios from 'axios';
 import { API_BASE_URL } from './api-base-url';
 
 const baseURL = API_BASE_URL;
-
-if (process.env.NODE_ENV === 'development') {
-  console.info('[api] Base URL:', baseURL);
-}
-
-
+// const baseURL = process.env.NEXT_API_URL || 'http://localhost:4000'
 
 export const api = axios.create({
   baseURL,

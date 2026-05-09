@@ -24,7 +24,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUpdatePassword } from "@/lib/queries";
+import { useUpdateMyProfile, useUpdatePassword } from "@/lib/queries";
 // import { toast } from "sonner";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -38,7 +38,7 @@ export default function UserProfilePage() {
   const [shouldShowContent, setShouldShowContent] = useState(false);
 
   // Use auth hook without invalid parameters
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, updateLocalUserProfile } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"profile" | "security">("profile");
   const [isEditing, setIsEditing] = useState(false);
@@ -64,6 +64,7 @@ export default function UserProfilePage() {
 
   // Use the update password mutation
   const updatePasswordMutation = useUpdatePassword();
+  const updateMyProfileMutation = useUpdateMyProfile();
 
   // Handle authentication state changes
   useEffect(() => {
@@ -86,10 +87,28 @@ export default function UserProfilePage() {
 
   const handleSaveProfile = async () => {
     try {
-      // TODO: Implement profile update endpoint in backend
-      // toast.info(
-      //   "Profile update feature is not yet implemented in the backend"
-      // );
+      const payload = {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        user_phone: editForm.phone,
+      };
+
+      const res = await updateMyProfileMutation.mutateAsync(payload);
+
+      const updated = res.data;
+      if (updated) {
+        updateLocalUserProfile({
+          first_name: updated.first_name,
+          last_name: updated.last_name,
+          phone: updated.user_phone,
+          // keep existing email/avatar/nid/dob/gender as-is unless backend returns them
+          ...(updated.user_photo ? { avatar: updated.user_photo } : {}),
+          ...(updated.user_nid ? { nid: updated.user_nid } : {}),
+          ...(updated.user_gender ? { gender: updated.user_gender } : {}),
+          ...(updated.user_dob ? { dob: String(updated.user_dob) } : {}),
+        });
+      }
+
       setIsEditing(false);
       // await api.put('/auth/profile', editForm);
       // refetch(); // Refetch the user data

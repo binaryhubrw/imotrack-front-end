@@ -134,7 +134,11 @@ export default function NotificationsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 h-10 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white shadow-sm" />
           </div>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)}
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            aria-label="Filter notifications"
+            title="Filter notifications"
             className="h-10 px-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm">
             <option value="all">All</option>
             <option value="unread">Unread</option>
